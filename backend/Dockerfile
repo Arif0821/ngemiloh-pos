@@ -3,6 +3,7 @@ FROM node:20-alpine AS builder
 
 # Install build tools untuk native modules (bcrypt, sharp)
 RUN apk add --no-cache python3 make g++ vips-dev
+RUN npm install -g node-gyp
 
 # PENTING: Pastikan devDependencies terinstal untuk build
 ENV NODE_ENV=development
@@ -36,6 +37,7 @@ WORKDIR /app
 # Install only production dependencies
 COPY package.json ./
 RUN apk add --no-cache python3 make g++ && \
+    npm install -g node-gyp && \
     npm install --omit=dev && \
     apk del python3 make g++
 
