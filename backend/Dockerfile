@@ -11,7 +11,7 @@ WORKDIR /app
 
 # Copy dependency files first (for Docker cache efficiency)
 COPY package.json package-lock.json ./
-RUN npm ci
+RUN npm install
 
 # Copy source code & Prisma schema
 COPY prisma ./prisma
@@ -36,7 +36,7 @@ WORKDIR /app
 # Install only production dependencies
 COPY package.json package-lock.json ./
 RUN apk add --no-cache python3 make g++ && \
-    npm ci --omit=dev && \
+    npm install --omit=dev && \
     apk del python3 make g++
 
 # Copy Prisma schema + generated client from builder
