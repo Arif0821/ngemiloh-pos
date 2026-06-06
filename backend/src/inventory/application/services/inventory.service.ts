@@ -14,7 +14,7 @@ export class InventoryService {
 
   async getLowStockMaterials() {
     const all = await this.inventoryRepository.findActiveRawMaterials();
-    return all.filter(m => Number(m.stock) <= Number(m.min_stock));
+    return all.filter(m => Number(m.current_stock) <= Number(m.min_stock));
   }
 
   async adjustStock(id: string, qty: number, type: 'IN' | 'OUT', notes: string, userId: string) {
@@ -48,7 +48,7 @@ export class InventoryService {
         const material = await repo.findRawMaterialById(item.id);
         if (!material) continue;
 
-        const sysStock = Number(material.stock);
+        const sysStock = Number(material.current_stock);
         const physStock = Number(item.physical_stock);
         const difference = physStock - sysStock;
 
@@ -81,9 +81,9 @@ export class InventoryService {
 
     for (const item of order.items) {
       const qtySold = item.quantity;
-      if (item.product.ingredients) {
-        for (const ingredient of item.product.ingredients) {
-          const totalQtyRequired = Number(ingredient.qty_required) * qtySold;
+      if (item.product.bom_recipes) {
+        for (const ingredient of item.product.bom_recipes) {
+          const totalQtyRequired = Number(ingredient.quantity_per_serving) * qtySold;
           if (!rawMaterialDeductions[ingredient.raw_material_id]) {
             rawMaterialDeductions[ingredient.raw_material_id] = 0;
           }
@@ -115,7 +115,7 @@ export class InventoryService {
 
           if (qtyToDeduct > 0) {
              const rm = await repo.findRawMaterialById(rawMaterialId);
-             totalCogs += (qtyToDeduct * Number(rm?.price_per_unit || 0));
+             totalCogs += (qtyToDeduct * Number(rm?.cost_per_unit || 0));
           }
 
           await repo.createInventoryTransaction({

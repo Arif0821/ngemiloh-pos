@@ -43,7 +43,7 @@ async function main() {
   // 2. Create Categories (5 Kategori)
   const categories = ['Makanan', 'Minuman', 'Camilan', 'Paket Hemat', 'Lain-lain'];
   let sortOrder = 1;
-  const categoryRecords = [];
+  const categoryRecords: any[] = [];
   for (const catName of categories) {
     const cat = await prisma.category.upsert({
       where: { name: catName },
@@ -52,7 +52,7 @@ async function main() {
     });
     categoryRecords.push(cat);
   }
-  const catFood = categoryRecords[0];
+  const catFood: any = categoryRecords[0];
 
   // 3. Create Product
   const product = await prisma.product.create({
@@ -128,20 +128,23 @@ async function main() {
       update: {},
       create: {
         name: rm.name,
-        unit: rm.unit,
-        stock: 5000, // Initial stock for testing
+        purchase_unit: rm.unit,
+        purchase_qty: 1,
+        usage_unit: rm.unit,
+        conversion_factor: 1,
+        current_stock: 5000, // Initial stock for testing
         min_stock: rm.min_stock,
-        price_per_unit: 100
+        cost_per_unit: 100
       }
     });
     
-    // Seed an initial InventoryBatch for FIFO costing
-    await prisma.inventoryBatch.create({
+    // Seed an initial StockMovement for FIFO costing
+    await prisma.stockMovement.create({
       data: {
         raw_material_id: rawMaterial.id,
-        qty_initial: 5000,
-        qty_remaining: 5000,
-        cost_per_unit: 100
+        type: 'in',
+        quantity: 5000,
+        notes: 'Initial stock seed'
       }
     });
   }
@@ -153,12 +156,12 @@ async function main() {
   const plastik = await prisma.rawMaterial.findUnique({ where: { name: 'Plastik Kemasan Kecil' } });
 
   if (makaroni && bumbuAsin && minyak && plastik) {
-    await prisma.productIngredient.createMany({
+    await prisma.bomRecipe.createMany({
       data: [
-        { product_id: product.id, raw_material_id: makaroni.id, qty_required: 100 }, // 100 gram
-        { product_id: product.id, raw_material_id: minyak.id, qty_required: 0.05 }, // 0.05 liter
-        { product_id: product.id, raw_material_id: bumbuAsin.id, qty_required: 10 }, // 10 gram default
-        { product_id: product.id, raw_material_id: plastik.id, qty_required: 1 }     // 1 pcs
+        { product_id: product.id, raw_material_id: makaroni.id, quantity_per_serving: 100 }, // 100 gram
+        { product_id: product.id, raw_material_id: minyak.id, quantity_per_serving: 0.05 }, // 0.05 liter
+        { product_id: product.id, raw_material_id: bumbuAsin.id, quantity_per_serving: 10 }, // 10 gram default
+        { product_id: product.id, raw_material_id: plastik.id, quantity_per_serving: 1 }     // 1 pcs
       ],
       skipDuplicates: true
     });

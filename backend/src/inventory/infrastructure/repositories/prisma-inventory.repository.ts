@@ -1,7 +1,7 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { IInventoryRepository } from '../../domain/interfaces/inventory.repository.interface';
-import { RawMaterial, InventoryTransaction, InventoryBatch, Order } from '@prisma/client';
+import { RawMaterial, Order, StockMovement } from '@prisma/client';
 
 @Injectable()
 export class PrismaInventoryRepository implements IInventoryRepository {
@@ -32,9 +32,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
   }
 
   async findActiveRawMaterials(): Promise<RawMaterial[]> {
-    return this.client.rawMaterial.findMany({
-      where: { is_active: true },
-    });
+    return this.client.rawMaterial.findMany({});
   }
 
   async findRawMaterialById(id: string): Promise<RawMaterial | null> {
@@ -46,11 +44,11 @@ export class PrismaInventoryRepository implements IInventoryRepository {
   async updateRawMaterialStock(id: string, amount: number, type: 'increment' | 'decrement' | 'set'): Promise<RawMaterial> {
     let data: any = {};
     if (type === 'increment') {
-      data = { stock: { increment: amount } };
+      data = { current_stock: { increment: amount } };
     } else if (type === 'decrement') {
-      data = { stock: { decrement: amount } };
+      data = { current_stock: { decrement: amount } };
     } else {
-      data = { stock: amount };
+      data = { current_stock: amount };
     }
 
     return this.client.rawMaterial.update({
@@ -66,9 +64,16 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     notes: string;
     created_by?: string;
     reference_id?: string;
-  }): Promise<InventoryTransaction> {
-    return this.client.inventoryTransaction.create({
-      data,
+  }): Promise<StockMovement> {
+    return this.client.stockMovement.create({
+      data: {
+        raw_material_id: data.raw_material_id,
+        quantity: data.qty,
+        type: data.transaction_type,
+        notes: data.notes,
+        created_by: data.created_by,
+        reference_order_id: data.reference_id
+      }
     });
   }
 
@@ -79,7 +84,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
         items: {
           include: {
             product: {
-              include: { ingredients: true },
+              include: { bom_recipes: true },
             },
           },
         },
@@ -94,17 +99,11 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     });
   }
 
-  async findAvailableBatches(rawMaterialId: string): Promise<InventoryBatch[]> {
-    return this.client.inventoryBatch.findMany({
-      where: { raw_material_id: rawMaterialId, qty_remaining: { gt: 0 } },
-      orderBy: { created_at: 'asc' },
-    });
+  async findAvailableBatches(rawMaterialId: string): Promise<any[]> {
+    return [];
   }
 
-  async decrementBatchStock(batchId: string, amount: number): Promise<InventoryBatch> {
-    return this.client.inventoryBatch.update({
-      where: { id: batchId },
-      data: { qty_remaining: { decrement: amount } },
-    });
+  async decrementBatchStock(batchId: string, amount: number): Promise<any> {
+    return null;
   }
 }

@@ -1,4 +1,4 @@
-import { RawMaterial, InventoryTransaction, InventoryBatch, Order } from '@prisma/client';
+import { RawMaterial, Order, StockMovement } from '@prisma/client';
 
 export const INVENTORY_REPOSITORY = 'INVENTORY_REPOSITORY';
 
@@ -18,11 +18,11 @@ export interface IInventoryRepository {
     notes: string;
     created_by?: string;
     reference_id?: string;
-  }): Promise<InventoryTransaction>;
+  }): Promise<StockMovement>;
 
   findOrderWithIngredients(orderId: string): Promise<any>;
   updateOrderCogs(orderId: string, cogsTotal: number): Promise<Order>;
 
-  findAvailableBatches(rawMaterialId: string): Promise<InventoryBatch[]>;
-  decrementBatchStock(batchId: string, amount: number): Promise<InventoryBatch>;
+  findAvailableBatches(rawMaterialId: string): Promise<any[]>;
+  decrementBatchStock(batchId: string, amount: number): Promise<any>;
 }
