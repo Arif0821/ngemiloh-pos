@@ -21,8 +21,6 @@ services:
       POSTGRES_USER: ngemiloh
       POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ngemiloh_db
-    ports:
-      - "5433:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     networks:
@@ -42,8 +40,6 @@ services:
       - MAX_CLIENT_CONN=100
       - DEFAULT_POOL_SIZE=20
       - LISTEN_PORT=6432
-    ports:
-      - "6432:6432"
     depends_on:
       - postgres
     networks:
@@ -58,8 +54,6 @@ services:
     image: redis:7-alpine
     container_name: ngemiloh_redis
     command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
-    ports:
-      - "6379:6379"
     volumes:
       - redis_data:/data
     networks:
@@ -86,8 +80,6 @@ services:
       - STORAGE_PATH=/var/storage/ngemiloh
       - JWT_ACCESS_EXPIRES=8h
       - JWT_REFRESH_EXPIRES=7d
-    ports:
-      - "3000:3000"
     volumes:
       - storage_data:/var/storage/ngemiloh
     networks:
@@ -161,8 +153,6 @@ services:
       DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD:-umami_secret_2026}@umami-db:5432/umami
       DATABASE_TYPE: postgresql
       APP_SECRET: ${UMAMI_APP_SECRET:-umami_secret_key_2026}
-    ports:
-      - "3001:3000"
     depends_on:
       - umami-db
     networks:
