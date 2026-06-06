@@ -32,3 +32,8 @@ ngemiloh-key.pem
 # ── Misc ─────────────────────────────────────────
 *.log
 *.tmp
+
+# ── Development/Utility Files (tidak perlu di repo) ──
+read_docx.py
+prd_v3.txt
+PRD_Ngemiloh_POS_v3.0.docx

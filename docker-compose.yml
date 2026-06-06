@@ -19,7 +19,7 @@ services:
     container_name: ngemiloh_db
     environment:
       POSTGRES_USER: ngemiloh
-      POSTGRES_PASSWORD: DbNgemiloh2026DuriAm0n
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
       POSTGRES_DB: ngemiloh_db
     ports:
       - "5433:5432"
@@ -37,7 +37,7 @@ services:
     image: pgbouncer/pgbouncer:latest
     container_name: ngemiloh_pgbouncer
     environment:
-      - DATABASE_URL=postgres://ngemiloh:DbNgemiloh2026DuriAm0n@postgres:5432/ngemiloh_db
+      - DATABASE_URL=postgres://ngemiloh:${DB_PASSWORD}@postgres:5432/ngemiloh_db
       - POOL_MODE=transaction
       - MAX_CLIENT_CONN=100
       - DEFAULT_POOL_SIZE=20
@@ -77,10 +77,13 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     environment:
-      - DATABASE_URL=postgresql://ngemiloh:DbNgemiloh2026DuriAm0n@pgbouncer:6432/ngemiloh_db?schema=public
+      - DATABASE_URL=postgresql://ngemiloh:${DB_PASSWORD}@pgbouncer:6432/ngemiloh_db?schema=public
       - REDIS_URL=redis://redis:6379
-      - JWT_ACCESS_SECRET=X9k2mP5vL8nB3qR7wY4tC1jH6fG0zD5x
-      - JWT_REFRESH_SECRET=M4pQ9vC2nB7xL5jH1kG8zD3wR6tY0fX
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
+      - PIN_PEPPER_SECRET=${PIN_PEPPER_SECRET}
+      - NODE_ENV=${NODE_ENV:-production}
+      - STORAGE_PATH=/var/storage/ngemiloh
       - JWT_ACCESS_EXPIRES=8h
       - JWT_REFRESH_EXPIRES=7d
     ports:
@@ -142,7 +145,7 @@ services:
     environment:
       POSTGRES_DB: umami
       POSTGRES_USER: umami
-      POSTGRES_PASSWORD: umami
+      POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD:-umami_secret_2026}
     volumes:
       - umami_db_data:/var/lib/postgresql/data
     networks:
@@ -157,9 +160,9 @@ services:
     image: ghcr.io/umami-software/umami:postgresql-latest
     container_name: ngemiloh_umami
     environment:
-      DATABASE_URL: postgresql://umami:umami@umami-db:5432/umami
+      DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD:-umami_secret_2026}@umami-db:5432/umami
       DATABASE_TYPE: postgresql
-      APP_SECRET: umami_super_secret_key
+      APP_SECRET: ${UMAMI_APP_SECRET:-umami_secret_key_2026}
     ports:
       - "3001:3000"
     depends_on:
