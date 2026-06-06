@@ -122,9 +122,6 @@ services:
       context: .
       dockerfile: Caddy.Dockerfile
     container_name: ngemiloh_caddy
-    ports:
-      - "80:80"
-      - "443:443"
     volumes:
       - frontend_build:/srv
       - caddy_data:/data
