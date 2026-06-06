@@ -118,13 +118,14 @@ services:
     restart: "no"
 
   caddy:
-    image: caddy:2-alpine
+    build:
+      context: .
+      dockerfile: Caddy.Dockerfile
     container_name: ngemiloh_caddy
     ports:
       - "80:80"
       - "443:443"
     volumes:
-      - ./Caddyfile:/etc/caddy/Caddyfile
       - frontend_build:/srv
       - caddy_data:/data
       - caddy_config:/config
