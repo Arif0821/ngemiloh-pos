@@ -1,0 +1,44 @@
+import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
+import { DiscountsService } from '../application/services/discounts.service';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
+import { Roles } from '../../auth/decorators/roles.decorator';
+
+@Controller('api/v1/admin/discounts')
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('superadmin')
+export class DiscountsController {
+  constructor(private readonly discountsService: DiscountsService) {}
+
+  @Post()
+  @Roles('superadmin')
+  async create(@Body() createDiscountDto: any, @Req() req: any) {
+    const data = await this.discountsService.create(createDiscountDto, req.user.id);
+    return { success: true, data };
+  }
+
+  @Get()
+  @Roles('superadmin', 'kasir')
+  async findAll() {
+    const data = await this.discountsService.findAll();
+    return { success: true, data };
+  }
+
+  @Get(':id')
+  async findOne(@Param('id') id: string) {
+    const data = await this.discountsService.findOne(id);
+    return { success: true, data };
+  }
+
+  @Patch(':id')
+  async update(@Param('id') id: string, @Body() updateDiscountDto: any) {
+    const data = await this.discountsService.update(id, updateDiscountDto);
+    return { success: true, data };
+  }
+
+  @Delete(':id')
+  async remove(@Param('id') id: string) {
+    const data = await this.discountsService.remove(id);
+    return { success: true, data };
+  }
+}

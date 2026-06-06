@@ -1,0 +1,21 @@
+import { Module } from '@nestjs/common';
+import { FinanceController } from './presentation/finance.controller';
+import { FinanceService } from './application/services/finance.service';
+import { FinanceCronService } from './finance.cron';
+import { MailModule } from '../mail/mail.module';
+import { FINANCE_REPOSITORY } from './domain/interfaces/finance.repository.interface';
+import { PrismaFinanceRepository } from './infrastructure/repositories/prisma-finance.repository';
+
+@Module({
+  imports: [MailModule],
+  controllers: [FinanceController],
+  providers: [
+    FinanceService, 
+    FinanceCronService,
+    {
+      provide: FINANCE_REPOSITORY,
+      useClass: PrismaFinanceRepository,
+    }
+  ]
+})
+export class FinanceModule {}

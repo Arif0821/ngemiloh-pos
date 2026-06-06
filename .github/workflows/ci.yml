@@ -1,0 +1,37 @@
+name: CI Pipeline
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:16
+        env: { POSTGRES_DB: ngemiloh_test, POSTGRES_PASSWORD: test }
+      redis:
+        image: redis:7-alpine
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: "20" }
+      - run: npm ci
+      - run: npm run lint
+      - run: npm audit --audit-level=high
+      - run: npx prisma migrate deploy
+        env: { DATABASE_URL: "postgresql://postgres:test@localhost/ngemiloh_test" }
+      - run: npm run test
+      - run: npm run test:e2e
+      - run: npm run test:cov # Fail if coverage < 70%
+
+  build:
+    needs: test
+    if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+      - run: docker build -t ngemiloh-api:${{ github.sha }} .
+      - run: docker push registry/ngemiloh-api:${{ github.sha }}
+      - run: curl -X POST ${{ secrets.COOLIFY_WEBHOOK }} # Trigger auto-deploy

@@ -1,0 +1,10 @@
+# Technical Debt Register
+
+Dokumen ini digunakan untuk melacak jalan pintas teknis (*technical shortcuts*) atau keputusan desain sementara yang diambil demi mengejar kecepatan rilis, namun perlu dilunasi (diperbaiki) di masa mendatang agar tidak menjadi beban sistem (Skenario 8.5 Maintainability).
+
+| ID | Tanggal | Deskripsi Utang Teknis | Dampak / Risiko | Rencana Penyelesaian | Status |
+|---|---|---|---|---|---|
+| TD-001 | *Date* | **Password Superadmin Belum Memenuhi Aturan NFR**<br>Superadmin awal dibuat melalui *Seeder* dengan kata sandi sederhana tanpa mengikuti aturan minimal 16 karakter + huruf/angka/simbol (Skenario 8.3). | Risiko *Brute Force* akun Superadmin rendah jika rate limit aktif, namun melanggar kepatuhan (*Compliance*). | Buat fitur "Ganti Sandi" wajib saat Superadmin pertama kali login setelah rilis produksi. | OPEN |
+| TD-002 | *Date* | **Validasi Magic Bytes File Upload**<br>Fitur *upload* gambar saat ini menggunakan ekstensi `.webp` yang disederhanakan, namun belum menggunakan dependensi eksternal `file-type` atau pemindai heksadesimal 100% ketat. | Risiko lolosnya skrip injeksi PHP/NodeJS berkedok `.webp`. Risiko dapat dimitigasi jika folder *upload* disetel *No-Execute* di peladen Nginx/Caddy. | Integrasikan pustaka `file-type` pada `StorageService` sebelum peluncuran resmi. | OPEN |
+| TD-003 | *Date* | **Email Notifikasi Menggunakan Ethereal Dummy**<br>Modul `MailService` saat ini terhubung dengan kotak masuk palsu (Ethereal) untuk lingkungan pengembangan. | Tidak ada surel asli yang terkirim ke *inbox* Superadmin. | Tukar kredensial Ethereal dengan kredensial Gmail SMTP / AWS SES pada berkas `.env` saat rilis produksi. | OPEN |
+| TD-004 | *Date* | **Unit Test Coverage**<br>Cakupan pengujian (Unit Test) di *NestJS Service layer* belum mencapai target absolut 70% yang disyaratkan oleh NFR. | Potensi regresi kode saat dilakukan *refactoring* di masa mendatang. | Dedikasikan 1 *sprint* penuh untuk menulis pengujian Unit menggunakan Jest. | OPEN |

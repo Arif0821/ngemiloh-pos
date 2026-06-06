@@ -1,0 +1,173 @@
+version: '3.8'
+
+networks:
+  ngemiloh_net:
+    driver: bridge
+
+volumes:
+  postgres_data:
+  redis_data:
+  storage_data:
+  umami_db_data:
+  caddy_data:
+  caddy_config:
+  frontend_build:
+
+services:
+  postgres:
+    image: postgres:16-alpine
+    container_name: ngemiloh_db
+    environment:
+      POSTGRES_USER: ngemiloh
+      POSTGRES_PASSWORD: DbNgemiloh2026DuriAm0n
+      POSTGRES_DB: ngemiloh_db
+    ports:
+      - "5433:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    networks:
+      - ngemiloh_net
+    deploy:
+      resources:
+        limits:
+          memory: 1G
+    restart: unless-stopped
+
+  pgbouncer:
+    image: pgbouncer/pgbouncer:latest
+    container_name: ngemiloh_pgbouncer
+    environment:
+      - DATABASE_URL=postgres://ngemiloh:DbNgemiloh2026DuriAm0n@postgres:5432/ngemiloh_db
+      - POOL_MODE=transaction
+      - MAX_CLIENT_CONN=100
+      - DEFAULT_POOL_SIZE=20
+      - LISTEN_PORT=6432
+    ports:
+      - "6432:6432"
+    depends_on:
+      - postgres
+    networks:
+      - ngemiloh_net
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    restart: unless-stopped
+
+  redis:
+    image: redis:7-alpine
+    container_name: ngemiloh_redis
+    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    networks:
+      - ngemiloh_net
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+    restart: unless-stopped
+
+  nestjs-api:
+    image: ngemiloh-api:latest
+    container_name: ngemiloh_api
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    environment:
+      - DATABASE_URL=postgresql://ngemiloh:DbNgemiloh2026DuriAm0n@pgbouncer:6432/ngemiloh_db?schema=public
+      - REDIS_URL=redis://redis:6379
+      - JWT_ACCESS_SECRET=X9k2mP5vL8nB3qR7wY4tC1jH6fG0zD5x
+      - JWT_REFRESH_SECRET=M4pQ9vC2nB7xL5jH1kG8zD3wR6tY0fX
+      - JWT_ACCESS_EXPIRES=8h
+      - JWT_REFRESH_EXPIRES=7d
+    ports:
+      - "3000:3000"
+    volumes:
+      - storage_data:/var/storage/ngemiloh
+    networks:
+      - ngemiloh_net
+    depends_on:
+      - pgbouncer
+      - redis
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    restart: unless-stopped
+
+  sveltekit-frontend:
+    image: ngemiloh-frontend:latest
+    container_name: ngemiloh_frontend_builder
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    volumes:
+      - frontend_build:/app/build
+    networks:
+      - ngemiloh_net
+    deploy:
+      resources:
+        limits:
+          memory: 512M
+    restart: "no"
+
+  caddy:
+    image: caddy:2-alpine
+    container_name: ngemiloh_caddy
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile
+      - frontend_build:/srv
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - ngemiloh_net
+    depends_on:
+      - nestjs-api
+      - sveltekit-frontend
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    restart: unless-stopped
+
+  umami-db:
+    image: postgres:15-alpine
+    container_name: ngemiloh_umami_db
+    environment:
+      POSTGRES_DB: umami
+      POSTGRES_USER: umami
+      POSTGRES_PASSWORD: umami
+    volumes:
+      - umami_db_data:/var/lib/postgresql/data
+    networks:
+      - ngemiloh_net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    restart: unless-stopped
+
+  umami:
+    image: ghcr.io/umami-software/umami:postgresql-latest
+    container_name: ngemiloh_umami
+    environment:
+      DATABASE_URL: postgresql://umami:umami@umami-db:5432/umami
+      DATABASE_TYPE: postgresql
+      APP_SECRET: umami_super_secret_key
+    ports:
+      - "3001:3000"
+    depends_on:
+      - umami-db
+    networks:
+      - ngemiloh_net
+    deploy:
+      resources:
+        limits:
+          memory: 256M
+    restart: unless-stopped

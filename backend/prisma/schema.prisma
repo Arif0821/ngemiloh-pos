@@ -1,0 +1,438 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  kasir
+  superadmin
+}
+
+enum DiscountType {
+  percentage
+  fixed_amount
+}
+
+enum DiscountScope {
+  all_products
+  category
+  specific_product
+}
+
+enum PaymentMethod {
+  cash
+  qris
+  split
+}
+
+enum OrderStatus {
+  completed
+  voided
+  pending_sync
+}
+
+enum RegisterStatus {
+  open
+  closed
+}
+
+model User {
+  id                 String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name               String    @db.VarChar(100)
+  username           String    @unique @db.VarChar(50)
+  email              String?   @unique @db.VarChar(150)
+  pin_hash           String?   @db.VarChar(72)
+  password_hash      String?   @db.VarChar(72)
+  role               Role
+  is_active          Boolean   @default(true)
+  must_change_pin    Boolean   @default(false)
+  failed_login_count Int       @default(0) @db.SmallInt
+  locked_until       DateTime? @db.Timestamptz
+  last_login_at      DateTime? @db.Timestamptz
+  created_at         DateTime  @default(now()) @db.Timestamptz
+  updated_at         DateTime  @updatedAt @db.Timestamptz
+
+  products_created   Product[]
+  discounts_created  Discount[]
+  orders             Order[]          @relation("CashierOrders")
+  orders_voided      Order[]          @relation("VoidedOrders")
+  refunds            OrderRefund[]
+  cash_registers     CashRegister[]
+  expenses           OperationalExpense[]
+  profit_shares_paid ProfitShareLog[]
+  feature_flags      FeatureFlag[]
+  settings           Setting[]
+  audit_logs         AuditLog[]
+  revoked_tokens     RevokedToken[]
+  stock_movements    StockMovement[]
+  price_histories    RawMaterialPriceHistory[]
+
+  @@index([role])
+}
+
+model Category {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String   @unique @db.VarChar(50)
+  sort_order Int      @default(0) @db.SmallInt
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @updatedAt @db.Timestamptz
+
+  products  Product[]
+}
+
+model Product {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String   @db.VarChar(100)
+  category_id     String   @db.Uuid
+  base_price      Decimal  @db.Decimal(12, 2)
+  image_url       String?  @db.VarChar(255)
+  is_active       Boolean  @default(true)
+  is_out_of_stock Boolean  @default(false)
+  sort_order      Int      @default(0) @db.SmallInt
+  created_by      String?  @db.Uuid
+  created_at      DateTime @default(now()) @db.Timestamptz
+  updated_at      DateTime @updatedAt @db.Timestamptz
+
+  category        Category               @relation(fields: [category_id], references: [id])
+  creator         User?                  @relation(fields: [created_by], references: [id])
+  modifier_groups ProductModifierGroup[]
+  order_items     OrderItem[]
+  bom_recipes     BomRecipe[]
+
+  @@index([category_id, sort_order])
+}
+
+model ProductModifierGroup {
+  id             String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id     String  @db.Uuid
+  name           String  @db.VarChar(50)
+  is_required    Boolean @default(true)
+  max_selections Int     @default(1) @db.SmallInt
+  sort_order     Int     @default(0) @db.SmallInt
+  is_active      Boolean @default(true)
+
+  product Product                 @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  options ProductModifierOption[]
+
+  @@index([product_id])
+}
+
+model ProductModifierOption {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  group_id         String   @db.Uuid
+  name             String   @db.VarChar(100)
+  additional_price Decimal  @default(0) @db.Decimal(12, 2)
+  sort_order       Int      @default(0) @db.SmallInt
+  is_active        Boolean  @default(true)
+  created_at       DateTime @default(now()) @db.Timestamptz
+  updated_at       DateTime @updatedAt @db.Timestamptz
+
+  group                ProductModifierGroup @relation(fields: [group_id], references: [id], onDelete: Cascade)
+  order_item_modifiers OrderItemModifier[]
+  bom_recipes          BomRecipe[]
+
+  @@index([group_id, sort_order])
+}
+
+model Discount {
+  id              String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name            String        @db.VarChar(100)
+  type            DiscountType
+  value           Decimal       @db.Decimal(10, 2)
+  scope           DiscountScope
+  target_id       String?       @db.Uuid
+  valid_from      DateTime      @db.Timestamptz
+  valid_until     DateTime?     @db.Timestamptz
+  applicable_days Int[]         @db.SmallInt
+  is_active       Boolean       @default(true)
+  created_by      String?       @db.Uuid
+
+  creator     User?       @relation(fields: [created_by], references: [id])
+  order_items OrderItem[]
+
+  @@index([is_active, valid_from, valid_until])
+}
+
+model Order {
+  id                   String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cashier_id           String        @db.Uuid
+  client_uuid          String        @unique @db.Uuid
+  total_amount         Decimal       @db.Decimal(12, 2)
+  discount_total       Decimal       @default(0) @db.Decimal(12, 2)
+  cogs_total           Decimal       @default(0) @db.Decimal(12, 2)
+  payment_method       PaymentMethod @default(cash)
+  cash_amount          Decimal       @default(0) @db.Decimal(12, 2)
+  qris_amount          Decimal       @default(0) @db.Decimal(12, 2)
+  payment_gateway      String?       @db.VarChar(20)
+  payment_gateway_ref  String?       @db.VarChar(100)
+  payment_status       String?       @db.VarChar(30)
+  qris_expiry_at       DateTime?     @db.Timestamptz
+  payment_settled_at   DateTime?     @db.Timestamptz
+  payment_raw_response String?       @db.Text
+  status               OrderStatus   @default(completed)
+  voided_by            String?       @db.Uuid
+  voided_at            DateTime?     @db.Timestamptz
+  void_reason          String?       @db.Text
+  synced_from_offline  Boolean       @default(false)
+  verification_status  String?       @db.VarChar(20) // 'Perlu Cek', 'Valid'
+  client_created_at    DateTime      @db.Timestamptz
+  created_at           DateTime      @default(now()) @db.Timestamptz
+
+  cashier     User          @relation("CashierOrders", fields: [cashier_id], references: [id])
+  voider      User?         @relation("VoidedOrders", fields: [voided_by], references: [id])
+  items           OrderItem[]
+  refunds         OrderRefund[]
+  stock_movements StockMovement[]
+
+  @@index([cashier_id, client_created_at(sort: Desc)])
+  @@index([client_created_at(sort: Desc)])
+  @@index([status])
+  @@index([payment_method])
+}
+
+model OrderItem {
+  id                    String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_id              String   @db.Uuid
+  product_id            String   @db.Uuid
+  product_name_snapshot String   @db.VarChar(100)
+  base_price            Decimal  @db.Decimal(12, 2)
+  discount_amount       Decimal  @default(0) @db.Decimal(12, 2)
+  discount_id           String?  @db.Uuid
+  discounted_base       Decimal  @db.Decimal(12, 2)
+  modifier_total        Decimal  @default(0) @db.Decimal(12, 2)
+  final_price           Decimal  @db.Decimal(12, 2)
+  quantity              Int      @db.SmallInt
+  subtotal              Decimal  @db.Decimal(12, 2)
+
+  order     Order               @relation(fields: [order_id], references: [id], onDelete: Cascade)
+  product   Product             @relation(fields: [product_id], references: [id], onDelete: Restrict)
+  discount  Discount?           @relation(fields: [discount_id], references: [id])
+  modifiers OrderItemModifier[]
+
+  @@index([order_id])
+  @@index([product_id])
+  @@index([discount_id])
+}
+
+model OrderItemModifier {
+  id                       String  @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_item_id            String  @db.Uuid
+  option_id                String  @db.Uuid
+  group_name_snapshot      String  @db.VarChar(50)
+  option_name_snapshot     String  @db.VarChar(100)
+  additional_price_at_time Decimal @db.Decimal(12, 2)
+
+  order_item OrderItem             @relation(fields: [order_item_id], references: [id], onDelete: Cascade)
+  option     ProductModifierOption @relation(fields: [option_id], references: [id], onDelete: Restrict)
+
+  @@index([order_item_id])
+}
+
+model OrderRefund {
+  id            String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_id      String   @db.Uuid
+  amount        Decimal  @db.Decimal(12, 2)
+  refund_method String   @default("manual_cash") @db.VarChar(30)
+  refunded_by   String   @db.Uuid
+  refunded_at   DateTime @default(now()) @db.Timestamptz
+  notes         String?  @db.Text
+
+  order     Order @relation(fields: [order_id], references: [id])
+  refunder  User  @relation(fields: [refunded_by], references: [id])
+}
+
+model CashRegister {
+  id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  cashier_id        String         @db.Uuid
+  shift_date        DateTime       @db.Date
+  shift_start       DateTime       @default(now()) @db.Timestamptz
+  shift_end         DateTime?      @db.Timestamptz
+  opening_balance   Decimal        @default(500000) @db.Decimal(12, 2)
+  closing_balance   Decimal?       @db.Decimal(12, 2)
+  system_cash_total Decimal?       @db.Decimal(12, 2)
+  discrepancy       Decimal?       @db.Decimal(12, 2)
+  status            RegisterStatus @default(open)
+  notes             String?        @db.Text
+
+  cashier User @relation(fields: [cashier_id], references: [id])
+
+  @@index([cashier_id, shift_date(sort: Desc)])
+}
+
+model OperationalExpense {
+  id           String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  category     String   @db.VarChar(50)
+  description  String?  @db.VarChar(200)
+  amount       Decimal  @db.Decimal(12, 2)
+  expense_date DateTime @db.Date
+  created_by   String?  @db.Uuid
+  created_at   DateTime @default(now()) @db.Timestamptz
+
+  creator User? @relation(fields: [created_by], references: [id])
+}
+
+model Asset {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name                 String   @db.VarChar(100)
+  purchase_price       Decimal  @default(0) @db.Decimal(12, 2)
+  useful_life_months   Int      @db.SmallInt
+  monthly_depreciation Decimal  @db.Decimal(12, 2)
+  purchase_date        DateTime @db.Date
+  is_active            Boolean  @default(true)
+  created_at           DateTime @db.Timestamptz
+}
+
+model ProfitShareLog {
+  id                  String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  period_month        DateTime  @unique @db.Date
+  total_revenue       Decimal   @db.Decimal(14, 2)
+  total_hpp           Decimal   @default(0) @db.Decimal(14, 2)
+  total_opex          Decimal   @default(0) @db.Decimal(14, 2)
+  total_depreciation  Decimal   @default(0) @db.Decimal(14, 2)
+  net_profit          Decimal   @db.Decimal(14, 2)
+  owner_share         Decimal   @db.Decimal(14, 2)
+  cashier_share       Decimal   @db.Decimal(14, 2)
+  cashier_paid_amount Decimal?  @db.Decimal(14, 2)
+  cashier_paid_at     DateTime? @db.Timestamptz
+  cashier_paid_by     String?   @db.Uuid
+  is_hpp_actual       Boolean   @default(false)
+  is_paid             Boolean   @default(false)
+  payment_proof       String?   @db.Text
+  notes               String?   @db.Text
+
+  payer User? @relation(fields: [cashier_paid_by], references: [id])
+}
+
+model FeatureFlag {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name        String   @unique @db.VarChar(100)
+  is_enabled  Boolean  @default(false)
+  description String?  @db.Text
+  updated_by  String?  @db.Uuid
+  updated_at  DateTime @default(now()) @db.Timestamptz
+
+  updater User? @relation(fields: [updated_by], references: [id])
+}
+
+model Setting {
+  key        String   @id @db.VarChar(100)
+  value      String   @db.Text
+  updated_by String?  @db.Uuid
+  updated_at DateTime @db.Timestamptz
+
+  updater User? @relation(fields: [updated_by], references: [id])
+}
+
+model AuditLog {
+  id          BigInt   @id @default(autoincrement())
+  actor_id    String?  @db.Uuid
+  action      String   @db.VarChar(100)
+  entity_type String?  @db.VarChar(50)
+  entity_id   String?  @db.VarChar(100)
+  old_value   Json?    @db.JsonB
+  new_value   Json?    @db.JsonB
+  ip_address  String?  @db.Inet
+  created_at  DateTime @default(now()) @db.Timestamptz
+
+  actor User? @relation(fields: [actor_id], references: [id])
+
+  @@index([actor_id, created_at(sort: Desc)])
+  @@index([action, created_at(sort: Desc)])
+}
+
+model RevokedToken {
+  jti        String   @id @db.VarChar(36)
+  user_id    String   @db.Uuid
+  expires_at DateTime @db.Timestamptz
+  revoked_at DateTime @default(now()) @db.Timestamptz
+
+  user User @relation(fields: [user_id], references: [id])
+
+  @@index([expires_at])
+}
+
+// --- FASE 2: LOYALITAS & BAHAN BAKU ---
+
+model Customer {
+  id               String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  phone            String   @unique @db.VarChar(20)
+  name             String   @db.VarChar(100)
+  loyalty_points   Int      @default(0)
+  registered_via   String?  @db.VarChar(50) // e.g., 'qr_link', 'cashier'
+  created_at       DateTime @default(now()) @db.Timestamptz
+
+  @@index([phone])
+}
+
+model RawMaterial {
+  id                String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String   @unique @db.VarChar(100)
+  purchase_unit     String   @db.VarChar(20)
+  purchase_qty      Decimal  @db.Decimal(10, 2)
+  usage_unit        String   @db.VarChar(20)
+  conversion_factor Decimal  @db.Decimal(10, 4)
+  current_stock     Decimal  @default(0) @db.Decimal(10, 2)
+  min_stock         Decimal  @default(0) @db.Decimal(10, 2)
+  cost_per_unit     Decimal  @default(0) @db.Decimal(12, 2)
+  supplier          String?  @db.VarChar(100)
+  created_at        DateTime @default(now()) @db.Timestamptz
+  updated_at        DateTime @updatedAt @db.Timestamptz
+
+  price_history RawMaterialPriceHistory[]
+  bom_recipes   BomRecipe[]
+  movements     StockMovement[]
+}
+
+model RawMaterialPriceHistory {
+  id              String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  raw_material_id String   @db.Uuid
+  cost_per_unit   Decimal  @db.Decimal(12, 2)
+  valid_from      DateTime @default(now()) @db.Timestamptz
+  recorded_by     String?  @db.Uuid
+
+  raw_material RawMaterial @relation(fields: [raw_material_id], references: [id], onDelete: Cascade)
+  recorder     User?       @relation(fields: [recorded_by], references: [id])
+}
+
+model BomRecipe {
+  id                   String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  product_id           String?  @db.Uuid
+  modifier_option_id   String?  @db.Uuid
+  raw_material_id      String   @db.Uuid
+  quantity_per_serving Decimal  @db.Decimal(10, 2)
+
+  product          Product?               @relation(fields: [product_id], references: [id], onDelete: Cascade)
+  modifier_option  ProductModifierOption? @relation(fields: [modifier_option_id], references: [id], onDelete: Cascade)
+  raw_material     RawMaterial            @relation(fields: [raw_material_id], references: [id], onDelete: Restrict)
+
+  @@index([product_id])
+  @@index([modifier_option_id])
+}
+
+model StockMovement {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  raw_material_id    String   @db.Uuid
+  type               String   @db.VarChar(20) // 'in', 'out', 'adjustment', 'waste'
+  quantity           Decimal  @db.Decimal(10, 2)
+  reference_order_id String?  @db.Uuid
+  notes              String?  @db.Text
+  created_by         String?  @db.Uuid
+  created_at         DateTime @default(now()) @db.Timestamptz
+
+  raw_material RawMaterial @relation(fields: [raw_material_id], references: [id], onDelete: Restrict)
+  actor        User?       @relation(fields: [created_by], references: [id])
+  order        Order?      @relation(fields: [reference_order_id], references: [id])
+}
+
+model IpLockout {
+  ip_address      String   @id @db.VarChar(50)
+  failed_count    Int      @default(0) @db.SmallInt
+  locked_until    DateTime? @db.Timestamptz
+  created_at      DateTime @default(now()) @db.Timestamptz
+  updated_at      DateTime @updatedAt @db.Timestamptz
+}

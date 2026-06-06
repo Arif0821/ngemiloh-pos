@@ -1,0 +1,28 @@
+import { RawMaterial, InventoryTransaction, InventoryBatch, Order } from '@prisma/client';
+
+export const INVENTORY_REPOSITORY = 'INVENTORY_REPOSITORY';
+
+export interface IInventoryRepository {
+  executeInTransaction<T>(fn: (repo: IInventoryRepository) => Promise<T>): Promise<T>;
+
+  findAllRawMaterials(): Promise<RawMaterial[]>;
+  findActiveRawMaterials(): Promise<RawMaterial[]>;
+  findRawMaterialById(id: string): Promise<RawMaterial | null>;
+  
+  updateRawMaterialStock(id: string, amount: number, type: 'increment' | 'decrement' | 'set'): Promise<RawMaterial>;
+  
+  createInventoryTransaction(data: {
+    raw_material_id: string;
+    qty: number;
+    transaction_type: string;
+    notes: string;
+    created_by?: string;
+    reference_id?: string;
+  }): Promise<InventoryTransaction>;
+
+  findOrderWithIngredients(orderId: string): Promise<any>;
+  updateOrderCogs(orderId: string, cogsTotal: number): Promise<Order>;
+
+  findAvailableBatches(rawMaterialId: string): Promise<InventoryBatch[]>;
+  decrementBatchStock(batchId: string, amount: number): Promise<InventoryBatch>;
+}
