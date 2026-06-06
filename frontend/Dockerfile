@@ -4,6 +4,7 @@ FROM node:20-alpine AS builder
 # PENTING: Set NODE_ENV=development agar npm ci menginstal devDependencies
 # (vite, svelte-kit, typescript, dll) yang dibutuhkan saat build
 ENV NODE_ENV=development
+ENV NODE_OPTIONS="--max-old-space-size=512"
 
 WORKDIR /app
 

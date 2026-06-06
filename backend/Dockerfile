@@ -3,6 +3,7 @@ FROM node:20-alpine AS builder
 
 # PENTING: Pastikan devDependencies terinstal untuk build
 ENV NODE_ENV=development
+ENV NODE_OPTIONS="--max-old-space-size=512"
 
 WORKDIR /app
 
