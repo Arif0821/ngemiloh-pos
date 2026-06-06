@@ -1,10 +1,6 @@
 # ── Stage 1: Build ────────────────────────────────────────────
 FROM node:20-alpine AS builder
 
-# Install build tools untuk native modules (bcrypt, sharp)
-RUN apk add --no-cache python3 make g++ vips-dev
-RUN npm install -g node-gyp
-
 # PENTING: Pastikan devDependencies terinstal untuk build
 ENV NODE_ENV=development
 
@@ -12,7 +8,7 @@ WORKDIR /app
 
 # Copy dependency files first (for Docker cache efficiency)
 COPY package.json ./
-RUN npm install
+RUN npm install --include=dev
 
 # Copy source code & Prisma schema
 COPY prisma ./prisma
@@ -28,18 +24,12 @@ RUN npm run build
 # ── Stage 2: Production ──────────────────────────────────────
 FROM node:20-alpine AS production
 
-# Install runtime dependencies untuk native modules
-RUN apk add --no-cache vips
-
 ENV NODE_ENV=production
 WORKDIR /app
 
 # Install only production dependencies
 COPY package.json ./
-RUN apk add --no-cache python3 make g++ && \
-    npm install -g node-gyp && \
-    npm install --omit=dev && \
-    apk del python3 make g++
+RUN npm install --omit=dev
 
 # Copy Prisma schema + generated client from builder
 COPY --from=builder /app/prisma ./prisma
