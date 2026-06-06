@@ -10,7 +10,7 @@ ENV NODE_ENV=development
 WORKDIR /app
 
 # Copy dependency files first (for Docker cache efficiency)
-COPY package.json package-lock.json ./
+COPY package.json ./
 RUN npm install
 
 # Copy source code & Prisma schema
@@ -34,7 +34,7 @@ ENV NODE_ENV=production
 WORKDIR /app
 
 # Install only production dependencies
-COPY package.json package-lock.json ./
+COPY package.json ./
 RUN apk add --no-cache python3 make g++ && \
     npm install --omit=dev && \
     apk del python3 make g++
