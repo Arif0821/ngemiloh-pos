@@ -28,6 +28,7 @@ jobs:
       - run: npm run test:cov # Fail if coverage < 70%
 
   build:
+    runs-on: ubuntu-latest
     needs: test
     if: github.ref == 'refs/heads/main'
     steps:
