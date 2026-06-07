@@ -114,7 +114,7 @@ services:
       context: .
       dockerfile: Caddy.Dockerfile
     container_name: ngemiloh_caddy
-    expose:
+    ports:
       - "80"
     volumes:
       - frontend_build:/srv
@@ -151,7 +151,7 @@ services:
   umami:
     image: ghcr.io/umami-software/umami:postgresql-latest
     container_name: ngemiloh_umami
-    expose:
+    ports:
       - "3000"
     environment:
       DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD:-umami_secret_2026}@umami-db:5432/umami
