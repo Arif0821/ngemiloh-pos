@@ -11,7 +11,7 @@
   async function fetchProfitShare() {
     isLoading = true;
     try {
-      const res = await fetch(`http://${window.location.hostname}:3000/api/v1/admin/finance/profit-share?month=${month}&year=${year}`, { credentials: 'include' });
+      const res = await fetch(`/api/v1/admin/finance/profit-share?month=${month}&year=${year}`, { credentials: 'include' });
       if (res.ok) {
         const json = await res.json();
         profitShareData = json.data;

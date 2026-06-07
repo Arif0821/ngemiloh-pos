@@ -8,7 +8,7 @@
     isLoading = true;
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`http://${hostname}:3000/api/v1/admin/audit-logs`, { credentials: 'include' });
+      const res = await fetch(`/api/v1/admin/audit-logs`, { credentials: 'include' });
       if (res.ok) {
         const json = await res.json();
         auditLogs = json.data;

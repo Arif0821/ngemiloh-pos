@@ -6,7 +6,7 @@
 
   onMount(async () => {
     try {
-      const res = await fetch(`http://${window.location.hostname}:3000/api/v1/orders/shift`, {
+      const res = await fetch(`/api/v1/orders/shift`, {
         credentials: 'include'
       });
       if (res.ok) {

@@ -17,7 +17,7 @@
   async function fetchShifts() {
     isLoading = true;
     try {
-      const res = await fetch(`http://${window.location.hostname}:3000/api/v1/admin/cash/shifts`, { credentials: 'include' });
+      const res = await fetch(`/api/v1/admin/cash/shifts`, { credentials: 'include' });
       if (res.ok) {
         const json = await res.json();
         shifts = json.data;

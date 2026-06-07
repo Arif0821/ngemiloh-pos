@@ -32,7 +32,7 @@
     isLoading = true;
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`http://${hostname}:3000/api/v1/admin/discounts`, { credentials: 'include' });
+      const res = await fetch(`/api/v1/admin/discounts`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         discounts = data.data;
@@ -52,7 +52,7 @@
     e.preventDefault();
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`http://${hostname}:3000/api/v1/admin/discounts`, {
+      const res = await fetch(`/api/v1/admin/discounts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -84,7 +84,7 @@
   async function toggleStatus(discount: any) {
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`http://${hostname}:3000/api/v1/admin/discounts/${discount.id}`, {
+      const res = await fetch(`/api/v1/admin/discounts/${discount.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

@@ -8,7 +8,7 @@
     try {
       // Call real backend endpoint
       const hostname = window.location.hostname;
-      window.open(`http://${hostname}:3000/api/v1/admin/reports/export?startDate=${startDate}&endDate=${endDate}`, '_blank');
+      window.open(`/api/v1/admin/reports/export?startDate=${startDate}&endDate=${endDate}`, '_blank');
       
       // Simulating a short delay so the loading state shows
       await new Promise(r => setTimeout(r, 1000));

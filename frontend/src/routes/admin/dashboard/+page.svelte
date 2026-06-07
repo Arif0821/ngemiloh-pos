@@ -25,7 +25,7 @@
 
   async function fetchKpi() {
     try {
-      const res = await fetch(`http://${window.location.hostname}:3000/api/v1/admin/finance/kpi`, { credentials: 'include' });
+      const res = await fetch(`/api/v1/admin/finance/kpi`, { credentials: 'include' });
       if (res.ok) {
         const json = await res.json();
         kpi = json.data;

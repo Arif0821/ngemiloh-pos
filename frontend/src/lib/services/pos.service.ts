@@ -4,7 +4,7 @@ import { posStore } from '../stores/pos.store.svelte';
 export class PosService {
   async fetchFlags() {
     try {
-      const res = await fetch(`http://${window.location.hostname}:3000/api/v1/flags`);
+      const res = await fetch(`/api/v1/flags`);
       if (res.ok) {
         const json = await res.json();
         posStore.featureFlags = json.data;
@@ -15,7 +15,7 @@ export class PosService {
   async checkShift() {
     posStore.isCheckingShift = true;
     try {
-      const res = await fetch(`http://${window.location.hostname}:3000/api/v1/cash/current`, { credentials: 'include' });
+      const res = await fetch(`/api/v1/cash/current`, { credentials: 'include' });
       if (res.ok) {
         const json = await res.json();
         posStore.hasOpenShift = !!json.data;
@@ -29,7 +29,7 @@ export class PosService {
 
   async handleOpenShift(openingBalance: number) {
     try {
-      const res = await fetch(`http://${window.location.hostname}:3000/api/v1/cash/open`, {
+      const res = await fetch(`/api/v1/cash/open`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -52,7 +52,7 @@ export class PosService {
 
   async handleCloseShift(closingBalance: number) {
     try {
-      const res = await fetch(`http://${window.location.hostname}:3000/api/v1/cash/close`, {
+      const res = await fetch(`/api/v1/cash/close`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -80,7 +80,7 @@ export class PosService {
 
   async fetchProductsFromApi() {
     try {
-      const res = await fetch(`http://${window.location.hostname}:3000/api/v1/products?include_modifiers=true`, {
+      const res = await fetch(`/api/v1/products?include_modifiers=true`, {
         credentials: 'include'
       });
       if (res.ok) {
@@ -100,7 +100,7 @@ export class PosService {
 
   async fetchDiscounts() {
     try {
-      const res = await fetch(`http://${window.location.hostname}:3000/api/v1/admin/discounts`, { credentials: 'include' });
+      const res = await fetch(`/api/v1/admin/discounts`, { credentials: 'include' });
       if (res.ok) {
         const json = await res.json();
         if (json.success) {
@@ -114,7 +114,7 @@ export class PosService {
 
   async fetchHistory() {
     try {
-      const res = await fetch(`http://${window.location.hostname}:3000/api/v1/orders`, { credentials: 'include' });
+      const res = await fetch(`/api/v1/orders`, { credentials: 'include' });
       if (res.ok) {
         const json = await res.json();
         if (json.success) posStore.historyOrders = json.data;
@@ -128,7 +128,7 @@ export class PosService {
     const pending = await db.orders.where('sync_status').equals('pending').toArray();
     for (const order of pending) {
       try {
-        const res = await fetch(`http://${window.location.hostname}:3000/api/v1/orders`, {
+        const res = await fetch(`/api/v1/orders`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',
@@ -169,7 +169,7 @@ export class PosService {
       }
     }, 1000);
 
-    this.sseEventSource = new EventSource(`http://${window.location.hostname}:3000/api/v1/orders/${orderData.id}/sse`);
+    this.sseEventSource = new EventSource(`/api/v1/orders/${orderData.id}/sse`);
     this.sseEventSource.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.status === 'completed') {
@@ -180,7 +180,7 @@ export class PosService {
     clearInterval(this.pollingInterval);
     this.pollingInterval = setInterval(async () => {
       try {
-        const res = await fetch(`http://${window.location.hostname}:3000/api/v1/orders/${orderData.id}/status`);
+        const res = await fetch(`/api/v1/orders/${orderData.id}/status`);
         if (res.ok) {
           const json = await res.json();
           if (json.data?.status === 'completed') {
@@ -247,7 +247,7 @@ export class PosService {
         alert('Offline: Pesanan disimpan ke perangkat.');
         posStore.resetCart();
       } else {
-        const res = await fetch(`http://${window.location.hostname}:3000/api/v1/orders`, {
+        const res = await fetch(`/api/v1/orders`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           credentials: 'include',

@@ -12,7 +12,7 @@
     isLoading = true;
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`http://${hostname}:3000/api/v1/admin/inventory`, { credentials: 'include' });
+      const res = await fetch(`/api/v1/admin/inventory`, { credentials: 'include' });
       if (res.ok) {
         const json = await res.json();
         materials = json.data;
@@ -47,7 +47,7 @@
         }))
       };
       
-      const res = await fetch(`http://${hostname}:3000/api/v1/admin/inventory/opname`, {
+      const res = await fetch(`/api/v1/admin/inventory/opname`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

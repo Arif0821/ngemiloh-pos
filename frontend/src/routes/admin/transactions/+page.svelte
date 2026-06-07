@@ -23,7 +23,7 @@
       const hostname = window.location.hostname;
       // Note: Ideally the backend has filters query params. For MVP we'll fetch all and filter in client if needed, or better, pass query params.
       // Let's assume the Orders controller has basic fetch with query params.
-      let url = `http://${hostname}:3000/api/v1/orders?date=${filterDate}&page=${currentPage}`;
+      let url = `/api/v1/orders?date=${filterDate}&page=${currentPage}`;
       if (filterStatus) url += `&status=${filterStatus}`;
       if (filterMethod) url += `&method=${filterMethod}`;
       
@@ -55,7 +55,7 @@
     
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`http://${hostname}:3000/api/v1/admin/transactions/${selectedOrder.id}/void`, {
+      const res = await fetch(`/api/v1/admin/transactions/${selectedOrder.id}/void`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -76,7 +76,7 @@
   async function flagTransaction(status: string) {
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`http://${hostname}:3000/api/v1/admin/transactions/${selectedOrder.id}/flag`, {
+      const res = await fetch(`/api/v1/admin/transactions/${selectedOrder.id}/flag`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

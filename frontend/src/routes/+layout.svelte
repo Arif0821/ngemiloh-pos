@@ -25,7 +25,7 @@
       let response = await originalFetch(input, init);
 
       if (response.status === 401 && !input.toString().includes('/auth/login') && !input.toString().includes('/auth/refresh')) {
-        const refreshRes = await originalFetch(`http://${window.location.hostname}:3000/api/v1/auth/refresh`, {
+        const refreshRes = await originalFetch(`/api/v1/auth/refresh`, {
           method: 'POST',
           credentials: 'include'
         });

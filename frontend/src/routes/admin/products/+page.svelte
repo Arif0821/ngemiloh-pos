@@ -17,7 +17,7 @@
     isLoading = true;
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`http://${hostname}:3000/api/v1/products?include_modifiers=true`, { credentials: 'include' });
+      const res = await fetch(`/api/v1/products?include_modifiers=true`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         products = data.data;
@@ -57,7 +57,7 @@
     e.preventDefault();
     try {
       const hostname = window.location.hostname;
-      const url = isEditing ? `http://${hostname}:3000/api/v1/products/${pId}` : `http://${hostname}:3000/api/v1/products`;
+      const url = isEditing ? `/api/v1/products/${pId}` : `/api/v1/products`;
       const method = isEditing ? 'PATCH' : 'POST';
       
       // For MVP, assuming category_id is needed, sending a dummy or default category if not present
@@ -108,7 +108,7 @@
     if (!newGroupName) return;
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`http://${hostname}:3000/api/v1/admin/products/${activeProductForModifier.id}/modifier-groups`, {
+      const res = await fetch(`/api/v1/admin/products/${activeProductForModifier.id}/modifier-groups`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -132,7 +132,7 @@
     if (!newOptionName || !selectedGroupId) return;
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`http://${hostname}:3000/api/v1/admin/modifier-groups/${selectedGroupId}/options`, {
+      const res = await fetch(`/api/v1/admin/modifier-groups/${selectedGroupId}/options`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -152,7 +152,7 @@
   async function toggleGroupStatus(groupId: string, currentStatus: boolean) {
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`http://${hostname}:3000/api/v1/admin/modifier-groups/${groupId}`, {
+      const res = await fetch(`/api/v1/admin/modifier-groups/${groupId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -170,7 +170,7 @@
   async function toggleOptionStatus(optionId: string, currentStatus: boolean) {
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`http://${hostname}:3000/api/v1/admin/modifier-options/${optionId}`, {
+      const res = await fetch(`/api/v1/admin/modifier-options/${optionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

@@ -18,7 +18,7 @@
     isLoading = true;
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`http://${hostname}:3000/api/v1/admin/finance/assets`, { credentials: 'include' });
+      const res = await fetch(`/api/v1/admin/finance/assets`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         assets = data.data;
@@ -60,7 +60,7 @@
     e.preventDefault();
     try {
       const hostname = window.location.hostname;
-      const url = isEditing ? `http://${hostname}:3000/api/v1/admin/finance/assets/${formId}` : `http://${hostname}:3000/api/v1/admin/finance/assets`;
+      const url = isEditing ? `/api/v1/admin/finance/assets/${formId}` : `/api/v1/admin/finance/assets`;
       const method = isEditing ? 'PATCH' : 'POST';
       
       const payload = {

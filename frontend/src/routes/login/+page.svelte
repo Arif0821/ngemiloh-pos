@@ -42,7 +42,7 @@
         ? { username: kasirUsername, pin } 
         : { email: adminEmail, password: adminPassword }; // Ensure backend supports reading email/password
 
-      const res = await fetch(`http://${window.location.hostname}:3000/api/v1/auth/login`, {
+      const res = await fetch(`/api/v1/auth/login`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

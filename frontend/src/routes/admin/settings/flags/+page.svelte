@@ -7,7 +7,7 @@
   async function fetchFlags() {
     isLoading = true;
     try {
-      const res = await fetch(`http://${window.location.hostname}:3000/api/v1/flags/admin`, { credentials: 'include' });
+      const res = await fetch(`/api/v1/flags/admin`, { credentials: 'include' });
       if (res.ok) {
         const json = await res.json();
         flags = json.data;
@@ -26,7 +26,7 @@
     flag.is_enabled = newValue;
     
     try {
-      const res = await fetch(`http://${window.location.hostname}:3000/api/v1/flags/toggle`, {
+      const res = await fetch(`/api/v1/flags/toggle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

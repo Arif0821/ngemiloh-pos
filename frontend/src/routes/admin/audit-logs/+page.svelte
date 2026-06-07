@@ -30,7 +30,7 @@
       if (filterDateFrom) params.append('date_from', filterDateFrom);
       if (filterDateTo) params.append('date_to', filterDateTo);
 
-      const res = await fetch(`http://${window.location.hostname}:3000/api/v1/admin/audit-logs?${params.toString()}`, { credentials: 'include' });
+      const res = await fetch(`/api/v1/admin/audit-logs?${params.toString()}`, { credentials: 'include' });
       if (res.ok) {
         const json = await res.json();
         logs = json.logs;
