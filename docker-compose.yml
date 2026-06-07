@@ -15,7 +15,7 @@ volumes:
 
 services:
   postgres:
-    image: postgres:16-alpine
+    image: 'mirror.gcr.io/library/postgres:16-alpine'
     container_name: ngemiloh_db
     environment:
       POSTGRES_USER: ngemiloh
@@ -32,7 +32,7 @@ services:
     restart: unless-stopped
 
   pgbouncer:
-    image: pgbouncer/pgbouncer:latest
+    image: 'mirror.gcr.io/pgbouncer/pgbouncer:latest'
     container_name: ngemiloh_pgbouncer
     environment:
       - DATABASE_URL=postgres://ngemiloh:${DB_PASSWORD}@postgres:5432/ngemiloh_db
@@ -51,7 +51,7 @@ services:
     restart: unless-stopped
 
   redis:
-    image: redis:7-alpine
+    image: 'mirror.gcr.io/library/redis:7-alpine'
     container_name: ngemiloh_redis
     command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
     volumes:
@@ -132,7 +132,7 @@ services:
     restart: unless-stopped
 
   umami-db:
-    image: postgres:15-alpine
+    image: 'mirror.gcr.io/library/postgres:15-alpine'
     container_name: ngemiloh_umami_db
     environment:
       POSTGRES_DB: umami

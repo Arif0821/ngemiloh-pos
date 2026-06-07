@@ -1,5 +1,5 @@
 # ── Stage 1: Build ────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM mirror.gcr.io/library/node:20-alpine AS builder
 
 # PENTING: Pastikan devDependencies terinstal untuk build
 ENV NODE_ENV=development
@@ -23,7 +23,7 @@ RUN npx prisma generate
 RUN npm run build
 
 # ── Stage 2: Production ──────────────────────────────────────
-FROM node:20-alpine AS production
+FROM mirror.gcr.io/library/node:20-alpine AS production
 
 ENV NODE_ENV=production
 WORKDIR /app

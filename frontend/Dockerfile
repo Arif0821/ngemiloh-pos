@@ -1,5 +1,5 @@
 # ── Stage 1: Build ────────────────────────────────────────────
-FROM node:20-alpine AS builder
+FROM mirror.gcr.io/library/node:20-alpine AS builder
 
 # PENTING: Set NODE_ENV=development agar npm ci menginstal devDependencies
 # (vite, svelte-kit, typescript, dll) yang dibutuhkan saat build
@@ -14,8 +14,8 @@ RUN npm install --include=dev
 COPY . .
 RUN npm run build
 
-# ── Stage 2: Production (hanya menyimpan hasil build) ────────
-FROM node:20-alpine AS production
+# ── Stage 2: Production ──────────────────────────────────────
+FROM mirror.gcr.io/library/node:20-alpine AS production
 
 WORKDIR /app
 COPY --from=builder /app/build ./build
