@@ -10,11 +10,9 @@ export class ApiClient {
     // Automatically prepend /api/v1 if it's a relative path and doesn't already have it
     let url = endpoint;
     if (!url.startsWith('http')) {
-       if (url.startsWith('/api/v1')) {
-           // Keep as is
-       } else {
-           url = `/api/v1${url.startsWith('/') ? url : '/' + url}`;
-       }
+       let path = url.startsWith('/api/v1') ? url : `/api/v1${url.startsWith('/') ? url : '/' + url}`;
+       const baseUrl = import.meta.env.VITE_API_URL || '';
+       url = baseUrl ? `${baseUrl}${path}` : path;
     }
     
     options.credentials = 'include'; // Always include credentials
@@ -35,7 +33,8 @@ export class ApiClient {
 
     // Global 401 handling
     if (response.status === 401 && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/refresh')) {
-      const refreshRes = await fetch(`/api/v1/auth/refresh`, {
+      const refreshUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1/auth/refresh` : `/api/v1/auth/refresh`;
+      const refreshRes = await fetch(refreshUrl, {
         method: 'POST',
         credentials: 'include'
       });
