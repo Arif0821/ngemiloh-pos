@@ -20,6 +20,6 @@ FROM mirror.gcr.io/library/node:20-alpine AS production
 WORKDIR /app
 COPY --from=builder /app/build ./build
 
-# Container ini hanya berfungsi menyediakan file build
+# Container ini berfungsi menyediakan file build ke shared volume
 # Caddy akan membaca dari volume yang di-share
-CMD ["echo", "Frontend build complete"]
+CMD ["sh", "-c", "mkdir -p /app/shared_build && cp -a /app/build/. /app/shared_build/ && echo 'Frontend build copied to shared volume'"]

@@ -32,7 +32,7 @@ services:
     restart: unless-stopped
 
   pgbouncer:
-    image: 'mirror.gcr.io/pgbouncer/pgbouncer:latest'
+    image: 'edoburu/pgbouncer:latest'
     container_name: ngemiloh_pgbouncer
     environment:
       - DATABASE_URL=postgres://ngemiloh:${DB_PASSWORD}@postgres:5432/ngemiloh_db
@@ -71,7 +71,7 @@ services:
       context: ./backend
       dockerfile: Dockerfile
     environment:
-      - DATABASE_URL=postgresql://ngemiloh:${DB_PASSWORD}@pgbouncer:6432/ngemiloh_db?schema=public
+      - DATABASE_URL=postgresql://ngemiloh:${DB_PASSWORD}@pgbouncer:6432/ngemiloh_db?schema=public&pgbouncer=true
       - REDIS_URL=redis://redis:6379
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
@@ -100,7 +100,7 @@ services:
       context: ./frontend
       dockerfile: Dockerfile
     volumes:
-      - frontend_build:/app/build
+      - frontend_build:/app/shared_build
     networks:
       - ngemiloh_net
     deploy:
@@ -123,8 +123,10 @@ services:
     networks:
       - ngemiloh_net
     depends_on:
-      - nestjs-api
-      - sveltekit-frontend
+      nestjs-api:
+        condition: service_started
+      sveltekit-frontend:
+        condition: service_completed_successfully
     deploy:
       resources:
         limits:
