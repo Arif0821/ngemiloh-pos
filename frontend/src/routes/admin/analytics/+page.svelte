@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
   import Chart from 'chart.js/auto';
 
@@ -21,7 +22,7 @@
   async function fetchAnalytics() {
     isLoading = true;
     try {
-      const res = await fetch(`/api/v1/admin/finance/analytics?period=${period}`, { credentials: 'include' });
+      const res = await api.request(`/api/v1/admin/finance/analytics?period=${period}`, { credentials: 'include' });
       if (res.ok) {
         const json = await res.json();
         analyticsData = json.data;

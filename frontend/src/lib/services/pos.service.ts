@@ -1,10 +1,11 @@
 import { db, type LocalProduct } from '$lib/db';
 import { posStore } from '../stores/pos.store.svelte';
+import { api } from '$lib/services/api.client';
 
 export class PosService {
   async fetchFlags() {
     try {
-      const res = await fetch(`/api/v1/flags`);
+      const res = await api.get(`/flags`);
       if (res.ok) {
         const json = await res.json();
         posStore.featureFlags = json.data;
@@ -15,7 +16,7 @@ export class PosService {
   async checkShift() {
     posStore.isCheckingShift = true;
     try {
-      const res = await fetch(`/api/v1/cash/current`, { credentials: 'include' });
+      const res = await api.get(`/cash/current`);
       if (res.ok) {
         const json = await res.json();
         posStore.hasOpenShift = !!json.data;
@@ -29,12 +30,7 @@ export class PosService {
 
   async handleOpenShift(openingBalance: number) {
     try {
-      const res = await fetch(`/api/v1/cash/open`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ opening_balance: openingBalance })
-      });
+      const res = await api.post(`/cash/open`, { opening_balance: openingBalance });
       if (res.ok) {
         posStore.hasOpenShift = true;
         posStore.showOpenShiftModal = false;
@@ -52,12 +48,7 @@ export class PosService {
 
   async handleCloseShift(closingBalance: number) {
     try {
-      const res = await fetch(`/api/v1/cash/close`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ closing_balance: closingBalance })
-      });
+      const res = await api.post(`/cash/close`, { closing_balance: closingBalance });
       if (res.ok) {
         posStore.hasOpenShift = false;
         posStore.showCloseShiftModal = false;
@@ -80,9 +71,7 @@ export class PosService {
 
   async fetchProductsFromApi() {
     try {
-      const res = await fetch(`/api/v1/products?include_modifiers=true`, {
-        credentials: 'include'
-      });
+      const res = await api.get(`/products?include_modifiers=true`);
       if (res.ok) {
         const json = await res.json();
         if (json.success) {
@@ -100,7 +89,7 @@ export class PosService {
 
   async fetchDiscounts() {
     try {
-      const res = await fetch(`/api/v1/admin/discounts`, { credentials: 'include' });
+      const res = await api.get(`/admin/discounts`);
       if (res.ok) {
         const json = await res.json();
         if (json.success) {
@@ -114,7 +103,7 @@ export class PosService {
 
   async fetchHistory() {
     try {
-      const res = await fetch(`/api/v1/orders`, { credentials: 'include' });
+      const res = await api.get(`/orders`);
       if (res.ok) {
         const json = await res.json();
         if (json.success) posStore.historyOrders = json.data;
@@ -139,12 +128,7 @@ export class PosService {
         }))
       };
 
-      const res = await fetch(`/api/v1/orders/sync-batch`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload)
-      });
+      const res = await api.post(`/orders/sync-batch`, payload);
 
       if (res.ok) {
         const json = await res.json();
@@ -193,7 +177,7 @@ export class PosService {
     clearInterval(this.pollingInterval);
     this.pollingInterval = setInterval(async () => {
       try {
-        const res = await fetch(`/api/v1/orders/${orderData.id}/status`);
+        const res = await api.get(`/orders/${orderData.id}/status`);
         if (res.ok) {
           const json = await res.json();
           if (json.data?.status === 'completed') {
@@ -260,12 +244,7 @@ export class PosService {
         alert('Offline: Pesanan disimpan ke perangkat.');
         posStore.resetCart();
       } else {
-        const res = await fetch(`/api/v1/orders`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify(payload)
-        });
+        const res = await api.post(`/orders`, payload);
         
         if (res.ok) {
           const json = await res.json();

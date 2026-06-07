@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
   import Chart from 'chart.js/auto';
 
@@ -25,7 +26,7 @@
 
   async function fetchKpi() {
     try {
-      const res = await fetch(`/api/v1/admin/finance/kpi`, { credentials: 'include' });
+      const res = await api.request(`/api/v1/admin/finance/kpi`, { credentials: 'include' });
       if (res.ok) {
         const json = await res.json();
         kpi = json.data;

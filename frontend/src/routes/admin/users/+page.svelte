@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
   
   let cashiers = $state<any[]>([]);
@@ -17,7 +18,7 @@
     isLoading = true;
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`/api/v1/admin/users/cashiers`, { credentials: 'include' });
+      const res = await api.request(`/api/v1/admin/users/cashiers`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         cashiers = data.data;
@@ -39,7 +40,7 @@
     
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`/api/v1/admin/users/cashiers`, {
+      const res = await api.request(`/api/v1/admin/users/cashiers`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -70,7 +71,7 @@
     
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`/api/v1/admin/users/cashiers/${selectedCashier.id}/reset-pin`, {
+      const res = await api.request(`/api/v1/admin/users/cashiers/${selectedCashier.id}/reset-pin`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -93,7 +94,7 @@
 
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`/api/v1/admin/users/cashiers/${cashier.id}/toggle-status`, {
+      const res = await api.request(`/api/v1/admin/users/cashiers/${cashier.id}/toggle-status`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
 
   let flags: any[] = $state([]);
@@ -7,7 +8,7 @@
   async function fetchFlags() {
     isLoading = true;
     try {
-      const res = await fetch(`/api/v1/flags/admin`, { credentials: 'include' });
+      const res = await api.request(`/api/v1/flags/admin`, { credentials: 'include' });
       if (res.ok) {
         const json = await res.json();
         flags = json.data;
@@ -26,7 +27,7 @@
     flag.is_enabled = newValue;
     
     try {
-      const res = await fetch(`/api/v1/flags/toggle`, {
+      const res = await api.request(`/api/v1/flags/toggle`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

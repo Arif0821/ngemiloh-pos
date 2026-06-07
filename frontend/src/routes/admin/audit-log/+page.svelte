@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
   
   let auditLogs: any[] = $state([]);
@@ -8,7 +9,7 @@
     isLoading = true;
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`/api/v1/admin/audit-logs`, { credentials: 'include' });
+      const res = await api.request(`/api/v1/admin/audit-logs`, { credentials: 'include' });
       if (res.ok) {
         const json = await res.json();
         auditLogs = json.data;

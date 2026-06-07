@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { api } from '$lib/services/api.client';
   import { slide } from 'svelte/transition';
 
   let loginMode: 'kasir' | 'superadmin' = $state('kasir');
@@ -42,7 +43,7 @@
         ? { username: kasirUsername, pin } 
         : { email: adminEmail, password: adminPassword }; // Ensure backend supports reading email/password
 
-      const res = await fetch(`/api/v1/auth/login`, {
+      const res = await api.request(`/api/v1/auth/login`, {
         method: 'POST',
         credentials: 'include',
         headers: { 'Content-Type': 'application/json' },

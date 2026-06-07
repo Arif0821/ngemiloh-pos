@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { api } from '$lib/services/api.client';
   let month = $state(new Date().getMonth() + 1);
   let year = $state(new Date().getFullYear());
   let profitShareData: any = $state(null);
@@ -11,7 +12,7 @@
   async function fetchProfitShare() {
     isLoading = true;
     try {
-      const res = await fetch(`/api/v1/admin/finance/profit-share?month=${month}&year=${year}`, { credentials: 'include' });
+      const res = await api.request(`/api/v1/admin/finance/profit-share?month=${month}&year=${year}`, { credentials: 'include' });
       if (res.ok) {
         const json = await res.json();
         profitShareData = json.data;

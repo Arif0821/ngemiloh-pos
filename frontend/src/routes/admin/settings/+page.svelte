@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
   
   let settings: Record<string, string> = $state({});
@@ -19,7 +20,7 @@
       const hostname = window.location.hostname;
       
       // Fetch settings
-      const resSettings = await fetch(`/api/v1/admin/settings`, { credentials: 'include' });
+      const resSettings = await api.request(`/api/v1/admin/settings`, { credentials: 'include' });
       if (resSettings.ok) {
         const json = await resSettings.json();
         // convert array [{key, value}] to object {key: value}
@@ -36,7 +37,7 @@
       }
 
       // Fetch flags
-      const resFlags = await fetch(`/api/v1/admin/feature-flags`, { credentials: 'include' });
+      const resFlags = await api.request(`/api/v1/admin/feature-flags`, { credentials: 'include' });
       if (resFlags.ok) {
         const json = await resFlags.json();
         featureFlags = json.data;
@@ -66,7 +67,7 @@
         'RECEIPT_FOOTER': receiptFooter
       };
       
-      const res = await fetch(`/api/v1/admin/settings`, {
+      const res = await api.request(`/api/v1/admin/settings`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -88,7 +89,7 @@
   async function toggleFlag(id: string, currentStatus: boolean) {
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`/api/v1/admin/feature-flags/${id}`, {
+      const res = await api.request(`/api/v1/admin/feature-flags/${id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

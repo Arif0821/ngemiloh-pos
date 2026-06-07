@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
   
   let assets: any[] = $state([]);
@@ -18,7 +19,7 @@
     isLoading = true;
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`/api/v1/admin/finance/assets`, { credentials: 'include' });
+      const res = await api.request(`/api/v1/admin/finance/assets`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         assets = data.data;
@@ -71,7 +72,7 @@
         is_active: formIsActive
       };
 
-      const res = await fetch(url, {
+      const res = await api.request(url, {
         method,
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

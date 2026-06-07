@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
 
   let loading = $state(true);
@@ -27,7 +28,7 @@
   async function fetchExpenses() {
     loading = true;
     try {
-      const res = await fetch(`/api/v1/admin/finance/opex`, {
+      const res = await api.request(`/api/v1/admin/finance/opex`, {
         credentials: 'include'
       });
       if (res.ok) {
@@ -47,7 +48,7 @@
     e.preventDefault();
     isSubmitting = true;
     try {
-      const res = await fetch(`/api/v1/admin/finance/opex`, {
+      const res = await api.request(`/api/v1/admin/finance/opex`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

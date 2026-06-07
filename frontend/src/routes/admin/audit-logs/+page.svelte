@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
 
   let logs: any[] = $state([]);
@@ -30,7 +31,7 @@
       if (filterDateFrom) params.append('date_from', filterDateFrom);
       if (filterDateTo) params.append('date_to', filterDateTo);
 
-      const res = await fetch(`/api/v1/admin/audit-logs?${params.toString()}`, { credentials: 'include' });
+      const res = await api.request(`/api/v1/admin/audit-logs?${params.toString()}`, { credentials: 'include' });
       if (res.ok) {
         const json = await res.json();
         logs = json.logs;

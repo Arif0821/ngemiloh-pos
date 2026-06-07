@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
   
   let orders = $state<any[]>([]);
@@ -27,7 +28,7 @@
       if (filterStatus) url += `&status=${filterStatus}`;
       if (filterMethod) url += `&method=${filterMethod}`;
       
-      const res = await fetch(url, { credentials: 'include' });
+      const res = await api.request(url, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         if (Array.isArray(data.data)) {
@@ -55,7 +56,7 @@
     
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`/api/v1/admin/transactions/${selectedOrder.id}/void`, {
+      const res = await api.request(`/api/v1/admin/transactions/${selectedOrder.id}/void`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -76,7 +77,7 @@
   async function flagTransaction(status: string) {
     try {
       const hostname = window.location.hostname;
-      const res = await fetch(`/api/v1/admin/transactions/${selectedOrder.id}/flag`, {
+      const res = await api.request(`/api/v1/admin/transactions/${selectedOrder.id}/flag`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

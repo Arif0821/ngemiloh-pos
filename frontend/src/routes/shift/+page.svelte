@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
 
   let shiftData: any = $state(null);
@@ -6,7 +7,7 @@
 
   onMount(async () => {
     try {
-      const res = await fetch(`/api/v1/orders/shift`, {
+      const res = await api.request(`/api/v1/orders/shift`, {
         credentials: 'include'
       });
       if (res.ok) {
