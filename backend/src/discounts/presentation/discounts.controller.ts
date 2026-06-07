@@ -3,6 +3,7 @@ import { DiscountsService } from '../application/services/discounts.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
+import { CreateDiscountDto, UpdateDiscountDto } from './dto/discounts.dto';
 
 @Controller('api/v1/admin/discounts')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -12,7 +13,7 @@ export class DiscountsController {
 
   @Post()
   @Roles('superadmin')
-  async create(@Body() createDiscountDto: any, @Req() req: any) {
+  async create(@Body() createDiscountDto: CreateDiscountDto, @Req() req: any) {
     const data = await this.discountsService.create(createDiscountDto, req.user.id);
     return { success: true, data };
   }
@@ -31,7 +32,7 @@ export class DiscountsController {
   }
 
   @Patch(':id')
-  async update(@Param('id') id: string, @Body() updateDiscountDto: any) {
+  async update(@Param('id') id: string, @Body() updateDiscountDto: UpdateDiscountDto) {
     const data = await this.discountsService.update(id, updateDiscountDto);
     return { success: true, data };
   }

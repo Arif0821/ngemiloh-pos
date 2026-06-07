@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
+import { AdjustStockDto, SubmitOpnameDto, CreateRawMaterialDto, UpdateRawMaterialDto, CreateBomRecipeDto } from './dto/inventory.dto';
 
 @UseGuards(JwtAuthGuard, RolesGuard)
 @Controller('api/v1/admin/inventory')
@@ -26,7 +27,7 @@ export class InventoryController {
 
   @Roles(Role.superadmin)
   @Post('adjust')
-  async adjustStock(@Body() body: any, @Req() req: any) {
+  async adjustStock(@Body() body: AdjustStockDto, @Req() req: any) {
     const { id, qty, type, notes } = body;
     const userId = req.user.id;
     const data = await this.inventoryService.adjustStock(id, qty, type, notes, userId);
@@ -35,8 +36,8 @@ export class InventoryController {
 
   @Roles(Role.superadmin)
   @Post('opname')
-  async submitOpname(@Body() body: any, @Req() req: any) {
-    const { items } = body; // Array of { id, physical_stock }
+  async submitOpname(@Body() body: SubmitOpnameDto, @Req() req: any) {
+    const { items } = body; 
     const userId = req.user.id;
     const data = await this.inventoryService.submitOpname(items, userId);
     return { status: 'success', data };
@@ -44,21 +45,21 @@ export class InventoryController {
 
   @Roles(Role.superadmin)
   @Post('materials')
-  async createRawMaterial(@Body() body: any) {
+  async createRawMaterial(@Body() body: CreateRawMaterialDto) {
     const data = await this.inventoryService.createRawMaterial(body);
     return { status: 'success', data };
   }
 
   @Roles(Role.superadmin)
   @Patch('materials/:id')
-  async updateRawMaterial(@Param('id') id: string, @Body() body: any) {
+  async updateRawMaterial(@Param('id') id: string, @Body() body: UpdateRawMaterialDto) {
     const data = await this.inventoryService.updateRawMaterial(id, body);
     return { status: 'success', data };
   }
 
   @Roles(Role.superadmin)
   @Post('bom')
-  async createBomRecipe(@Body() body: any) {
+  async createBomRecipe(@Body() body: CreateBomRecipeDto) {
     const data = await this.inventoryService.createBomRecipe(body);
     return { status: 'success', data };
   }

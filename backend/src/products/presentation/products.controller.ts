@@ -9,6 +9,7 @@ import sharp from 'sharp';
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import * as fs from 'fs';
+import { CreateProductDto, UpdateProductDto, CreateModifierGroupDto, UpdateModifierGroupDto, CreateModifierOptionDto, UpdateModifierOptionDto } from './dto/products.dto';
 
 @Controller('api/v1')
 export class ProductsController {
@@ -35,9 +36,7 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
   @UseInterceptors(FileInterceptor('image', { limits: { fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 5) * 1024 * 1024 } }))
-  async createProduct(@Body() body: any, @Req() req: any, @UploadedFile() file: Express.Multer.File) {
-    if (!body.name || body.name.length > 100) throw new BadRequestException('Nama produk wajib dan maksimal 100 karakter');
-    if (!body.base_price || Number(body.base_price) <= 0) throw new BadRequestException('Harga dasar harus lebih dari 0');
+  async createProduct(@Body() body: CreateProductDto, @Req() req: any, @UploadedFile() file: Express.Multer.File) {
     
     let imageUrl = body.image_url;
     
@@ -65,9 +64,7 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
   @UseInterceptors(FileInterceptor('image', { limits: { fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 5) * 1024 * 1024 } }))
-  async updateProduct(@Param('id') id: string, @Body() body: any, @Req() req: any, @UploadedFile() file: Express.Multer.File) {
-    if (body.name && body.name.length > 100) throw new BadRequestException('Nama produk maksimal 100 karakter');
-    if (body.base_price && Number(body.base_price) <= 0) throw new BadRequestException('Harga dasar harus lebih dari 0');
+  async updateProduct(@Param('id') id: string, @Body() body: UpdateProductDto, @Req() req: any, @UploadedFile() file: Express.Multer.File) {
     
     let imageUrl = body.image_url;
     
@@ -105,7 +102,7 @@ export class ProductsController {
   @Post('admin/products/:id/modifier-groups')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
-  async createModifierGroup(@Param('id') id: string, @Body() body: any) {
+  async createModifierGroup(@Param('id') id: string, @Body() body: CreateModifierGroupDto) {
     const group = await this.productsService.createModifierGroup(id, body);
     return { success: true, data: group };
   }
@@ -113,7 +110,7 @@ export class ProductsController {
   @Post('admin/modifier-groups/:id/options')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
-  async createModifierOption(@Param('id') id: string, @Body() body: any) {
+  async createModifierOption(@Param('id') id: string, @Body() body: CreateModifierOptionDto) {
     const option = await this.productsService.createModifierOption(id, body);
     return { success: true, data: option };
   }
@@ -121,7 +118,7 @@ export class ProductsController {
   @Patch('admin/modifier-groups/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
-  async updateModifierGroup(@Param('id') id: string, @Body() body: any) {
+  async updateModifierGroup(@Param('id') id: string, @Body() body: UpdateModifierGroupDto) {
     const group = await this.productsService.updateModifierGroup(id, body);
     return { success: true, data: group };
   }
@@ -129,7 +126,7 @@ export class ProductsController {
   @Patch('admin/modifier-options/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
-  async updateModifierOption(@Param('id') id: string, @Body() body: any) {
+  async updateModifierOption(@Param('id') id: string, @Body() body: UpdateModifierOptionDto) {
     const option = await this.productsService.updateModifierOption(id, body);
     return { success: true, data: option };
   }

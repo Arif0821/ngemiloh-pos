@@ -25,7 +25,7 @@ export class AppController {
   @Patch('api/v1/admin/settings')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
-  async updateSettings(@Body() body: any, @Req() req: any) {
+  async updateSettings(@Body() body: Record<string, string>, @Req() req: any) {
     const data = await this.appService.updateSettings(body, req.user.id);
     return { success: true, data };
   }

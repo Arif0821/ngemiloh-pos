@@ -3,6 +3,7 @@ import { UsersService } from '../application/services/users.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
+import { CreateCashierDto, ResetPinDto, ToggleStatusDto, CreateCustomerDto, AddLoyaltyPointsDto } from './dto/users.dto';
 
 @Controller('api/v1/admin/users')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -17,19 +18,19 @@ export class UsersController {
   }
 
   @Post('cashiers')
-  async createCashier(@Body() createDto: any) {
+  async createCashier(@Body() createDto: CreateCashierDto) {
     const data = await this.usersService.createCashier(createDto);
     return { success: true, data };
   }
 
   @Patch('cashiers/:id/reset-pin')
-  async resetPin(@Param('id') id: string, @Body() dto: { pin: string }) {
+  async resetPin(@Param('id') id: string, @Body() dto: ResetPinDto) {
     const data = await this.usersService.resetCashierPin(id, dto.pin);
     return { success: true, data };
   }
 
   @Patch('cashiers/:id/toggle-status')
-  async toggleStatus(@Param('id') id: string, @Body() dto: { is_active: boolean }) {
+  async toggleStatus(@Param('id') id: string, @Body() dto: ToggleStatusDto) {
     const data = await this.usersService.toggleCashierStatus(id, dto.is_active);
     return { success: true, data };
   }
@@ -42,13 +43,13 @@ export class UsersController {
   }
 
   @Post('customers')
-  async createCustomer(@Body() createDto: any) {
+  async createCustomer(@Body() createDto: CreateCustomerDto) {
     const data = await this.usersService.createCustomer(createDto);
     return { success: true, data };
   }
 
   @Patch('customers/:id/loyalty')
-  async addLoyaltyPoints(@Param('id') id: string, @Body() dto: { points: number }) {
+  async addLoyaltyPoints(@Param('id') id: string, @Body() dto: AddLoyaltyPointsDto) {
     const data = await this.usersService.addLoyaltyPoints(id, dto.points);
     return { success: true, data };
   }

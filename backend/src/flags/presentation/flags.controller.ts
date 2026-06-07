@@ -3,6 +3,7 @@ import { FlagsService } from '../application/services/flags.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
+import { ToggleFlagDto } from './dto/flags.dto';
 
 @Controller('flags')
 export class FlagsController {
@@ -26,7 +27,7 @@ export class FlagsController {
   @Post('toggle')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles('superadmin')
-  async toggleFlag(@Body() body: { name: string, is_enabled: boolean }, @Req() req: any) {
+  async toggleFlag(@Body() body: ToggleFlagDto, @Req() req: any) {
     const data = await this.flagsService.toggleFlag(body.name, body.is_enabled, req.user.id);
     return { success: true, data };
   }

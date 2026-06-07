@@ -8,6 +8,7 @@ import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Observable, filter, map, fromEvent, merge, interval } from 'rxjs';
 import type { Response } from 'express';
+import { CreateOrderDto, SyncBatchDto } from './dto/create-order.dto';
 
 @Controller('api/v1')
 export class OrdersController {
@@ -18,18 +19,15 @@ export class OrdersController {
 
   @Post('orders')
   @UseGuards(JwtAuthGuard)
-  async createOrder(@Body() body: any, @Req() req: any) {
+  async createOrder(@Body() body: CreateOrderDto, @Req() req: any) {
     const order = await this.ordersService.createOrder(body, req.user.id);
     return { success: true, data: order };
   }
 
   @Post('orders/sync-batch')
   @UseGuards(JwtAuthGuard)
-  async syncBatchOrders(@Body() body: any, @Req() req: any) {
+  async syncBatchOrders(@Body() body: SyncBatchDto, @Req() req: any) {
     const { orders } = body;
-    if (!Array.isArray(orders)) {
-      return { success: false, message: 'Invalid payload, expected array of orders' };
-    }
     const result = await this.ordersService.syncBatchOrders(orders, req.user.id);
     return { success: true, data: result };
   }

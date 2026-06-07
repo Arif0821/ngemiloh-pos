@@ -3,6 +3,8 @@ import { FinanceService } from '../application/services/finance.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
+import { Role } from '@prisma/client';
+import { CreateOpexDto, ClosePeriodDto, CompleteProfitShareDto, CreateAssetDto, UpdateAssetDto, OpenShiftDto, CloseShiftDto } from './dto/finance.dto';
 
 @Controller('api/v1/admin/finance')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -26,9 +28,10 @@ export class FinanceController {
   }
 
   @Post('opex')
-  async createOpex(@Body() createDto: any, @Req() req: any) {
+  @Roles(Role.superadmin)
+  async createOpex(@Body() createDto: CreateOpexDto, @Req() req: any) {
     const data = await this.financeService.createOpex(createDto, req.user.id);
-    return { success: true, data };
+    return { status: 'success', data };
   }
 
   @Get('profit-share')
@@ -40,25 +43,24 @@ export class FinanceController {
   }
 
   @Post('profit-share/close')
-  async closePeriod(@Body('month') month: string, @Body('year') year: string) {
-    const m = month ? parseInt(month) : new Date().getMonth() + 1;
-    const y = year ? parseInt(year) : new Date().getFullYear();
+  @Roles(Role.superadmin)
+  async closePeriod(@Body() body: ClosePeriodDto) {
+    const m = body.month ? parseInt(body.month) : new Date().getMonth() + 1;
+    const y = body.year ? parseInt(body.year) : new Date().getFullYear();
     const data = await this.financeService.closePeriod(m, y);
-    return { success: true, data };
+    return { status: 'success', data };
   }
 
   @Post('profit-share/pay')
+  @Roles(Role.superadmin)
   async payProfitShare(
-    @Body('month') month: string, 
-    @Body('year') year: string, 
-    @Body('proof') proof: string,
-    @Body('notes') notes: string,
+    @Body() body: CompleteProfitShareDto,
     @Req() req: any
   ) {
-    const m = month ? parseInt(month) : new Date().getMonth() + 1;
-    const y = year ? parseInt(year) : new Date().getFullYear();
-    const data = await this.financeService.payProfitShare(m, y, proof, notes, req.user.id);
-    return { success: true, data };
+    const m = body.month ? parseInt(body.month) : new Date().getMonth() + 1;
+    const y = body.year ? parseInt(body.year) : new Date().getFullYear();
+    const data = await this.financeService.payProfitShare(m, y, body.proof, body.notes || '', req.user.id);
+    return { status: 'success', data };
   }
 
   @Get('assets')
@@ -68,15 +70,17 @@ export class FinanceController {
   }
 
   @Post('assets')
-  async createAsset(@Body() createDto: any) {
+  @Roles(Role.superadmin)
+  async createAsset(@Body() createDto: CreateAssetDto) {
     const data = await this.financeService.createAsset(createDto);
-    return { success: true, data };
+    return { status: 'success', data };
   }
 
   @Patch('assets/:id')
-  async updateAsset(@Param('id') id: string, @Body() updateDto: any) {
+  @Roles(Role.superadmin)
+  async updateAsset(@Param('id') id: string, @Body() updateDto: UpdateAssetDto) {
     const data = await this.financeService.updateAsset(id, updateDto);
-    return { success: true, data };
+    return { status: 'success', data };
   }
 
   @Get('analytics')
@@ -95,16 +99,16 @@ export class FinanceController {
 
   @Post('cash/open')
   @Roles('kasir', 'superadmin')
-  async openShift(@Body('opening_balance') openingBalance: number, @Req() req: any) {
-    const data = await this.financeService.openShift(req.user.id, openingBalance);
-    return { success: true, data };
+  async openShift(@Body() body: OpenShiftDto, @Req() req: any) {
+    const data = await this.financeService.openShift(req.user.id, body.opening_balance);
+    return { status: 'success', data };
   }
 
   @Post('cash/close')
   @Roles('kasir', 'superadmin')
-  async closeShift(@Body('closing_balance') closingBalance: number, @Req() req: any) {
-    const data = await this.financeService.closeShift(req.user.id, closingBalance);
-    return { success: true, data };
+  async closeShift(@Body() body: CloseShiftDto, @Req() req: any) {
+    const data = await this.financeService.closeShift(req.user.id, body.closing_balance);
+    return { status: 'success', data };
   }
 
   @Get('cash/shifts')
