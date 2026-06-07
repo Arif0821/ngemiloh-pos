@@ -2,7 +2,8 @@
   import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
 
-  let flags: any[] = $state([]);
+  import type { FeatureFlag } from '$lib/domain/models/types';
+  let flags: FeatureFlag[] = $state([]);
   let isLoading = $state(false);
 
   async function fetchFlags() {
@@ -20,7 +21,7 @@
     }
   }
 
-  async function toggleFlag(flag: any) {
+  async function toggleFlag(flag: FeatureFlag) {
     const newValue = !flag.is_enabled;
     const oldFlags = [...flags];
     // Optimistic update

@@ -4,7 +4,8 @@
   import Chart from 'chart.js/auto';
 
   let period = $state('daily');
-  let analyticsData: any = null;
+  import type { AnalyticsResponse } from '$lib/domain/models/types';
+  let analyticsData: AnalyticsResponse | null = $state(null);
   let isLoading = $state(true);
 
   let trendCanvas: HTMLCanvasElement;
@@ -43,10 +44,10 @@
     trendChart = new Chart(trendCanvas, {
       type: 'line',
       data: {
-        labels: analyticsData.trend.map((t: any) => t.label),
+        labels: analyticsData.trend.map(t => t.label),
         datasets: [{
-          label: 'Revenue (Rp)',
-          data: analyticsData.trend.map((t: any) => t.value),
+          label: 'Pendapatan Harian',
+          data: analyticsData.trend.map(t => t.value),
           borderColor: '#f43f5e',
           backgroundColor: 'rgba(244, 63, 94, 0.1)',
           fill: true
@@ -59,10 +60,10 @@
     qtyChart = new Chart(qtyCanvas, {
       type: 'bar',
       data: {
-        labels: analyticsData.topProducts.byQty.map((t: any) => t.name),
+        labels: analyticsData.topProducts.byQty.map(t => t.name),
         datasets: [{
-          label: 'Terjual (Qty)',
-          data: analyticsData.topProducts.byQty.map((t: any) => t.qty),
+          label: 'Kuantitas',
+          data: analyticsData.topProducts.byQty.map(t => t.qty),
           backgroundColor: '#3b82f6'
         }]
       }
@@ -73,10 +74,10 @@
     revChart = new Chart(revenueCanvas, {
       type: 'bar',
       data: {
-        labels: analyticsData.topProducts.byRevenue.map((t: any) => t.name),
+        labels: analyticsData.topProducts.byRevenue.map(t => t.name),
         datasets: [{
-          label: 'Revenue (Rp)',
-          data: analyticsData.topProducts.byRevenue.map((t: any) => t.revenue),
+          label: 'Pendapatan',
+          data: analyticsData.topProducts.byRevenue.map(t => t.revenue),
           backgroundColor: '#10b981'
         }]
       }
@@ -100,10 +101,10 @@
     peakChart = new Chart(peakHoursCanvas, {
       type: 'bar',
       data: {
-        labels: analyticsData.peakHours.map((t: any) => `${t.hour}:00`),
+        labels: analyticsData.peakHours.map(t => `${t.hour}:00`),
         datasets: [{
           label: 'Jumlah Transaksi',
-          data: analyticsData.peakHours.map((t: any) => t.count),
+          data: analyticsData.peakHours.map(t => t.count),
           backgroundColor: '#f59e0b'
         }]
       }

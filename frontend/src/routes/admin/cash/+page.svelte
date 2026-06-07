@@ -2,7 +2,8 @@
   import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
 
-  let shifts: any[] = $state([]);
+  import type { ShiftInfo } from '$lib/domain/models/types';
+  let shifts: ShiftInfo[] = $state([]);
   let isLoading = $state(false);
 
   function formatRp(amount: number) {

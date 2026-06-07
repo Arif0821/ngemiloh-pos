@@ -16,13 +16,13 @@
     paymentDistribution: { cash: 0, qris: 0, split: 0 }
   });
 
-  let refreshTimer: any;
+  let refreshTimer: ReturnType<typeof setInterval>;
 
   function formatRp(amount: number) {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   }
 
-  let paymentChart: any = null;
+  let paymentChart: unknown = null;
 
   async function fetchKpi() {
     try {

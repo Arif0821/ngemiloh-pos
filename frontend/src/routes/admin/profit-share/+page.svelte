@@ -2,7 +2,8 @@
   import { api } from '$lib/services/api.client';
   let month = $state(new Date().getMonth() + 1);
   let year = $state(new Date().getFullYear());
-  let profitShareData: any = $state(null);
+  import type { ProfitShareData } from '$lib/domain/models/types';
+  let profitShareData: ProfitShareData | null = $state(null);
   let isLoading = $state(false);
 
   function formatRp(amount: number) {

@@ -2,6 +2,7 @@
   import { posStore } from '$lib/stores/pos.store.svelte';
   import { posService } from '$lib/services/pos.service';
   import { printerService } from '$lib/services/printer.service';
+  import type { OrderResponse } from '$lib/domain/models/types';
 
   function formatTime(seconds: number) {
     const m = Math.floor(seconds / 60).toString().padStart(2, '0');
@@ -9,7 +10,7 @@
     return `${m}:${s}`;
   }
 
-  async function printReceipt(order: any) {
+  async function printReceipt(order: OrderResponse) {
     try {
       const receiptText = printerService.formatReceipt(order, 'NGEMILOH POS', 'Terima Kasih Telah Berbelanja');
       const success = await printerService.connectAndPrint(receiptText);

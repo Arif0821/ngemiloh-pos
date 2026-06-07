@@ -7,7 +7,7 @@ export interface LocalProduct {
   category_id?: string;
   image_url?: string;
   is_out_of_stock: boolean;
-  modifier_groups: any[];
+  modifier_groups: unknown[];
 }
 
 export interface LocalOrder {
@@ -25,7 +25,7 @@ export interface LocalOrder {
 
 export interface LocalCartItem {
   id: string; // just a single record 'current_cart'
-  items: any[];
+  items: unknown[];
 }
 
 export class PosDatabase extends Dexie {

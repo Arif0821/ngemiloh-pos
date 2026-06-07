@@ -2,7 +2,8 @@
   import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
   
-  let discounts = $state<any[]>([]);
+  import type { Discount } from '$lib/domain/models/types';
+  let discounts = $state<Discount[]>([]);
   let isLoading = $state(true);
   
   let showModal = $state(false);
@@ -82,7 +83,7 @@
     }
   }
 
-  async function toggleStatus(discount: any) {
+  async function toggleStatus(discount: Discount) {
     try {
       const hostname = window.location.hostname;
       const res = await api.request(`/api/v1/admin/discounts/${discount.id}`, {

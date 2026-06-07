@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { IProductRepository } from '../../domain/interfaces/product.repository.interface';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class PrismaProductRepository implements IProductRepository {
@@ -41,7 +42,7 @@ export class PrismaProductRepository implements IProductRepository {
     });
   }
 
-  async create(data: any, creatorId: string) {
+  async create(data: Prisma.ProductUncheckedCreateInput, creatorId: string) {
     return this.prisma.product.create({
       data: {
         name: data.name,
@@ -53,7 +54,7 @@ export class PrismaProductRepository implements IProductRepository {
     });
   }
 
-  async update(id: string, data: any) {
+  async update(id: string, data: Prisma.ProductUncheckedUpdateInput) {
     return this.prisma.product.update({
       where: { id },
       data: {
@@ -88,7 +89,7 @@ export class PrismaProductRepository implements IProductRepository {
     });
   }
 
-  async createModifierGroup(productId: string, data: any) {
+  async createModifierGroup(productId: string, data: Prisma.ProductModifierGroupUncheckedCreateInput) {
     return this.prisma.productModifierGroup.create({
       data: {
         product_id: productId,
@@ -99,7 +100,7 @@ export class PrismaProductRepository implements IProductRepository {
     });
   }
 
-  async createModifierOption(groupId: string, data: any) {
+  async createModifierOption(groupId: string, data: Prisma.ProductModifierOptionUncheckedCreateInput) {
     return this.prisma.productModifierOption.create({
       data: {
         group_id: groupId,
@@ -125,7 +126,7 @@ export class PrismaProductRepository implements IProductRepository {
     return this.prisma.productModifierOption.findUnique({ where: { id } });
   }
 
-  async updateModifierGroup(id: string, data: any) {
+  async updateModifierGroup(id: string, data: Prisma.ProductModifierGroupUncheckedUpdateInput) {
     return this.prisma.productModifierGroup.update({
       where: { id },
       data: {
@@ -137,7 +138,7 @@ export class PrismaProductRepository implements IProductRepository {
     });
   }
 
-  async updateModifierOption(id: string, data: any) {
+  async updateModifierOption(id: string, data: Prisma.ProductModifierOptionUncheckedUpdateInput) {
     return this.prisma.productModifierOption.update({
       where: { id },
       data: {

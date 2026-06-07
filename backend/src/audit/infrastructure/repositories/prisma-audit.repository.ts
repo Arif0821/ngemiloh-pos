@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { AuditLog, Prisma } from '@prisma/client';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { IAuditRepository, AuditLogFilters } from '../../domain/interfaces/audit.repository.interface';
 
@@ -35,8 +36,8 @@ export class PrismaAuditRepository implements IAuditRepository {
     }
   }
 
-  async findLogs(filters: AuditLogFilters, skip: number, take: number): Promise<[any[], number]> {
-    const where: any = {};
+  async findLogs(filters: AuditLogFilters, skip: number, take: number): Promise<[AuditLog[], number]> {
+    const where: Prisma.AuditLogWhereInput = {};
 
     if (filters.actor_id) {
       where.actor_id = filters.actor_id;
@@ -66,7 +67,7 @@ export class PrismaAuditRepository implements IAuditRepository {
     return [logs, total];
   }
 
-  async findLogsOlderThan(date: Date): Promise<any[]> {
+  async findLogsOlderThan(date: Date): Promise<AuditLog[]> {
     return this.prisma.auditLog.findMany({
       where: { created_at: { lt: date } },
       include: { actor: { select: { username: true } } }
@@ -80,7 +81,7 @@ export class PrismaAuditRepository implements IAuditRepository {
     return deleted.count;
   }
 
-  async createAuditLog(data: any): Promise<void> {
+  async createAuditLog(data: Prisma.AuditLogUncheckedCreateInput): Promise<void> {
     await this.prisma.auditLog.create({
       data: {
         actor_id: data.actor_id,

@@ -2,7 +2,8 @@
   import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
   
-  let cashiers = $state<any[]>([]);
+  import type { User } from '$lib/domain/models/types';
+  let cashiers = $state<User[]>([]);
   let isLoading = $state(true);
   
   let showAddModal = $state(false);
@@ -11,7 +12,7 @@
   let newPin = $state('');
   
   let showResetModal = $state(false);
-  let selectedCashier = $state<any>(null);
+  let selectedCashier = $state<User | null>(null);
   let resetPin = $state('');
 
   async function fetchCashiers() {
@@ -88,7 +89,7 @@
     }
   }
 
-  async function toggleStatus(cashier: any) {
+  async function toggleStatus(cashier: User) {
     const confirmMsg = cashier.is_active ? 'Nonaktifkan kasir ini?' : 'Aktifkan kasir ini?';
     if (!confirm(confirmMsg)) return;
 

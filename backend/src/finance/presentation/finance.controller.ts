@@ -1,7 +1,8 @@
 import { Controller, Get, Post, Patch, Body, Query, Param, UseGuards, Req } from '@nestjs/common';
 import { FinanceService } from '../application/services/finance.service';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../../auth/guards/roles.guard';
+import { JwtAuthGuard } from '../../auth/strategies/jwt-auth.guard';
+import { RolesGuard } from '../../auth/strategies/roles.guard';
+import { Request } from 'express';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { CreateOpexDto, ClosePeriodDto, CompleteProfitShareDto, CreateAssetDto, UpdateAssetDto, OpenShiftDto, CloseShiftDto } from './dto/finance.dto';
@@ -29,7 +30,7 @@ export class FinanceController {
 
   @Post('opex')
   @Roles(Role.superadmin)
-  async createOpex(@Body() createDto: CreateOpexDto, @Req() req: any) {
+  async createOpex(@Body() createDto: CreateOpexDto, @Req() req: Request & { user: any }) {
     const data = await this.financeService.createOpex(createDto, req.user.id);
     return { status: 'success', data };
   }
@@ -55,7 +56,7 @@ export class FinanceController {
   @Roles(Role.superadmin)
   async payProfitShare(
     @Body() body: CompleteProfitShareDto,
-    @Req() req: any
+    @Req() req: Request & { user: any }
   ) {
     const m = body.month ? parseInt(body.month) : new Date().getMonth() + 1;
     const y = body.year ? parseInt(body.year) : new Date().getFullYear();
@@ -92,21 +93,21 @@ export class FinanceController {
   // --- CASH REGISTER (SHIFT) ---
   @Get('cash/current')
   @Roles('kasir', 'superadmin')
-  async getCurrentShift(@Req() req: any) {
+  async getCurrentShift(@Req() req: Request & { user: any }) {
     const data = await this.financeService.getCurrentShift(req.user.id);
     return { success: true, data };
   }
 
   @Post('cash/open')
   @Roles('kasir', 'superadmin')
-  async openShift(@Body() body: OpenShiftDto, @Req() req: any) {
+  async openShift(@Body() body: OpenShiftDto, @Req() req: Request & { user: any }) {
     const data = await this.financeService.openShift(req.user.id, body.opening_balance);
     return { status: 'success', data };
   }
 
   @Post('cash/close')
   @Roles('kasir', 'superadmin')
-  async closeShift(@Body() body: CloseShiftDto, @Req() req: any) {
+  async closeShift(@Body() body: CloseShiftDto, @Req() req: Request & { user: any }) {
     const data = await this.financeService.closeShift(req.user.id, body.closing_balance);
     return { status: 'success', data };
   }

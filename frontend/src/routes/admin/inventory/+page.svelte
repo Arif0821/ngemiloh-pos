@@ -2,7 +2,8 @@
   import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
   
-  let materials: any[] = $state([]);
+  import type { RawMaterial } from '$lib/domain/models/types';
+  let materials: RawMaterial[] = $state([]);
   let isLoading = $state(true);
   
   let isOpnameMode = $state(false);

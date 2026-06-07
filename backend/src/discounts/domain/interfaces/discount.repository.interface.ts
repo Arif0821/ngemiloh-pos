@@ -1,9 +1,11 @@
-export const DISCOUNT_REPOSITORY = 'DISCOUNT_REPOSITORY';
+import { Discount, Prisma } from '@prisma/client';
+
+export const DISCOUNT_REPOSITORY = Symbol('DISCOUNT_REPOSITORY');
 
 export interface IDiscountRepository {
-  findAll(): Promise<any>;
-  findOne(id: string): Promise<any>;
-  create(data: any, adminId: string): Promise<any>;
-  update(id: string, data: any): Promise<any>;
-  remove(id: string): Promise<any>;
+  findAll(): Promise<Discount[]>;
+  findOne(id: string): Promise<Discount | null>;
+  create(data: Prisma.DiscountUncheckedCreateInput, adminId: string): Promise<Discount>;
+  update(id: string, data: Prisma.DiscountUncheckedUpdateInput): Promise<Discount>;
+  remove(id: string): Promise<Discount>;
 }

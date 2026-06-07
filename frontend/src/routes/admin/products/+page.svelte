@@ -2,7 +2,8 @@
   import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
   
-  let products = $state<any[]>([]);
+  import type { ProductItem, ModifierGroup } from '$lib/domain/models/types';
+  let products = $state<ProductItem[]>([]);
   let isLoading = $state(true);
   
   let showProductModal = $state(false);
@@ -44,7 +45,7 @@
     showProductModal = true;
   }
 
-  function openEditModal(prod: any) {
+  function openEditModal(prod: ProductItem) {
     isEditing = true;
     pId = prod.id;
     pName = prod.name;
@@ -91,7 +92,7 @@
 
   // --- Modifier Management ---
   let showModifierModal = $state(false);
-  let activeProductForModifier: any = $state(null);
+  let activeProductForModifier: ProductItem | null = $state(null);
   let newGroupName = $state('');
   let newGroupRequired = $state(true);
 
@@ -99,7 +100,7 @@
   let newOptionPrice = $state('');
   let selectedGroupId = $state('');
 
-  function openModifierModal(prod: any) {
+  function openModifierModal(prod: ProductItem) {
     activeProductForModifier = prod;
     showModifierModal = true;
   }
@@ -122,7 +123,7 @@
         // For simplicity, we just reload products and close modal or refetch
         // Let's refetch products and update activeProductForModifier
         setTimeout(() => {
-          activeProductForModifier = products.find((p: any) => p.id === activeProductForModifier.id);
+          activeProductForModifier = products.find((p) => p.id === activeProductForModifier?.id) || null;
         }, 300);
       }
     } catch(e) {}
@@ -144,7 +145,7 @@
         newOptionPrice = '';
         fetchProducts();
         setTimeout(() => {
-          activeProductForModifier = products.find((p: any) => p.id === activeProductForModifier.id);
+          activeProductForModifier = products.find((p) => p.id === activeProductForModifier?.id) || null;
         }, 300);
       }
     } catch(e) {}
@@ -162,7 +163,7 @@
       if (res.ok) {
         fetchProducts();
         setTimeout(() => {
-          activeProductForModifier = products.find((p: any) => p.id === activeProductForModifier.id);
+          activeProductForModifier = products.find((p) => p.id === activeProductForModifier?.id) || null;
         }, 300);
       }
     } catch(e) {}
@@ -180,7 +181,7 @@
       if (res.ok) {
         fetchProducts();
         setTimeout(() => {
-          activeProductForModifier = products.find((p: any) => p.id === activeProductForModifier.id);
+          activeProductForModifier = products.find((p) => p.id === activeProductForModifier?.id) || null;
         }, 300);
       }
     } catch(e) {}
@@ -255,8 +256,8 @@
                       {/if}
                     </td>
                     <td class="px-6 py-4 text-sm text-slate-600 max-w-xs truncate">
-                      {#if prod.modifier_groups && prod.modifier_groups.filter((g:any) => g.is_active).length > 0}
-                        {prod.modifier_groups.filter((g:any) => g.is_active).map((g:any) => g.name).join(', ')}
+                      {#if prod.modifier_groups && prod.modifier_groups.filter(g => g.is_active).length > 0}
+                        {prod.modifier_groups.filter(g => g.is_active).map(g => g.name).join(', ')}
                       {:else}
                         <span class="text-slate-400 italic">Tanpa modifier</span>
                       {/if}
@@ -376,13 +377,13 @@
       </div>
 
       <!-- Add New Option to Existing Group -->
-      {#if activeProductForModifier.modifier_groups && activeProductForModifier.modifier_groups.filter((g:any) => g.is_active).length > 0}
+      {#if activeProductForModifier.modifier_groups && activeProductForModifier.modifier_groups.filter(g => g.is_active).length > 0}
         <form onsubmit={addModifierOption} class="bg-indigo-50 p-4 rounded-xl border border-indigo-100">
           <h4 class="font-bold text-indigo-900 mb-3 text-sm">Tambah Opsi Baru ke Grup</h4>
           <div class="grid grid-cols-3 gap-3">
             <select bind:value={selectedGroupId} required class="border-indigo-200 rounded-lg focus:ring-indigo-500 text-sm">
               <option value="">Pilih Grup</option>
-              {#each activeProductForModifier.modifier_groups.filter((g:any) => g.is_active) as group}
+              {#each activeProductForModifier.modifier_groups.filter(g => g.is_active) as group}
                 <option value={group.id}>{group.name}</option>
               {/each}
             </select>

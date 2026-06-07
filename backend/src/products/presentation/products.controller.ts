@@ -1,7 +1,8 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, Req, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
 import { ProductsService } from '../application/services/products.service';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../../auth/guards/roles.guard';
+import { JwtAuthGuard } from '../../auth/strategies/jwt-auth.guard';
+import { RolesGuard } from '../../auth/strategies/roles.guard';
+import { Request } from 'express';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -36,7 +37,7 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
   @UseInterceptors(FileInterceptor('image', { limits: { fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 5) * 1024 * 1024 } }))
-  async createProduct(@Body() body: CreateProductDto, @Req() req: any, @UploadedFile() file: Express.Multer.File) {
+  async createProduct(@Body() body: CreateProductDto, @Req() req: Request & { user: any }, @UploadedFile() file: Express.Multer.File) {
     
     let imageUrl = body.image_url;
     
@@ -64,7 +65,7 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
   @UseInterceptors(FileInterceptor('image', { limits: { fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 5) * 1024 * 1024 } }))
-  async updateProduct(@Param('id') id: string, @Body() body: UpdateProductDto, @Req() req: any, @UploadedFile() file: Express.Multer.File) {
+  async updateProduct(@Param('id') id: string, @Body() body: UpdateProductDto, @Req() req: Request & { user: any }, @UploadedFile() file: Express.Multer.File) {
     
     let imageUrl = body.image_url;
     

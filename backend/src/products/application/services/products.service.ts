@@ -1,5 +1,6 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { type IProductRepository, PRODUCT_REPOSITORY } from '../../domain/interfaces/product.repository.interface';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class ProductsService {
@@ -17,11 +18,11 @@ export class ProductsService {
     return product;
   }
 
-  async create(data: any, creatorId: string) {
+  async create(data: Prisma.ProductUncheckedCreateInput, creatorId: string) {
     return this.productRepository.create(data, creatorId);
   }
 
-  async update(id: string, data: any, adminId: string) {
+  async update(id: string, data: Prisma.ProductUncheckedUpdateInput, adminId: string) {
     const product = await this.productRepository.findOne(id);
     if (!product) throw new NotFoundException('Product not found');
 
@@ -49,11 +50,11 @@ export class ProductsService {
     }
   }
 
-  async createModifierGroup(productId: string, data: any) {
+  async createModifierGroup(productId: string, data: Prisma.ProductModifierGroupUncheckedCreateInput) {
     return this.productRepository.createModifierGroup(productId, data);
   }
 
-  async createModifierOption(groupId: string, data: any) {
+  async createModifierOption(groupId: string, data: Prisma.ProductModifierOptionUncheckedCreateInput) {
     return this.productRepository.createModifierOption(groupId, data);
   }
 
@@ -61,7 +62,7 @@ export class ProductsService {
     return this.productRepository.getCategories();
   }
 
-  async updateModifierGroup(id: string, data: any) {
+  async updateModifierGroup(id: string, data: Prisma.ProductModifierGroupUncheckedUpdateInput) {
     const group = await this.productRepository.getModifierGroup(id);
     if (!group) throw new NotFoundException('Modifier group not found');
 
@@ -75,7 +76,7 @@ export class ProductsService {
     return this.productRepository.updateModifierGroup(id, updateData);
   }
 
-  async updateModifierOption(id: string, data: any) {
+  async updateModifierOption(id: string, data: Prisma.ProductModifierOptionUncheckedUpdateInput) {
     const option = await this.productRepository.getModifierOption(id);
     if (!option) throw new NotFoundException('Modifier option not found');
 

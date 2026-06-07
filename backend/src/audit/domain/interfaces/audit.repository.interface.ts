@@ -1,5 +1,7 @@
 export const AUDIT_REPOSITORY = Symbol('AUDIT_REPOSITORY');
 
+import { AuditLog, Prisma } from '@prisma/client';
+
 export interface AuditLogFilters {
   actor_id?: string;
   action?: string;
@@ -9,8 +11,8 @@ export interface AuditLogFilters {
 
 export interface IAuditRepository {
   applyImmutableTrigger(): Promise<void>;
-  findLogs(filters: AuditLogFilters, skip: number, take: number): Promise<[any[], number]>;
-  findLogsOlderThan(date: Date): Promise<any[]>;
-  deleteLogsOlderThan(date: Date): Promise<number>;
-  createAuditLog(data: any): Promise<void>;
+  findLogs(filters: AuditLogFilters, skip: number, take: number): Promise<[AuditLog[], number]>;
+  findLogsOlderThan(date: Date): Promise<AuditLog[]>;
+  deleteLogs(ids: string[]): Promise<number>;
+  createAuditLog(data: Prisma.AuditLogUncheckedCreateInput): Promise<void>;
 }

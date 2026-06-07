@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuthRepositoryInterface } from '../../domain/interfaces/auth.repository.interface';
-import { User, IpLockout, RevokedToken, AuditLog } from '@prisma/client';
+import { User, IpLockout, RevokedToken, AuditLog, Prisma } from '@prisma/client';
 
 @Injectable()
 export class PrismaAuthRepository implements AuthRepositoryInterface {
@@ -76,7 +76,7 @@ export class PrismaAuthRepository implements AuthRepositoryInterface {
     });
   }
 
-  async createAuditLog(actorId: string, action: string, entityType: string, entityId: string, newValue: any): Promise<AuditLog> {
+  async createAuditLog(actorId: string, action: string, entityType: string, entityId: string, newValue: Prisma.InputJsonValue): Promise<AuditLog> {
     return this.prisma.auditLog.create({
       data: {
         actor_id: actorId,

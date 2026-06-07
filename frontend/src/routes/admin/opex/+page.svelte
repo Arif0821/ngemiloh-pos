@@ -3,7 +3,8 @@
   import { onMount } from 'svelte';
 
   let loading = $state(true);
-  let expenses: any[] = $state([]);
+  import type { OperationalExpense } from '$lib/domain/models/types';
+  let expenses: OperationalExpense[] = $state([]);
   let error = $state('');
 
   // Form State

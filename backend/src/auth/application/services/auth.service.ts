@@ -102,12 +102,12 @@ export class AuthService {
     const payload = { sub: user.id, role: user.role };
     const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET,
-      expiresIn: process.env.JWT_ACCESS_EXPIRES as any,
+      expiresIn: process.env.JWT_ACCESS_EXPIRES as string,
     });
     
     const refreshToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: process.env.JWT_REFRESH_EXPIRES as any,
+      expiresIn: process.env.JWT_REFRESH_EXPIRES as string,
     });
     
     const csrfToken = crypto.randomBytes(32).toString('hex');
@@ -125,7 +125,7 @@ export class AuthService {
     };
   }
 
-  async validateUser(username: string, pass: string): Promise<any> {
+  async validateUser(username: string, pass: string): Promise<Partial<User> | null> {
     const user = await this.authRepository.findUserByUsername(username);
 
     if (!user) {
@@ -206,7 +206,7 @@ export class AuthService {
       const newPayload = { sub: user.id, role: user.role };
       const newAccessToken = this.jwtService.sign(newPayload, {
         secret: process.env.JWT_ACCESS_SECRET,
-        expiresIn: process.env.JWT_ACCESS_EXPIRES as any,
+        expiresIn: process.env.JWT_ACCESS_EXPIRES as string,
       });
 
       return {

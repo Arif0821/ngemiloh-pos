@@ -1,6 +1,7 @@
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { type IFinanceRepository, FINANCE_REPOSITORY } from '../../domain/interfaces/finance.repository.interface';
 import { MailService } from '../../../mail/mail.service';
+import { Prisma, Order } from '@prisma/client';
 
 @Injectable()
 export class FinanceService {
@@ -21,7 +22,7 @@ export class FinanceService {
     );
 
     const revenue = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
-    const hpp = orders.reduce((sum, o) => sum + Number((o as any).cogs_total || 0), 0);
+    const hpp = orders.reduce((sum, o) => sum + Number((o as Order & { cogs_total?: number }).cogs_total || 0), 0);
     const laba = revenue - hpp;
     const targetProgress = Math.min(100, Math.round((revenue / 5000000) * 100));
 
@@ -47,7 +48,7 @@ export class FinanceService {
     );
   }
 
-  async createOpex(data: any, userId: string) {
+  async createOpex(data: Prisma.OperationalExpenseUncheckedCreateInput, userId: string) {
     return this.financeRepository.createOperationalExpense({
       category: data.category,
       description: data.description,
@@ -75,7 +76,7 @@ export class FinanceService {
     const assets = await this.financeRepository.findAssets({ is_active: true });
     const totalDepreciation = assets.reduce((sum, a) => sum + Number(a.monthly_depreciation), 0);
 
-    const totalHpp = orders.reduce((sum, o) => sum + Number((o as any).cogs_total || 0), 0); 
+    const totalHpp = orders.reduce((sum, o) => sum + Number((o as Order & { cogs_total?: number }).cogs_total || 0), 0); 
 
     const netProfit = revenue - totalHpp - totalOpex - totalDepreciation;
     
@@ -130,7 +131,7 @@ export class FinanceService {
     return this.financeRepository.findAssets(undefined, { created_at: 'desc' });
   }
 
-  async createAsset(data: any) {
+  async createAsset(data: Prisma.AssetUncheckedCreateInput) {
     return this.financeRepository.createAsset({
       name: data.name,
       purchase_price: data.value,
@@ -142,7 +143,7 @@ export class FinanceService {
     });
   }
 
-  async updateAsset(id: string, data: any) {
+  async updateAsset(id: string, data: Prisma.AssetUncheckedUpdateInput) {
     const asset = await this.financeRepository.findAssetById(id);
     if (!asset) throw new NotFoundException('Asset not found');
 

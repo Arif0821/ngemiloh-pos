@@ -31,10 +31,10 @@
               <h4 class="font-medium text-sm leading-tight text-surface-800 dark:text-surface-100">{item.name}</h4>
               {#if item.selectedModifiers.length > 0}
                 <p class="text-xs text-surface-500 mt-0.5">
-                  + {item.selectedModifiers.map((m:any) => m.name).join(', ')}
+                  + {item.selectedModifiers.map((m) => m.name).join(', ')}
                 </p>
               {/if}
-              <p class="text-brand-600 dark:text-brand-400 font-bold text-sm mt-1">{posStore.formatRp((item.base_price + item.selectedModifiers.reduce((s:number,m:any)=>s+Number(m.additional_price),0)) * item.quantity)}</p>
+              <p class="text-brand-600 dark:text-brand-400 font-bold text-sm mt-1">{posStore.formatRp((item.base_price + item.selectedModifiers.reduce((s:number,m)=>s+Number(m.additional_price),0)) * item.quantity)}</p>
             </div>
             <div class="flex items-center gap-1 bg-white dark:bg-surface-800 rounded-xl shadow-sm border border-surface-200 dark:border-surface-700 p-1">
               <button class="w-[44px] h-[44px] flex items-center justify-center text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded-lg active:scale-95 transition-all" onclick={() => { vibrate(); posStore.updateQuantity(item.cartItemId, -1); }}>

@@ -1,24 +1,25 @@
 import { Injectable } from '@nestjs/common';
 import { IFinanceRepository } from '../../domain/interfaces/finance.repository.interface';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class PrismaFinanceRepository implements IFinanceRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findOrders(where: any, include?: any) {
+  async findOrders(where: Prisma.OrderWhereInput, include?: Prisma.OrderInclude) {
     return this.prisma.order.findMany({ where, include });
   }
 
-  async findOperationalExpenses(where: any, orderBy?: any) {
+  async findOperationalExpenses(where: Prisma.OperationalExpenseWhereInput, orderBy?: Prisma.OperationalExpenseOrderByWithRelationInput) {
     return this.prisma.operationalExpense.findMany({ where, orderBy });
   }
 
-  async createOperationalExpense(data: any) {
+  async createOperationalExpense(data: Prisma.OperationalExpenseUncheckedCreateInput) {
     return this.prisma.operationalExpense.create({ data });
   }
 
-  async findAssets(where?: any, orderBy?: any) {
+  async findAssets(where?: Prisma.AssetWhereInput, orderBy?: Prisma.AssetOrderByWithRelationInput) {
     return this.prisma.asset.findMany({ where, orderBy });
   }
 
@@ -26,11 +27,11 @@ export class PrismaFinanceRepository implements IFinanceRepository {
     return this.prisma.asset.findUnique({ where: { id } });
   }
 
-  async createAsset(data: any) {
+  async createAsset(data: Prisma.AssetUncheckedCreateInput) {
     return this.prisma.asset.create({ data });
   }
 
-  async updateAsset(id: string, data: any) {
+  async updateAsset(id: string, data: Prisma.AssetUncheckedUpdateInput) {
     return this.prisma.asset.update({ where: { id }, data });
   }
 
@@ -38,31 +39,31 @@ export class PrismaFinanceRepository implements IFinanceRepository {
     return this.prisma.profitShareLog.findUnique({ where: { period_month: periodMonth } });
   }
 
-  async createProfitShareLog(data: any) {
+  async createProfitShareLog(data: Prisma.ProfitShareLogUncheckedCreateInput) {
     return this.prisma.profitShareLog.create({ data });
   }
 
-  async updateProfitShareLog(id: string, data: any) {
+  async updateProfitShareLog(id: string, data: Prisma.ProfitShareLogUncheckedUpdateInput) {
     return this.prisma.profitShareLog.update({ where: { id }, data });
   }
 
-  async createAuditLog(data: any) {
+  async createAuditLog(data: Prisma.AuditLogUncheckedCreateInput) {
     return this.prisma.auditLog.create({ data });
   }
 
-  async findFirstCashRegister(where: any, orderBy?: any) {
+  async findFirstCashRegister(where: Prisma.CashRegisterWhereInput, orderBy?: Prisma.CashRegisterOrderByWithRelationInput) {
     return this.prisma.cashRegister.findFirst({ where, orderBy });
   }
 
-  async createCashRegister(data: any) {
+  async createCashRegister(data: Prisma.CashRegisterUncheckedCreateInput) {
     return this.prisma.cashRegister.create({ data });
   }
 
-  async updateCashRegister(id: string, data: any) {
+  async updateCashRegister(id: string, data: Prisma.CashRegisterUncheckedUpdateInput) {
     return this.prisma.cashRegister.update({ where: { id }, data });
   }
 
-  async findManyCashRegisters(orderBy?: any, include?: any) {
+  async findManyCashRegisters(orderBy?: Prisma.CashRegisterOrderByWithRelationInput, include?: Prisma.CashRegisterInclude) {
     return this.prisma.cashRegister.findMany({ orderBy, include });
   }
 }

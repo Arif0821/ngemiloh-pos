@@ -3,7 +3,8 @@
   import { onMount } from 'svelte';
   
   let settings: Record<string, string> = $state({});
-  let featureFlags: any[] = $state([]);
+  import type { FeatureFlag } from '$lib/domain/models/types';
+  let featureFlags: FeatureFlag[] = $state([]);
   let isLoading = $state(true);
   
   let isSavingSettings = $state(false);
@@ -24,8 +25,8 @@
       if (resSettings.ok) {
         const json = await resSettings.json();
         // convert array [{key, value}] to object {key: value}
-        const st: any = {};
-        json.data.forEach((s: any) => {
+        const st: Record<string, string> = {};
+        json.data.forEach((s: {key: string, value: string}) => {
           st[s.key] = s.value;
         });
         settings = st;

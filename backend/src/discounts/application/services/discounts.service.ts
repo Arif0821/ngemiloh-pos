@@ -1,5 +1,6 @@
 import { Injectable, Inject, NotFoundException } from '@nestjs/common';
 import { type IDiscountRepository, DISCOUNT_REPOSITORY } from '../../domain/interfaces/discount.repository.interface';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class DiscountsService {
@@ -17,11 +18,11 @@ export class DiscountsService {
     return discount;
   }
 
-  async create(data: any, adminId: string) {
+  async create(data: Prisma.DiscountUncheckedCreateInput, adminId: string) {
     return this.discountRepository.create(data, adminId);
   }
 
-  async update(id: string, data: any) {
+  async update(id: string, data: Prisma.DiscountUncheckedUpdateInput) {
     return this.discountRepository.update(id, data);
   }
 

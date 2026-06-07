@@ -2,7 +2,8 @@
   import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
   
-  let assets: any[] = $state([]);
+  import type { Asset } from '$lib/domain/models/types';
+  let assets: Asset[] = $state([]);
   let isLoading = $state(true);
   
   let showModal = $state(false);
@@ -46,7 +47,7 @@
     showModal = true;
   }
 
-  function openEditModal(asset: any) {
+  function openEditModal(asset: Asset) {
     isEditing = true;
     formId = asset.id;
     formName = asset.name;

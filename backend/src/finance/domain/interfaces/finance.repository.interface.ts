@@ -1,19 +1,21 @@
+import { Prisma, Order, OperationalExpense, Asset, ProfitShareLog, AuditLog, CashRegister } from '@prisma/client';
+
 export const FINANCE_REPOSITORY = Symbol('FINANCE_REPOSITORY');
 
 export interface IFinanceRepository {
-  findOrders(where: any, include?: any): Promise<any[]>;
-  findOperationalExpenses(where: any, orderBy?: any): Promise<any[]>;
-  createOperationalExpense(data: any): Promise<any>;
-  findAssets(where?: any, orderBy?: any): Promise<any[]>;
-  findAssetById(id: string): Promise<any>;
-  createAsset(data: any): Promise<any>;
-  updateAsset(id: string, data: any): Promise<any>;
-  findProfitShareLogByPeriod(periodMonth: Date): Promise<any>;
-  createProfitShareLog(data: any): Promise<any>;
-  updateProfitShareLog(id: string, data: any): Promise<any>;
-  createAuditLog(data: any): Promise<any>;
-  findFirstCashRegister(where: any, orderBy?: any): Promise<any>;
-  createCashRegister(data: any): Promise<any>;
-  updateCashRegister(id: string, data: any): Promise<any>;
-  findManyCashRegisters(orderBy?: any, include?: any): Promise<any[]>;
+  findOrders(where: Prisma.OrderWhereInput, include?: Prisma.OrderInclude): Promise<any[]>;
+  findOperationalExpenses(where: Prisma.OperationalExpenseWhereInput, orderBy?: Prisma.OperationalExpenseOrderByWithRelationInput): Promise<OperationalExpense[]>;
+  createOperationalExpense(data: Prisma.OperationalExpenseUncheckedCreateInput): Promise<OperationalExpense>;
+  findAssets(where?: Prisma.AssetWhereInput, orderBy?: Prisma.AssetOrderByWithRelationInput): Promise<Asset[]>;
+  findAssetById(id: string): Promise<Asset | null>;
+  createAsset(data: Prisma.AssetUncheckedCreateInput): Promise<Asset>;
+  updateAsset(id: string, data: Prisma.AssetUncheckedUpdateInput): Promise<Asset>;
+  findProfitShareLogByPeriod(periodMonth: Date): Promise<ProfitShareLog | null>;
+  createProfitShareLog(data: Prisma.ProfitShareLogUncheckedCreateInput): Promise<ProfitShareLog>;
+  updateProfitShareLog(id: string, data: Prisma.ProfitShareLogUncheckedUpdateInput): Promise<ProfitShareLog>;
+  createAuditLog(data: Prisma.AuditLogUncheckedCreateInput): Promise<AuditLog>;
+  findFirstCashRegister(where: Prisma.CashRegisterWhereInput, orderBy?: Prisma.CashRegisterOrderByWithRelationInput): Promise<CashRegister | null>;
+  createCashRegister(data: Prisma.CashRegisterUncheckedCreateInput): Promise<CashRegister>;
+  updateCashRegister(id: string, data: Prisma.CashRegisterUncheckedUpdateInput): Promise<CashRegister>;
+  findManyCashRegisters(orderBy?: Prisma.CashRegisterOrderByWithRelationInput, include?: Prisma.CashRegisterInclude): Promise<any[]>;
 }

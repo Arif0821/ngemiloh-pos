@@ -1,7 +1,8 @@
 import { Controller, Get, Post, Body, Patch, Param, Delete, UseGuards, Req } from '@nestjs/common';
 import { DiscountsService } from '../application/services/discounts.service';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../../auth/guards/roles.guard';
+import { JwtAuthGuard } from '../../auth/strategies/jwt-auth.guard';
+import { RolesGuard } from '../../auth/strategies/roles.guard';
+import { Request } from 'express';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { CreateDiscountDto, UpdateDiscountDto } from './dto/discounts.dto';
 
@@ -13,7 +14,7 @@ export class DiscountsController {
 
   @Post()
   @Roles('superadmin')
-  async create(@Body() createDiscountDto: CreateDiscountDto, @Req() req: any) {
+  async create(@Body() createDiscountDto: CreateDiscountDto, @Req() req: Request & { user: any }) {
     const data = await this.discountsService.create(createDiscountDto, req.user.id);
     return { success: true, data };
   }

@@ -1,3 +1,5 @@
+import type { OrderResponse } from '../domain/models/types';
+
 export class PrinterService {
   private device: BluetoothDevice | null = null;
   private characteristic: BluetoothRemoteGATTCharacteristic | null = null;
@@ -45,7 +47,7 @@ export class PrinterService {
       console.log('Receipt printed successfully');
       return true;
 
-    } catch (e: any) {
+    } catch (e: unknown) {
       console.error('Bluetooth printing error', e);
       // alert('Gagal mencetak struk via Bluetooth: ' + e.message);
       return false;
@@ -53,7 +55,7 @@ export class PrinterService {
   }
 
   // Utility to format standard receipts
-  formatReceipt(order: any, storeName: string, footer: string) {
+  formatReceipt(order: OrderResponse, storeName: string, footer: string) {
     let text = `\n${storeName}\n`;
     text += `================================\n`;
     text += `ID: ${order.client_uuid.split('-')[0].toUpperCase()}\n`;

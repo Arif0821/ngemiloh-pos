@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { OrderRepositoryInterface } from '../../domain/interfaces/order.repository.interface';
-import { Order, CashRegister, Setting, AuditLog, OrderRefund, Discount, Product } from '@prisma/client';
+import { Order, CashRegister, Setting, AuditLog, OrderRefund, Discount, Product, Prisma } from '@prisma/client';
 
 @Injectable()
 export class PrismaOrderRepository implements OrderRepositoryInterface {
@@ -33,11 +33,11 @@ export class PrismaOrderRepository implements OrderRepositoryInterface {
     });
   }
 
-  async createOrder(data: any): Promise<Order> {
+  async createOrder(data: Prisma.OrderUncheckedCreateInput): Promise<Order> {
     return this.prisma.order.create(data);
   }
 
-  async updateOrder(id: string, data: any): Promise<Order> {
+  async updateOrder(id: string, data: Prisma.OrderUncheckedUpdateInput): Promise<Order> {
     return this.prisma.order.update({
       where: { id },
       data
@@ -50,7 +50,7 @@ export class PrismaOrderRepository implements OrderRepositoryInterface {
     });
   }
 
-  async findOrders(where: any, orderBy: any, include?: any): Promise<any[]> {
+  async findOrders(where: Prisma.OrderWhereInput, orderBy: Prisma.OrderOrderByWithRelationInput, include?: Prisma.OrderInclude): Promise<any[]> {
     return this.prisma.order.findMany({
       where,
       orderBy,
@@ -58,7 +58,7 @@ export class PrismaOrderRepository implements OrderRepositoryInterface {
     });
   }
 
-  async createAuditLog(data: any): Promise<AuditLog> {
+  async createAuditLog(data: Prisma.AuditLogUncheckedCreateInput): Promise<AuditLog> {
     return this.prisma.auditLog.create({ data });
   }
 
@@ -78,11 +78,11 @@ export class PrismaOrderRepository implements OrderRepositoryInterface {
     });
   }
 
-  async createShift(data: any): Promise<CashRegister> {
+  async createShift(data: Prisma.CashRegisterUncheckedCreateInput): Promise<CashRegister> {
     return this.prisma.cashRegister.create({ data });
   }
 
-  async createOrderRefund(data: any): Promise<OrderRefund> {
+  async createOrderRefund(data: Prisma.OrderRefundUncheckedCreateInput): Promise<OrderRefund> {
     return this.prisma.orderRefund.create({ data });
   }
 
@@ -95,7 +95,7 @@ export class PrismaOrderRepository implements OrderRepositoryInterface {
     });
   }
 
-  async findShifts(where: any, include?: any, orderBy?: any, take?: number): Promise<any[]> {
+  async findShifts(where: Prisma.CashRegisterWhereInput, include?: Prisma.CashRegisterInclude, orderBy?: Prisma.CashRegisterOrderByWithRelationInput, take?: number): Promise<any[]> {
     return this.prisma.cashRegister.findMany({
       where,
       include,

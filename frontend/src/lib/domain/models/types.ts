@@ -78,3 +78,86 @@ export interface AnalyticsTrend {
   label: string;
   value: number;
 }
+
+export interface AnalyticsResponse {
+  trend: AnalyticsTrend[];
+  topProducts: {
+    byQty: { name: string; qty: number; revenue: number }[];
+    byRevenue: { name: string; qty: number; revenue: number }[];
+  };
+  paymentDistribution: {
+    counts: { cash: number; qris: number; split: number };
+    values: { cash: number; qris: number; split: number };
+  };
+  peakHours: { hour: number; count: number }[];
+}
+
+export interface Asset {
+  id: string;
+  name: string;
+  purchase_price: number | string;
+  useful_life_months: number;
+  monthly_depreciation: number | string;
+  purchase_date: string;
+  is_active: boolean;
+}
+
+export interface AuditLog {
+  id: string;
+  actor_id: string;
+  action: string;
+  entity_type: string;
+  entity_id: string;
+  old_value?: any;
+  new_value?: any;
+  created_at: string;
+  actor?: { name: string; role: string };
+}
+
+export interface OperationalExpense {
+  id: string;
+  category: string;
+  description: string;
+  amount: number | string;
+  expense_date: string;
+}
+
+export interface RawMaterial {
+  id: string;
+  name: string;
+  purchase_unit: string;
+  purchase_qty: number;
+  usage_unit: string;
+  conversion_factor: number;
+  cost_per_unit: number;
+  stock_level: number;
+  min_stock?: number;
+  supplier?: string;
+  last_purchase_price: number;
+}
+
+export interface ProfitShareData {
+  period: string;
+  revenue: number;
+  totalHpp: number;
+  totalOpex: number;
+  totalDepreciation: number;
+  netProfit: number;
+  ownerShare: number;
+  cashierShare: number;
+}
+
+export interface FeatureFlag {
+  id: string;
+  name: string;
+  description: string;
+  is_enabled: boolean;
+}
+
+export interface User {
+  id: string;
+  name: string;
+  username?: string;
+  role: string;
+  is_active: boolean;
+}

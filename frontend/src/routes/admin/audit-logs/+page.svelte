@@ -2,7 +2,8 @@
   import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
 
-  let logs: any[] = $state([]);
+  import type { AuditLog } from '$lib/domain/models/types';
+  let logs: AuditLog[] = $state([]);
   let total: number = $state(0);
   let isLoading = $state(false);
 
@@ -57,7 +58,7 @@
     });
   }
 
-  function formatJson(data: any) {
+  function formatJson(data: unknown) {
     if (!data) return '-';
     try {
       return JSON.stringify(data, null, 2);

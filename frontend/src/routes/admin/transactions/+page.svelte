@@ -1,11 +1,12 @@
 <script lang="ts">
   import { api } from '$lib/services/api.client';
   import { onMount } from 'svelte';
+  import type { OrderResponse } from '$lib/domain/models/types';
   
-  let orders = $state<any[]>([]);
+  let orders = $state<OrderResponse[]>([]);
   let isLoading = $state(true);
   
-  let selectedOrder = $state<any>(null);
+  let selectedOrder = $state<OrderResponse | null>(null);
   let showDetailModal = $state(false);
   let showVoidModal = $state(false);
   let voidReason = $state('');

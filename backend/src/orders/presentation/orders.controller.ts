@@ -1,7 +1,8 @@
 import { Controller, Post, Get, Body, UseGuards, Req, HttpCode, HttpStatus, Param, Sse, MessageEvent, Patch, Res, Query } from '@nestjs/common';
 import { OrdersService } from '../application/services/orders.service';
-import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../../auth/guards/roles.guard';
+import { JwtAuthGuard } from '../../auth/strategies/jwt-auth.guard';
+import { RolesGuard } from '../../auth/strategies/roles.guard';
+import { Request } from 'express';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
@@ -19,14 +20,14 @@ export class OrdersController {
 
   @Post('orders')
   @UseGuards(JwtAuthGuard)
-  async createOrder(@Body() body: CreateOrderDto, @Req() req: any) {
+  async createOrder(@Body() body: CreateOrderDto, @Req() req: Request & { user: any }) {
     const order = await this.ordersService.createOrder(body, req.user.id);
     return { success: true, data: order };
   }
 
   @Post('orders/sync-batch')
   @UseGuards(JwtAuthGuard)
-  async syncBatchOrders(@Body() body: SyncBatchDto, @Req() req: any) {
+  async syncBatchOrders(@Body() body: SyncBatchDto, @Req() req: Request & { user: any }) {
     const { orders } = body;
     const result = await this.ordersService.syncBatchOrders(orders, req.user.id);
     return { success: true, data: result };
@@ -34,7 +35,7 @@ export class OrdersController {
 
   @Get('orders')
   @UseGuards(JwtAuthGuard)
-  async getHistory(@Req() req: any, @Query('page') page: string = '1') {
+  async getHistory(@Req() req: Request & { user: any }, @Query('page') page: string = '1') {
     const filterKasir = req.user.role === 'kasir' ? req.user.id : undefined;
     const pageNum = parseInt(page, 10) || 1;
     const limit = 50;
@@ -59,7 +60,7 @@ export class OrdersController {
 
   @Get('orders/shift')
   @UseGuards(JwtAuthGuard)
-  async getShiftSummary(@Req() req: any) {
+  async getShiftSummary(@Req() req: Request & { user: any }) {
     const filterKasir = req.user.role === 'kasir' ? req.user.id : req.query.kasir_id;
     if (!filterKasir) {
       return { success: false, message: 'Kasir ID required for superadmin shift check' };
@@ -78,21 +79,21 @@ export class OrdersController {
 
   @Post('pos/shift/start')
   @UseGuards(JwtAuthGuard)
-  async startShift(@Req() req: any) {
+  async startShift(@Req() req: Request & { user: any }) {
     const shift = await this.ordersService.startShift(req.user.id);
     return { success: true, data: shift };
   }
 
   @Get('pos/shift/status')
   @UseGuards(JwtAuthGuard)
-  async checkShiftStatus(@Req() req: any) {
+  async checkShiftStatus(@Req() req: Request & { user: any }) {
     const shift = await this.ordersService.getCurrentShift(req.user.id);
     return { success: true, data: shift };
   }
 
   @Post('admin/transactions/:id/void')
   @UseGuards(JwtAuthGuard)
-  async voidTransaction(@Param('id') id: string, @Body('reason') reason: string, @Req() req: any) {
+  async voidTransaction(@Param('id') id: string, @Body('reason') reason: string, @Req() req: Request & { user: any }) {
     if (req.user.role !== 'superadmin') {
       return { success: false, message: 'Forbidden' };
     }
@@ -102,7 +103,7 @@ export class OrdersController {
 
   @Patch('admin/transactions/:id/flag')
   @UseGuards(JwtAuthGuard)
-  async flagTransaction(@Param('id') id: string, @Body('status') status: string, @Req() req: any) {
+  async flagTransaction(@Param('id') id: string, @Body('status') status: string, @Req() req: Request & { user: any }) {
     if (req.user.role !== 'superadmin') {
       return { success: false, message: 'Forbidden' };
     }

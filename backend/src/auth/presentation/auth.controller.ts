@@ -94,7 +94,7 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  async getMe(@Req() req: any) {
+  async getMe(@Req() req: Request & { user: any }) {
     return {
       success: true,
       data: req.user,
