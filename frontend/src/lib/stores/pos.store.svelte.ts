@@ -1,6 +1,7 @@
 import { db, type LocalProduct } from '$lib/db';
+import type { Discount, OrderResponse, ModifierOption } from '../domain/models/types';
 
-export type CartItem = LocalProduct & { quantity: number, cartItemId: string, selectedModifiers: any[] };
+export type CartItem = LocalProduct & { quantity: number, cartItemId: string, selectedModifiers: ModifierOption[] };
 
 export class PosStore {
   // Application State
@@ -28,9 +29,9 @@ export class PosStore {
 
   // Modifier Logic
   selectedProductForModifier: LocalProduct | null = $state(null);
-  selectedModifiers: Record<string, any> = $state({});
+  selectedModifiers: Record<string, ModifierOption> = $state({});
   modifierTotal: number = $derived(
-    Object.values(this.selectedModifiers).reduce((sum, opt: any) => sum + Number(opt.additional_price || 0), 0)
+    Object.values(this.selectedModifiers).reduce((sum, opt) => sum + Number(opt.additional_price || 0), 0)
   );
 
   isAllRequiredModifiersSelected: boolean = $derived.by(() => {
@@ -42,8 +43,8 @@ export class PosStore {
   });
 
   // Discounts
-  activeDiscounts: any[] = $state([]);
-  appliedDiscount: any = $state(null);
+  activeDiscounts: Discount[] = $state([]);
+  appliedDiscount: Discount | null = $state(null);
 
   // Payment Logic
   paymentMethod: 'cash' | 'qris' | 'split' = $state('cash');
@@ -52,7 +53,7 @@ export class PosStore {
   isProcessing: boolean = $state(false);
   
   cartTotalBeforeDiscount = $derived(
-    this.cart.reduce((sum, item) => sum + (item.base_price * item.quantity) + (item.selectedModifiers.reduce((s:number, m:any)=>s+Number(m.additional_price), 0) * item.quantity), 0)
+    this.cart.reduce((sum, item) => sum + (item.base_price * item.quantity) + (item.selectedModifiers.reduce((s:number, m:ModifierOption)=>s+Number(m.additional_price), 0) * item.quantity), 0)
   );
   
   discountTotal: number = $derived(
@@ -66,9 +67,9 @@ export class PosStore {
   // QRIS Waiting State
   isWaitingQris: boolean = $state(false);
   qrisCountdown: number = $state(900); // 15 minutes
-  qrisOrderInfo: any = $state(null);
-  lastOrderDetails: any = $state(null);
-  historyOrders: any[] = $state([]);
+  qrisOrderInfo: OrderResponse | null = $state(null);
+  lastOrderDetails: OrderResponse | null = $state(null);
+  historyOrders: OrderResponse[] = $state([]);
 
   // Methods
   
@@ -97,9 +98,9 @@ export class PosStore {
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   }
 
-  addToCart(product: LocalProduct, modifiers: any[]) {
+  addToCart(product: LocalProduct, modifiers: ModifierOption[]) {
     const modifierSig = modifiers.map(m => m.id).sort().join(',');
-    const existing = this.cart.find(item => item.id === product.id && item.selectedModifiers.map((m:any)=>m.id).sort().join(',') === modifierSig);
+    const existing = this.cart.find(item => item.id === product.id && item.selectedModifiers.map(m=>m.id).sort().join(',') === modifierSig);
     
     if (existing) {
       existing.quantity++;

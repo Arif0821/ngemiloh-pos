@@ -1,13 +1,14 @@
 import { db, type LocalProduct } from '$lib/db';
 import { posStore } from '../stores/pos.store.svelte';
 import { api } from '$lib/services/api.client';
+import type { ApiResponse, Discount, OrderResponse, CreateOrderPayload, ShiftInfo } from '../domain/models/types';
 
 export class PosService {
   async fetchFlags() {
     try {
       const res = await api.get(`/flags`);
       if (res.ok) {
-        const json = await res.json();
+        const json: ApiResponse<any> = await res.json();
         posStore.featureFlags = json.data;
       }
     } catch (e) {}
@@ -18,7 +19,7 @@ export class PosService {
     try {
       const res = await api.get(`/cash/current`);
       if (res.ok) {
-        const json = await res.json();
+        const json: ApiResponse<ShiftInfo | null> = await res.json();
         posStore.hasOpenShift = !!json.data;
       }
     } catch (e) {
@@ -91,9 +92,9 @@ export class PosService {
     try {
       const res = await api.get(`/admin/discounts`);
       if (res.ok) {
-        const json = await res.json();
+        const json: ApiResponse<Discount[]> = await res.json();
         if (json.success) {
-          posStore.activeDiscounts = json.data.filter((d: any) => d.is_active);
+          posStore.activeDiscounts = json.data.filter(d => d.is_active);
         }
       }
     } catch (e) {
@@ -151,7 +152,7 @@ export class PosService {
   pollingInterval: any;
   sseEventSource: EventSource | null = null;
 
-  startQrisWaiting(orderData: any, onSuccess: () => void) {
+  startQrisWaiting(orderData: OrderResponse, onSuccess: () => void) {
     posStore.isWaitingQris = true;
     posStore.showPaymentModal = false;
     posStore.qrisOrderInfo = orderData;
@@ -200,7 +201,7 @@ export class PosService {
     }
   }
 
-  async processPayment(onQrisWait: (data: any) => void, onSuccess: (data: any) => void) {
+  async processPayment(onQrisWait: (data: OrderResponse) => void, onSuccess: (data: OrderResponse) => void) {
     if (posStore.cart.length === 0 || posStore.isProcessing) return;
     posStore.isProcessing = true;
     
@@ -219,7 +220,7 @@ export class PosService {
         quantity: c.quantity,
         modifiers: c.selectedModifiers.map((m:any) => ({ option_id: m.id }))
       }))
-    };
+    } as CreateOrderPayload;
 
     try {
       if (posStore.isOffline) {
@@ -247,7 +248,7 @@ export class PosService {
         const res = await api.post(`/orders`, payload);
         
         if (res.ok) {
-          const json = await res.json();
+          const json: ApiResponse<OrderResponse> = await res.json();
           if (posStore.paymentMethod === 'qris' || posStore.paymentMethod === 'split') {
             onQrisWait(json.data);
           } else {
