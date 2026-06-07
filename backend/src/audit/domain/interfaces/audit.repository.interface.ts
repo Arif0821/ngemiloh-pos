@@ -12,4 +12,5 @@ export interface IAuditRepository {
   findLogs(filters: AuditLogFilters, skip: number, take: number): Promise<[any[], number]>;
   findLogsOlderThan(date: Date): Promise<any[]>;
   deleteLogsOlderThan(date: Date): Promise<number>;
+  createAuditLog(data: any): Promise<void>;
 }

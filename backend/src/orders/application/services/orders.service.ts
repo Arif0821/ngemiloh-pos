@@ -221,7 +221,7 @@ export class OrdersService {
   }
 
   async syncBatchOrders(orders: any[], kasirId: string) {
-    const results = [];
+    const results: any[] = [];
     for (const orderData of orders) {
       try {
         // Flag to mark it came from offline sync

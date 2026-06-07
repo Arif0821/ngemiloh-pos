@@ -1,7 +1,7 @@
 import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Inject } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
-import { AUDIT_REPOSITORY, type IAuditRepository } from '../../domain/interfaces/audit.repository.interface';
+import { AUDIT_REPOSITORY, type IAuditRepository } from '../domain/interfaces/audit.repository.interface';
 import { Role } from '@prisma/client';
 
 @Injectable()

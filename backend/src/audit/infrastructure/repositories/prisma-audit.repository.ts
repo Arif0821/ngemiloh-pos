@@ -79,4 +79,18 @@ export class PrismaAuditRepository implements IAuditRepository {
     });
     return deleted.count;
   }
+
+  async createAuditLog(data: any): Promise<void> {
+    await this.prisma.auditLog.create({
+      data: {
+        actor_id: data.actor_id,
+        action: data.action,
+        entity_type: data.entity_type,
+        entity_id: data.entity_id,
+        old_value: data.old_value,
+        new_value: data.new_value,
+        ip_address: data.ip_address,
+      }
+    });
+  }
 }
