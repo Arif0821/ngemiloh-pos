@@ -6,4 +6,7 @@ export interface IUserRepository {
   findById(id: string): Promise<any | null>;
   create(data: any): Promise<any>;
   update(id: string, data: any): Promise<any>;
+  findCustomers(): Promise<any[]>;
+  createCustomer(data: any): Promise<any>;
+  updateCustomerLoyalty(id: string, points: number): Promise<any>;
 }

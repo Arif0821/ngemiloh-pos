@@ -220,6 +220,32 @@ export class OrdersService {
     return order;
   }
 
+  async syncBatchOrders(orders: any[], kasirId: string) {
+    const results = [];
+    for (const orderData of orders) {
+      try {
+        // Flag to mark it came from offline sync
+        orderData.synced_from_offline = true;
+        // The QRIS can't be used offline per BR-O01, but we still handle it
+        if (orderData.payment_method === PaymentMethod.qris) {
+           results.push({ client_uuid: orderData.client_uuid, status: 'error', message: 'QRIS not allowed in offline sync' });
+           continue;
+        }
+        
+        const order = await this.createOrder(orderData, kasirId);
+        
+        // Ensure it is marked as synced_from_offline
+        await this.orderRepository.updateOrder(order.id, { synced_from_offline: true });
+        
+        results.push({ client_uuid: orderData.client_uuid, status: 'success', server_id: order.id });
+      } catch (err: any) {
+        this.logger.error(`Failed to sync offline order ${orderData.client_uuid}: ${err.message}`);
+        results.push({ client_uuid: orderData.client_uuid, status: 'error', message: err.message });
+      }
+    }
+    return results;
+  }
+
   async handleMidtransWebhook(notification: any) {
     try {
       const statusResponse = await this.midtransCore.transaction.notification(notification);

@@ -41,4 +41,21 @@ export class PrismaUserRepository implements IUserRepository {
       data
     });
   }
+
+  async findCustomers(): Promise<any[]> {
+    return this.prisma.customer.findMany({
+      orderBy: { created_at: 'desc' }
+    });
+  }
+
+  async createCustomer(data: any): Promise<any> {
+    return this.prisma.customer.create({ data });
+  }
+
+  async updateCustomerLoyalty(id: string, points: number): Promise<any> {
+    return this.prisma.customer.update({
+      where: { id },
+      data: { loyalty_points: { increment: points } }
+    });
+  }
 }

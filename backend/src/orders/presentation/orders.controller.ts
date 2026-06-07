@@ -23,6 +23,17 @@ export class OrdersController {
     return { success: true, data: order };
   }
 
+  @Post('orders/sync-batch')
+  @UseGuards(JwtAuthGuard)
+  async syncBatchOrders(@Body() body: any, @Req() req: any) {
+    const { orders } = body;
+    if (!Array.isArray(orders)) {
+      return { success: false, message: 'Invalid payload, expected array of orders' };
+    }
+    const result = await this.ordersService.syncBatchOrders(orders, req.user.id);
+    return { success: true, data: result };
+  }
+
   @Get('orders')
   @UseGuards(JwtAuthGuard)
   async getHistory(@Req() req: any, @Query('page') page: string = '1') {

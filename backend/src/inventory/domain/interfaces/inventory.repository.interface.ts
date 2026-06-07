@@ -25,4 +25,9 @@ export interface IInventoryRepository {
 
   findAvailableBatches(rawMaterialId: string): Promise<any[]>;
   decrementBatchStock(batchId: string, amount: number): Promise<any>;
+
+  createRawMaterial(data: any): Promise<RawMaterial>;
+  updateRawMaterial(id: string, data: any): Promise<RawMaterial>;
+  createBomRecipe(data: any): Promise<any>;
+  deleteBomRecipe(id: string): Promise<any>;
 }

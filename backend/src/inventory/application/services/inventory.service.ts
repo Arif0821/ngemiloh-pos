@@ -12,6 +12,22 @@ export class InventoryService {
     return this.inventoryRepository.findAllRawMaterials();
   }
 
+  async createRawMaterial(data: any) {
+    return this.inventoryRepository.createRawMaterial(data);
+  }
+
+  async updateRawMaterial(id: string, data: any) {
+    return this.inventoryRepository.updateRawMaterial(id, data);
+  }
+
+  async createBomRecipe(data: any) {
+    return this.inventoryRepository.createBomRecipe(data);
+  }
+
+  async deleteBomRecipe(id: string) {
+    return this.inventoryRepository.deleteBomRecipe(id);
+  }
+
   async getLowStockMaterials() {
     const all = await this.inventoryRepository.findActiveRawMaterials();
     return all.filter(m => Number(m.current_stock) <= Number(m.min_stock));

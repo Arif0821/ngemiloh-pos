@@ -50,4 +50,17 @@ export class UsersService {
     await this.userRepository.update(id, { is_active: isActive });
     return { success: true };
   }
+
+  async findAllCustomers() {
+    return this.userRepository.findCustomers();
+  }
+
+  async createCustomer(data: any) {
+    // ensure unique phone number
+    return this.userRepository.createCustomer(data);
+  }
+
+  async addLoyaltyPoints(id: string, points: number) {
+    return this.userRepository.updateCustomerLoyalty(id, points);
+  }
 }

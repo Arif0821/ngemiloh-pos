@@ -126,26 +126,39 @@ export class PosService {
 
   async syncPendingOrders() {
     const pending = await db.orders.where('sync_status').equals('pending').toArray();
-    for (const order of pending) {
-      try {
-        const res = await fetch(`/api/v1/orders`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          credentials: 'include',
-          body: JSON.stringify({
-            client_uuid: order.client_uuid,
-            payment_method: order.payment_method,
-            order_type: 'dine_in',
-            client_final_price: order.final_price,
-            items: order.items
-          })
-        });
-        if (res.ok) {
-          await db.orders.update(order.client_uuid, { sync_status: 'synced' });
+    if (pending.length === 0) return;
+
+    try {
+      const payload = {
+        orders: pending.map(order => ({
+          client_uuid: order.client_uuid,
+          payment_method: order.payment_method,
+          order_type: 'dine_in',
+          client_final_price: order.final_price,
+          items: order.items
+        }))
+      };
+
+      const res = await fetch(`/api/v1/orders/sync-batch`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        credentials: 'include',
+        body: JSON.stringify(payload)
+      });
+
+      if (res.ok) {
+        const json = await res.json();
+        if (json.success && json.data) {
+          // Update status to synced for successful ones
+          for (const result of json.data) {
+             if (result.status === 'success') {
+               await db.orders.update(result.client_uuid, { sync_status: 'synced' });
+             }
+          }
         }
-      } catch (e) {
-        console.error('Sync failed for order ' + order.client_uuid, e);
       }
+    } catch (e) {
+      console.error('Batch sync failed', e);
     }
   }
 

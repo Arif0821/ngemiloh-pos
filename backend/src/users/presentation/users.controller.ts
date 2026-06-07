@@ -33,4 +33,23 @@ export class UsersController {
     const data = await this.usersService.toggleCashierStatus(id, dto.is_active);
     return { success: true, data };
   }
+
+  // --- FASE 2: LOYALTY ---
+  @Get('customers')
+  async getCustomers() {
+    const data = await this.usersService.findAllCustomers();
+    return { success: true, data };
+  }
+
+  @Post('customers')
+  async createCustomer(@Body() createDto: any) {
+    const data = await this.usersService.createCustomer(createDto);
+    return { success: true, data };
+  }
+
+  @Patch('customers/:id/loyalty')
+  async addLoyaltyPoints(@Param('id') id: string, @Body() dto: { points: number }) {
+    const data = await this.usersService.addLoyaltyPoints(id, dto.points);
+    return { success: true, data };
+  }
 }

@@ -106,4 +106,25 @@ export class PrismaInventoryRepository implements IInventoryRepository {
   async decrementBatchStock(batchId: string, amount: number): Promise<any> {
     return null;
   }
+
+  async createRawMaterial(data: any): Promise<RawMaterial> {
+    return this.client.rawMaterial.create({ data });
+  }
+
+  async updateRawMaterial(id: string, data: any): Promise<RawMaterial> {
+    return this.client.rawMaterial.update({
+      where: { id },
+      data
+    });
+  }
+
+  async createBomRecipe(data: any): Promise<any> {
+    return this.client.bomRecipe.create({ data });
+  }
+
+  async deleteBomRecipe(id: string): Promise<any> {
+    return this.client.bomRecipe.delete({
+      where: { id }
+    });
+  }
 }

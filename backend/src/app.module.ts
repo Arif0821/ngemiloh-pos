@@ -19,6 +19,8 @@ import { FlagsModule } from './flags/flags.module';
 import { MailModule } from './mail/mail.module';
 import { AuditModule } from './audit/audit.module';
 import { BullModule } from '@nestjs/bullmq';
+import { APP_INTERCEPTOR } from '@nestjs/core';
+import { AuditInterceptor } from './audit/presentation/audit.interceptor';
 
 @Module({
   imports: [
@@ -67,6 +69,10 @@ import { BullModule } from '@nestjs/bullmq';
     {
       provide: APP_GUARD,
       useClass: ThrottlerGuard, // Apply rate limiting globally
+    },
+    {
+      provide: APP_INTERCEPTOR,
+      useClass: AuditInterceptor, // Apply audit log globally for mutating requests
     }
   ],
 })
