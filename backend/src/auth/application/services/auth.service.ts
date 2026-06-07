@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { EmailService } from '../../../email/email.service';
-import { Role } from '@prisma/client';
+import { Role, User } from '@prisma/client';
 import { MailService } from '../../../mail/mail.service';
 import { AUTH_REPOSITORY, type AuthRepositoryInterface } from '../../domain/interfaces/auth.repository.interface';
 
@@ -102,12 +102,12 @@ export class AuthService {
     const payload = { sub: user.id, role: user.role };
     const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET,
-      expiresIn: process.env.JWT_ACCESS_EXPIRES as string,
+      expiresIn: process.env.JWT_ACCESS_EXPIRES as any,
     });
     
     const refreshToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: process.env.JWT_REFRESH_EXPIRES as string,
+      expiresIn: process.env.JWT_REFRESH_EXPIRES as any,
     });
     
     const csrfToken = crypto.randomBytes(32).toString('hex');
@@ -206,7 +206,7 @@ export class AuthService {
       const newPayload = { sub: user.id, role: user.role };
       const newAccessToken = this.jwtService.sign(newPayload, {
         secret: process.env.JWT_ACCESS_SECRET,
-        expiresIn: process.env.JWT_ACCESS_EXPIRES as string,
+        expiresIn: process.env.JWT_ACCESS_EXPIRES as any,
       });
 
       return {

@@ -34,7 +34,7 @@ export class PrismaOrderRepository implements OrderRepositoryInterface {
   }
 
   async createOrder(data: Prisma.OrderUncheckedCreateInput): Promise<Order> {
-    return this.prisma.order.create(data);
+    return this.prisma.order.create({ data });
   }
 
   async updateOrder(id: string, data: Prisma.OrderUncheckedUpdateInput): Promise<Order> {

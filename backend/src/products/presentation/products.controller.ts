@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, Req, UseInterceptors, UploadedFile, BadRequestException } from '@nestjs/common';
 import { ProductsService } from '../application/services/products.service';
-import { JwtAuthGuard } from '../../auth/strategies/jwt-auth.guard';
-import { RolesGuard } from '../../auth/strategies/roles.guard';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Request } from 'express';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
@@ -104,7 +104,8 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
   async createModifierGroup(@Param('id') id: string, @Body() body: CreateModifierGroupDto) {
-    const group = await this.productsService.createModifierGroup(id, body);
+    const payload: any = { ...body, product_id: id };
+    const group = await this.productsService.createModifierGroup(id, payload);
     return { success: true, data: group };
   }
 
@@ -112,7 +113,8 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
   async createModifierOption(@Param('id') id: string, @Body() body: CreateModifierOptionDto) {
-    const option = await this.productsService.createModifierOption(id, body);
+    const payload: any = { ...body, group_id: id };
+    const option = await this.productsService.createModifierOption(id, payload);
     return { success: true, data: option };
   }
 

@@ -143,29 +143,27 @@ export class OrdersService {
     }
 
     const order = await this.orderRepository.createOrder({
-      data: {
-        client_uuid: data.client_uuid,
-        cashier_id: kasirId,
-        client_created_at: new Date(),
-        total_amount: calculatedFinalPrice,
-        discount_total: totalDiscountAmount, 
-        payment_method: data.payment_method,
-        cash_amount: cashAmount,
-        qris_amount: qrisAmount,
-        status: data.payment_method === PaymentMethod.cash ? OrderStatus.completed : OrderStatus.pending_sync,
-        payment_status: data.payment_method === PaymentMethod.cash ? 'paid' : 'unpaid',
-        items: {
-          create: orderItemsPayload.map(i => ({
-            product_id: i.product_id,
-            discount_id: i.discount_id,
-            product_name_snapshot: 'Menu',
-            base_price: i.unit_price,
-            discounted_base: i.discounted_base,
-            final_price: i.final_price, 
-            quantity: i.quantity,
-            subtotal: i.subtotal
-          }))
-        }
+      client_uuid: data.client_uuid,
+      cashier_id: kasirId,
+      client_created_at: new Date(),
+      total_amount: calculatedFinalPrice,
+      discount_total: totalDiscountAmount, 
+      payment_method: data.payment_method,
+      cash_amount: cashAmount,
+      qris_amount: qrisAmount,
+      status: data.payment_method === PaymentMethod.cash ? OrderStatus.completed : OrderStatus.pending_sync,
+      payment_status: data.payment_method === PaymentMethod.cash ? 'paid' : 'unpaid',
+      items: {
+        create: orderItemsPayload.map(i => ({
+          product_id: i.product_id,
+          discount_id: i.discount_id,
+          product_name_snapshot: 'Menu',
+          base_price: i.unit_price,
+          discounted_base: i.discounted_base,
+          final_price: i.final_price, 
+          quantity: i.quantity,
+          subtotal: i.subtotal
+        }))
       }
     });
 
@@ -344,8 +342,7 @@ export class OrdersService {
         created_at: { gte: today },
         cashier_id: kasirId,
         status: OrderStatus.completed,
-      },
-      undefined
+      }
     );
 
     const totalOrders = orders.length;

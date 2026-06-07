@@ -30,7 +30,7 @@ export class InventoryController {
   async adjustStock(@Body() body: AdjustStockDto, @Req() req: any) {
     const { id, qty, type, notes } = body;
     const userId = req.user.id;
-    const data = await this.inventoryService.adjustStock(id, qty, type, notes, userId);
+    const data = await this.inventoryService.adjustStock(id, qty, type as 'IN' | 'OUT', notes || '', userId);
     return { status: 'success', data };
   }
 

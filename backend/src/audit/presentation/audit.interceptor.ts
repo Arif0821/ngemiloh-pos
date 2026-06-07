@@ -42,8 +42,8 @@ export class AuditInterceptor implements NestInterceptor {
           action: action,
           entity_type: 'API_REQUEST',
           entity_id: request.url,
-          old_value: null,
-          new_value: newValue,
+          old_value: null as any,
+          new_value: newValue as any,
           ip_address: ipAddress,
         }).catch(err => {
           console.error('Failed to write audit log:', err);

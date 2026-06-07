@@ -131,7 +131,7 @@ export class FinanceService {
     return this.financeRepository.findAssets(undefined, { created_at: 'desc' });
   }
 
-  async createAsset(data: Prisma.AssetUncheckedCreateInput) {
+  async createAsset(data: any) {
     return this.financeRepository.createAsset({
       name: data.name,
       purchase_price: data.value,
@@ -143,7 +143,7 @@ export class FinanceService {
     });
   }
 
-  async updateAsset(id: string, data: Prisma.AssetUncheckedUpdateInput) {
+  async updateAsset(id: string, data: any) {
     const asset = await this.financeRepository.findAssetById(id);
     if (!asset) throw new NotFoundException('Asset not found');
 

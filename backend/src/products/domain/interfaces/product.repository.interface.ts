@@ -1,4 +1,4 @@
-import { Product, ProductCategory, ProductModifierGroup, ProductModifierOption, Prisma } from '@prisma/client';
+import { Product, Category, ProductModifierGroup, ProductModifierOption, Prisma } from '@prisma/client';
 
 export interface IProductRepository {
   findAll(categoryId?: string, includeModifiers?: boolean): Promise<Product[]>;
@@ -14,7 +14,7 @@ export interface IProductRepository {
   updateModifierGroup(id: string, data: Prisma.ProductModifierGroupUncheckedUpdateInput): Promise<ProductModifierGroup>;
   updateModifierOption(id: string, data: Prisma.ProductModifierOptionUncheckedUpdateInput): Promise<ProductModifierOption>;
   
-  getCategories(): Promise<ProductCategory[]>;
+  getCategories(): Promise<Category[]>;
   getModifierGroup(id: string): Promise<ProductModifierGroup | null>;
   getModifierOption(id: string): Promise<ProductModifierOption | null>;
 }

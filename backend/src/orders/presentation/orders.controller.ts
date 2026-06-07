@@ -1,7 +1,7 @@
 import { Controller, Post, Get, Body, UseGuards, Req, HttpCode, HttpStatus, Param, Sse, MessageEvent, Patch, Res, Query } from '@nestjs/common';
 import { OrdersService } from '../application/services/orders.service';
-import { JwtAuthGuard } from '../../auth/strategies/jwt-auth.guard';
-import { RolesGuard } from '../../auth/strategies/roles.guard';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Request } from 'express';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';

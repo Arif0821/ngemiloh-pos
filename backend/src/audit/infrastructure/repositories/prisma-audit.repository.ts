@@ -81,6 +81,13 @@ export class PrismaAuditRepository implements IAuditRepository {
     return deleted.count;
   }
 
+  async deleteLogs(ids: string[]): Promise<number> {
+    const deleted = await this.prisma.auditLog.deleteMany({
+      where: { id: { in: ids.map(id => BigInt(id)) } }
+    });
+    return deleted.count;
+  }
+
   async createAuditLog(data: Prisma.AuditLogUncheckedCreateInput): Promise<void> {
     await this.prisma.auditLog.create({
       data: {

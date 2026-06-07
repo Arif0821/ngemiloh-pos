@@ -1,7 +1,7 @@
 import { Controller, Get, Post, Patch, Body, Query, Param, UseGuards, Req } from '@nestjs/common';
 import { FinanceService } from '../application/services/finance.service';
-import { JwtAuthGuard } from '../../auth/strategies/jwt-auth.guard';
-import { RolesGuard } from '../../auth/strategies/roles.guard';
+import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
+import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Request } from 'express';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
@@ -73,14 +73,14 @@ export class FinanceController {
   @Post('assets')
   @Roles(Role.superadmin)
   async createAsset(@Body() createDto: CreateAssetDto) {
-    const data = await this.financeService.createAsset(createDto);
+    const data = await this.financeService.createAsset(createDto as any);
     return { status: 'success', data };
   }
 
   @Patch('assets/:id')
   @Roles(Role.superadmin)
   async updateAsset(@Param('id') id: string, @Body() updateDto: UpdateAssetDto) {
-    const data = await this.financeService.updateAsset(id, updateDto);
+    const data = await this.financeService.updateAsset(id, updateDto as any);
     return { status: 'success', data };
   }
 

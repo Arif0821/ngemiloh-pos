@@ -9,7 +9,7 @@ export class PrismaDiscountRepository implements IDiscountRepository {
 
   async findAll(): Promise<Discount[]> {
     return this.prisma.discount.findMany({
-      orderBy: { created_at: 'desc' }
+      orderBy: { valid_from: 'desc' }
     });
   }
 
@@ -46,8 +46,8 @@ export class PrismaDiscountRepository implements IDiscountRepository {
         value: data.value,
         scope: data.scope,
         target_id: data.target_id || null,
-        valid_from: data.valid_from ? new Date(data.valid_from) : undefined,
-        valid_until: data.valid_until !== undefined ? (data.valid_until ? new Date(data.valid_until) : null) : undefined,
+        valid_from: data.valid_from ? new Date(data.valid_from as any) : undefined,
+        valid_until: data.valid_until !== undefined ? (data.valid_until ? new Date(data.valid_until as any) : null) : undefined,
         applicable_days: data.applicable_days,
         is_active: data.is_active,
       }
