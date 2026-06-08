@@ -150,7 +150,8 @@ services:
       DATABASE_TYPE: postgresql
       APP_SECRET: ${UMAMI_APP_SECRET:-umami_secret_key_2026}
     depends_on:
-      - umami-db
+      umami-db:
+        condition: service_healthy
 
     deploy:
       resources:
