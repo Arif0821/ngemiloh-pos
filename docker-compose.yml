@@ -37,7 +37,9 @@ services:
     restart: unless-stopped
 
   pgbouncer:
-    image: 'edoburu/pgbouncer:latest'
+    # FIX: Ganti dari Docker Hub ke mirror.gcr.io, dan pin versi spesifik
+    # edoburu/pgbouncer adalah image community — gunakan mirror agar konsisten
+    image: 'mirror.gcr.io/edoburu/pgbouncer:1.23.1'
     container_name: ngemiloh_pgbouncer
     environment:
       - DATABASE_URL=postgres://ngemiloh:${DB_PASSWORD}@postgres:5432/ngemiloh_db
@@ -46,13 +48,20 @@ services:
       - DEFAULT_POOL_SIZE=20
       - LISTEN_PORT=6432
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     networks:
       - ngemiloh_net
     deploy:
       resources:
         limits:
           memory: 64M
+    # FIX: Tambah healthcheck agar nestjs-api tidak konek sebelum pgbouncer siap
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -h localhost -p 6432 || exit 1"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
     restart: unless-stopped
 
   redis:
@@ -67,6 +76,12 @@ services:
       resources:
         limits:
           memory: 128M
+    # FIX: Tambah healthcheck untuk redis
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
     restart: unless-stopped
 
   nestjs-api:
@@ -81,6 +96,8 @@ services:
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
       - PIN_PEPPER_SECRET=${PIN_PEPPER_SECRET}
+      # FIX: Hapus NODE_ENV dari sini — sudah di-set via Coolify sebagai Runtime Only
+      # Jika ingin tetap di sini, gunakan: NODE_ENV=production (tanpa fallback)
       - NODE_ENV=${NODE_ENV:-production}
       - STORAGE_PATH=/var/storage/ngemiloh
       - JWT_ACCESS_EXPIRES=8h
@@ -93,9 +110,12 @@ services:
       postgres:
         condition: service_healthy
       pgbouncer:
-        condition: service_started
+        # FIX: Ganti dari service_started ke service_healthy
+        # agar NestJS tidak konek sebelum pgbouncer benar-benar siap
+        condition: service_healthy
       redis:
-        condition: service_started
+        # FIX: Ganti dari service_started ke service_healthy
+        condition: service_healthy
     deploy:
       resources:
         limits:
@@ -126,6 +146,7 @@ services:
   caddy:
     build:
       context: .
+      # FIX: Caddy.Dockerfile sudah diperbaiki — FROM mirror.gcr.io/library/caddy:2-alpine
       dockerfile: Caddy.Dockerfile
     container_name: ngemiloh_caddy
     ports:
