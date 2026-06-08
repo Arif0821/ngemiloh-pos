@@ -4,7 +4,11 @@
 # Backend API (ganti domain ini dengan domain Anda nanti)
 :80 {
     # API routes → proxy ke NestJS backend
-    handle /api/* {
+    handle /health {
+        respond " OK\ 200
+ }
+
+ handle /api/* {
         reverse_proxy nestjs-api:3000
     }
 
