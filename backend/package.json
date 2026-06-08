@@ -35,6 +35,7 @@
     "@types/multer": "^2.1.0",
     "@types/sharp": "^0.31.1",
     "@types/uuid": "^10.0.0",
+    "@nestjs/swagger": "^8.0.0",
     "bcrypt": "^6.0.0",
     "bullmq": "^5.78.0",
     "class-transformer": "^0.5.1",
@@ -97,9 +98,26 @@
       "^.+\\.(t|j)s$": "ts-jest"
     },
     "collectCoverageFrom": [
-      "**/*.(t|j)s"
+      "**/*.(t|j)s",
+      "!**/*.spec.ts",
+      "!**/*.module.ts",
+      "!**/*.controller.ts"
     ],
     "coverageDirectory": "../coverage",
-    "testEnvironment": "node"
+    "testEnvironment": "node",
+    "moduleNameMapper": {
+      "^src/(.*)$": "<rootDir>/$1"
+    },
+    "setupFilesAfterEnv": [
+      "<rootDir>/test/setup.ts"
+    ],
+    "coverageThreshold": {
+      "global": {
+        "branches": 50,
+        "functions": 50,
+        "lines": 50,
+        "statements": 50
+      }
+    }
   }
 }

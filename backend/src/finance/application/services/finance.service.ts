@@ -1,10 +1,12 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
 import { type IFinanceRepository, FINANCE_REPOSITORY } from '../../domain/interfaces/finance.repository.interface';
 import { EmailService } from '../../../email/email.service';
 import { Prisma, Order } from '@prisma/client';
 
 @Injectable()
 export class FinanceService {
+  private readonly logger = new Logger(FinanceService.name);
+
   constructor(
     @Inject(FINANCE_REPOSITORY) private readonly financeRepository: IFinanceRepository,
     private emailService: EmailService
@@ -119,9 +121,21 @@ export class FinanceService {
     });
 
     if (share.netProfit <= 0) {
-      console.warn(`[NOTIF-RUGI] Laba bersih bulan ${month}/${year} minus atau 0 (Rp ${share.netProfit}). Sistem mengirim notifikasi ke Superadmin.`);
+      this.logger.warn(
+        `[NOTIF-RUGI] Laba bersih bulan ${month}/${year} minus...`
+      );
       try {
-      } catch(e) {}
+        await this.emailService.sendAlert(
+          'Laporan Rugi Bulanan',
+          `<p>Total penjualan bulan ini tidak menghasilkan laba.</p><p>Mohon periksa laporan keuangan untuk detail.</p>`
+        );
+      } catch (emailError) {
+        this.logger.error(
+          `Failed to send loss notification email: ${emailError.message}`,
+          emailError.stack
+        );
+        // Don't throw - this is a non-critical operation
+      }
     }
 
     return log;

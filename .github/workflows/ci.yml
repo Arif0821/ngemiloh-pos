@@ -1,9 +1,66 @@
 name: CI Pipeline
+
 on:
   pull_request:
     branches: [develop, main]
+  push:
+    branches: [develop, main]
 
 jobs:
+  # ============================================
+  # JOB 1: LINT
+  # ============================================
+  lint:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: ./backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run ESLint
+        run: npm run lint
+        env:
+          DATABASE_URL: "postgresql://test:test@localhost:5432/test"
+
+  # ============================================
+  # JOB 2: TYPE CHECK
+  # ============================================
+  typecheck:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ./backend
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: ./backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run TypeScript compiler
+        run: npx tsc --noEmit
+
+  # ============================================
+  # JOB 3: TEST
+  # ============================================
   test:
     runs-on: ubuntu-latest
     defaults:
@@ -28,19 +85,105 @@ jobs:
           - 6379:6379
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-node@v4
         with:
-          node-version: "20"
-      - run: npm ci
-      - run: npx prisma generate
-      - run: npm run build
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: ./backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Prisma Client
+        run: npx prisma generate
+
+      - name: Run migrations
+        run: npx prisma migrate deploy
         env:
           DATABASE_URL: "postgresql://postgres:test@localhost:5432/ngemiloh_test"
 
-  build:
+      - name: Run tests with coverage
+        run: npm test -- --coverage --coverageReporters=lcov
+        env:
+          DATABASE_URL: "postgresql://postgres:test@localhost:5432/ngemiloh_test"
+          REDIS_URL: "redis://localhost:6379"
+          JWT_ACCESS_SECRET: "test-secret"
+          JWT_REFRESH_SECRET: "test-refresh-secret"
+          JWT_ACCESS_EXPIRES: "1h"
+          JWT_REFRESH_EXPIRES: "7d"
+          PIN_PEPPER_SECRET: "test-pepper"
+          NODE_ENV: "test"
+
+      - name: Upload coverage to Codecov
+        if: always()
+        uses: codecov/codecov-action@v4
+        with:
+          files: ./backend/coverage/lcov.info
+          flags: unittests
+          name: backend-coverage
+
+      - name: Upload test results
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: test-results
+          path: ./backend/coverage/
+
+  # ============================================
+  # JOB 4: SECURITY AUDIT
+  # ============================================
+  security:
     runs-on: ubuntu-latest
-    needs: test
-    if: github.ref == 'refs/heads/main'
+    defaults:
+      run:
+        working-directory: ./backend
     steps:
       - uses: actions/checkout@v4
-      - run: docker build -t ngemiloh-api:${{ github.sha }} ./backend
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: "npm"
+          cache-dependency-path: ./backend/package-lock.json
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run npm audit
+        run: npm audit --audit-level=high
+
+      - name: Check for secrets in code
+        run: |
+          if grep -r -i "password.*=.*['\"][^'\"]*['\"]" --include="*.ts" src/; then
+            echo "WARNING: Potential hardcoded passwords found!"
+            exit 1
+          fi
+
+  # ============================================
+  # JOB 5: BUILD
+  # ============================================
+  build:
+    runs-on: ubuntu-latest
+    needs: [lint, typecheck, test, security]
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push backend
+        uses: docker/build-push-action@v5
+        with:
+          context: ./backend
+          push: true
+          tags: ${{ secrets.DOCKER_USERNAME }}/ngemiloh-api:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

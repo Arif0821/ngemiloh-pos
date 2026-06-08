@@ -23,11 +23,11 @@ export class OrdersService {
   ) {
     this.midtransCore = new midtransClient.CoreApi({
       isProduction: process.env.MIDTRANS_ENV === 'production',
-      serverKey: process.env.MIDTRANS_ENV === 'production' 
-        ? process.env.MIDTRANS_SERVER_KEY_PROD 
+      serverKey: process.env.MIDTRANS_ENV === 'production'
+        ? process.env.MIDTRANS_SERVER_KEY_PRODUCTION
         : process.env.MIDTRANS_SERVER_KEY_SANDBOX,
       clientKey: process.env.MIDTRANS_ENV === 'production'
-        ? process.env.MIDTRANS_CLIENT_KEY_PROD
+        ? process.env.MIDTRANS_CLIENT_KEY_PRODUCTION
         : process.env.MIDTRANS_CLIENT_KEY_SANDBOX,
     });
   }
@@ -257,7 +257,7 @@ export class OrdersService {
       const transactionStatus = statusResponse.transaction_status;
       const fraudStatus = statusResponse.fraud_status;
 
-      const serverKey = process.env.MIDTRANS_ENV === 'production' ? process.env.MIDTRANS_SERVER_KEY_PROD : process.env.MIDTRANS_SERVER_KEY_SANDBOX;
+      const serverKey = process.env.MIDTRANS_ENV === 'production' ? process.env.MIDTRANS_SERVER_KEY_PRODUCTION : process.env.MIDTRANS_SERVER_KEY_SANDBOX;
       const hash = crypto.createHash('sha512').update(orderId + statusResponse.status_code + statusResponse.gross_amount + serverKey).digest('hex');
       
       const expectedBuffer = Buffer.from(hash, 'hex');

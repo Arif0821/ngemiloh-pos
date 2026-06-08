@@ -9,6 +9,7 @@ volumes:
   umami_db_data:
   caddy_data:
   caddy_config:
+  pgbouncer_data:
 
 services:
   postgres:
@@ -30,6 +31,37 @@ services:
       interval: 5s
       timeout: 5s
       retries: 10
+    restart: unless-stopped
+
+  # PgBouncer: Connection pooler PostgreSQL (transaction mode)
+  pgbouncer:
+    image: edoburu/pgbouncer:latest
+    container_name: ngemiloh_pgbouncer
+    environment:
+      DATABASE_URL: "postgres://ngemiloh:${DB_PASSWORD}@postgres:5432/ngemiloh_db"
+      POOL_MODE: transaction
+      MAX_CLIENT_CONN: 100
+      DEFAULT_POOL_SIZE: 20
+      MIN_POOL_SIZE: 5
+      RESERVE_POOL_SIZE: 10
+      RESERVE_POOL_TIMEOUT: 3
+      SERVER_RESET_ON_RELEASE: "on"
+      SERVER_LIFETIME: 3600
+      SERVER_IDLE_TIMEOUT: 600
+    volumes:
+      - pgbouncer_data:/var/log/pgbouncer
+    depends_on:
+      postgres:
+        condition: service_healthy
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+    healthcheck:
+      test: ["CMD", "pgbouncer_admin", "-h", "localhost", "-p", "6432", "-U", "ngemiloh", "-c", "SELECT 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
     restart: unless-stopped
 
 
@@ -56,12 +88,18 @@ services:
 
   nestjs-api:
     container_name: ngemiloh_api
+    depends_on:
+      postgres:
+        condition: service_healthy
+      pgbouncer:
+        condition: service_healthy
     build:
       context: ./backend
       dockerfile: Dockerfile
     environment:
-      - DATABASE_URL=postgresql://ngemiloh:${DB_PASSWORD}@postgres:5432/ngemiloh_db?schema=public
-      - DIRECT_URL=postgresql://ngemiloh:${DB_PASSWORD}@postgres:5432/ngemiloh_db?schema=public
+      # PRD-10: Transaction pooling via PgBouncer (max pool 20 connections)
+      - DATABASE_URL=postgresql://ngemiloh:${DB_PASSWORD}@pgbouncer:6432/ngemiloh_db
+      - DIRECT_URL=postgresql://ngemiloh:${DB_PASSWORD}@postgres:5432/ngemiloh_db
       - REDIS_URL=redis://redis:6379
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}

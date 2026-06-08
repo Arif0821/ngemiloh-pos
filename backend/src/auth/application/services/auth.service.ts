@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, HttpException, HttpStatus, Logger, Inject } from '@nestjs/common';
+import { Injectable, UnauthorizedException, HttpException, HttpStatus, Logger, Inject, BadRequestException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
@@ -25,6 +25,27 @@ export class AuthService {
   private async verifyPin(pin: string, hash: string): Promise<boolean> {
     const pepper = process.env.PIN_PEPPER_SECRET || 'DEFAULT_PEPPER_SUPER_SECRET';
     return bcrypt.compare(pin + pepper, hash);
+  }
+
+  // PRD AUTH-02: Superadmin password requirements
+  // Wajib: min 16 karakter (angka + huruf kapital + simbol)
+  private validatePasswordRequirements(password: string): void {
+    const minLength = 16;
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+
+    if (password.length < minLength) {
+      throw new BadRequestException(
+        `Password must be at least ${minLength} characters. Current: ${password.length} characters.`
+      );
+    }
+    if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSymbol) {
+      throw new BadRequestException(
+        'Password must contain uppercase, lowercase, number, and symbol'
+      );
+    }
   }
 
   async login(usernameOrEmail: string, pinOrPassword: string, ipAddress: string = 'unknown') {
@@ -56,6 +77,8 @@ export class AuthService {
       isValid = await this.verifyPin(pinOrPassword, user.pin_hash);
     } else if (user.role === Role.superadmin) {
       if (!user.password_hash) throw new UnauthorizedException('Invalid credentials');
+      // PRD AUTH-02: Validasi password requirements sebelum verify
+      this.validatePasswordRequirements(pinOrPassword);
       isValid = await bcrypt.compare(pinOrPassword, user.password_hash);
     }
 
