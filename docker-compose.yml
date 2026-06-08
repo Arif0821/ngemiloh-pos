@@ -71,6 +71,7 @@ services:
       dockerfile: Dockerfile
     environment:
       - DATABASE_URL=postgresql://ngemiloh:${DB_PASSWORD}@pgbouncer:6432/ngemiloh_db?schema=public&pgbouncer=true
+      - DIRECT_URL=postgresql://ngemiloh:${DB_PASSWORD}@postgres:5432/ngemiloh_db?schema=public
       - REDIS_URL=redis://redis:6379
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
