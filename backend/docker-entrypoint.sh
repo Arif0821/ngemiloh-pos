@@ -26,8 +26,4 @@ fi
 echo ""
 echo "[3/3] Starting NestJS server on port 3000..."
 echo "=============================================="
-node dist/main.js || echo "Server crashed with exit code $?"
-
-# Prevent container from restart-looping if node crashes
-echo "Container is sleeping for 1 hour to prevent restart loop and allow debugging..."
-sleep 3600
+exec node dist/main.js
