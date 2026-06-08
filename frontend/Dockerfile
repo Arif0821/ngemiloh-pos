@@ -11,7 +11,7 @@ WORKDIR /app
 COPY package.json ./
 COPY . .
 # Jalankan install dan build dalam 1 layer untuk hemat RAM
-RUN npm ci && npm run build
+RUN npm install --include=dev && npm run build
 # ── Stage 2: Production ──────────────────────────────────────
 FROM mirror.gcr.io/library/node:20-alpine AS production
 

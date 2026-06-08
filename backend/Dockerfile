@@ -16,7 +16,7 @@ COPY tsconfig.json tsconfig.build.json nest-cli.json ./
 COPY src ./src
 
 # Jalankan install, generate, dan build dalam 1 layer sekaligus untuk menghemat RAM ekstrim
-RUN npm ci && npx prisma generate && npm run build
+RUN npm install --include=dev && npx prisma generate && npm run build
 
 # ── Stage 2: Production ──────────────────────────────────────
 FROM mirror.gcr.io/library/node:20-alpine AS production
