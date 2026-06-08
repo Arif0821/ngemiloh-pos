@@ -37,9 +37,8 @@ services:
     restart: unless-stopped
 
   pgbouncer:
-    # FIX: Ganti dari Docker Hub ke mirror.gcr.io, dan pin versi spesifik
-    # edoburu/pgbouncer adalah image community — gunakan mirror agar konsisten
-    image: 'mirror.gcr.io/edoburu/pgbouncer:1.23.1'
+    # Menggunakan image asli dari Docker Hub karena mirror.gcr.io tidak mensupport image komunitas
+    image: 'edoburu/pgbouncer:1.23.1'
     container_name: ngemiloh_pgbouncer
     environment:
       - DATABASE_URL=postgres://ngemiloh:${DB_PASSWORD}@postgres:5432/ngemiloh_db
