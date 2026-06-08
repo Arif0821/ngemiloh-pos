@@ -12,6 +12,11 @@
         reverse_proxy nestjs-api:3000
     }
 
+    # Proxy untuk file upload (gambar produk)
+    handle /storage/* {
+        reverse_proxy nestjs-api:3000
+    }
+
     # Webhook routes -> proxy ke NestJS backend
     handle /webhooks/* {
         reverse_proxy nestjs-api:3000
