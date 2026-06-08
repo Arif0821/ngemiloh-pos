@@ -61,14 +61,15 @@ export class PrinterService {
     text += `ID: ${order.client_uuid.split('-')[0].toUpperCase()}\n`;
     text += `Tanggal: ${new Date().toLocaleString('id-ID')}\n`;
     text += `================================\n`;
-    
-    for (const item of order.items) {
-      let itemName = (item.product?.name || 'Produk') + ' x' + item.quantity;
+
+    const items = order.items || [];
+    for (const item of items) {
+      let itemName = (item.product_name_snapshot || 'Produk') + ' x' + item.quantity;
       text += `${itemName.padEnd(20)} ${item.subtotal.toString().padStart(11)}\n`;
     }
-    
+
     text += `--------------------------------\n`;
-    text += `TOTAL: Rp ${order.client_final_price}\n`;
+    text += `TOTAL: Rp ${order.final_price}\n`;
     text += `================================\n`;
     text += `${footer}\n`;
     return text;

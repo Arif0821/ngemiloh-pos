@@ -19,10 +19,13 @@ export class SentryErrorInterceptor implements NestInterceptor {
         // Only capture errors that weren't already handled by exception filter
         const request = context.switchToHttp().getRequest();
 
-        // Don't capture expected errors (4xx) in Sentry
-        const isExpectedError = error.status >= 400 && error.status < 500;
+        // Get status safely - use getStatus() method if available
+        const status = error.getStatus ? error.getStatus() : (error.status || 500);
 
-        if (!isExpectedError && error.status !== 404) {
+        // Don't capture expected errors (4xx) in Sentry
+        const isExpectedError = status >= 400 && status < 500;
+
+        if (!isExpectedError && status !== 404) {
           Sentry.captureException(error, {
             extra: {
               path: request.url,

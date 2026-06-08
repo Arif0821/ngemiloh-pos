@@ -3,7 +3,7 @@ import { JwtService } from '@nestjs/jwt';
 import { UnauthorizedException, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AUTH_REPOSITORY } from '../../domain/interfaces/auth.repository.interface';
-import { EmailService } from '../../../../email/email.service';
+import { EmailService } from '../../../email/email.service';
 import { createMockUser, createMockIpLockout } from '../../../test/mocks';
 import { Role } from '@prisma/client';
 

@@ -18,8 +18,7 @@
   async function fetchProducts() {
     isLoading = true;
     try {
-      const hostname = window.location.hostname;
-      const res = await api.request(`/api/v1/products?include_modifiers=true`, { credentials: 'include' });
+      const res = await api.request(`/products?include_modifiers=true`, { credentials: 'include' });
       if (res.ok) {
         const data = await res.json();
         products = data.data;
@@ -58,8 +57,7 @@
   async function saveProduct(e: Event) {
     e.preventDefault();
     try {
-      const hostname = window.location.hostname;
-      const url = isEditing ? `/api/v1/products/${pId}` : `/api/v1/products`;
+      const url = isEditing ? `/products/${pId}` : `/products`;
       const method = isEditing ? 'PATCH' : 'POST';
       
       // For MVP, assuming category_id is needed, sending a dummy or default category if not present
@@ -109,8 +107,7 @@
     e.preventDefault();
     if (!newGroupName) return;
     try {
-      const hostname = window.location.hostname;
-      const res = await api.request(`/api/v1/admin/products/${activeProductForModifier.id}/modifier-groups`, {
+      const res = await api.request(`/admin/products/${activeProductForModifier.id}/modifier-groups`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -133,8 +130,7 @@
     e.preventDefault();
     if (!newOptionName || !selectedGroupId) return;
     try {
-      const hostname = window.location.hostname;
-      const res = await api.request(`/api/v1/admin/modifier-groups/${selectedGroupId}/options`, {
+      const res = await api.request(`/admin/modifier-groups/${selectedGroupId}/options`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -153,8 +149,7 @@
 
   async function toggleGroupStatus(groupId: string, currentStatus: boolean) {
     try {
-      const hostname = window.location.hostname;
-      const res = await api.request(`/api/v1/admin/modifier-groups/${groupId}`, {
+      const res = await api.request(`/admin/modifier-groups/${groupId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
@@ -171,8 +166,7 @@
 
   async function toggleOptionStatus(optionId: string, currentStatus: boolean) {
     try {
-      const hostname = window.location.hostname;
-      const res = await api.request(`/api/v1/admin/modifier-options/${optionId}`, {
+      const res = await api.request(`/admin/modifier-options/${optionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',

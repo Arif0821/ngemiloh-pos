@@ -56,14 +56,36 @@ export interface CreateOrderPayload {
   items: OrderItem[];
 }
 
+export interface OrderItemResponse {
+  id: string;
+  product_id: string;
+  product_name_snapshot?: string;
+  quantity: number;
+  subtotal: number;
+  modifiers?: { name: string; additional_price: number }[];
+}
+
 export interface OrderResponse {
   id: string;
   client_uuid: string;
   total_amount: number | string;
+  subtotal?: number;
+  tax_total?: number;
+  final_price: number;
+  discount_total?: number;
   status: string;
   payment_status: string;
+  payment_method?: 'cash' | 'qris' | 'split';
+  cash_amount?: number;
+  qris_amount?: number;
   qr_string?: string;
   midtrans_transaction_id?: string;
+  items?: OrderItemResponse[];
+  cashier?: { id: string; name: string };
+  void_reason?: string;
+  voider?: string;
+  client_created_at?: string;
+  created_at?: string;
 }
 
 export interface ShiftInfo {
