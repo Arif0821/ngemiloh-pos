@@ -1,23 +1,28 @@
-# ── Ngemiloh POS - Caddyfile ──────────────────────────────────
+# -- Ngemiloh POS - Caddyfile ----------------------------------
 # Caddy akan otomatis mengurus sertifikat SSL (HTTPS) gratis!
 
 # Backend API (ganti domain ini dengan domain Anda nanti)
 :80 {
-    # API routes → proxy ke NestJS backend
+    # API routes -> proxy ke NestJS backend
     handle /health {
-        respond " OK\ 200
- }
+        respond "OK" 200
+    }
 
- handle /api/* {
+    handle /api/* {
         reverse_proxy nestjs-api:3000
     }
 
-    # Webhook routes → proxy ke NestJS backend
+    # Webhook routes -> proxy ke NestJS backend
     handle /webhooks/* {
         reverse_proxy nestjs-api:3000
     }
 
-    # Semua route lain → serve frontend static files
+    # Umami Analytics -> proxy ke Umami container
+    handle /umami/* {
+        reverse_proxy umami:3000
+    }
+
+    # Semua route lain -> serve frontend static files
     handle {
         root * /srv
         try_files {path} /index.html
