@@ -1,8 +1,6 @@
 version: '3.8'
 
-networks:
-  ngemiloh_net:
-    driver: bridge
+
 
 volumes:
   postgres_data:
@@ -22,8 +20,7 @@ services:
       POSTGRES_DB: ngemiloh_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
-    networks:
-      - ngemiloh_net
+
     deploy:
       resources:
         limits:
@@ -43,8 +40,7 @@ services:
     command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
-    networks:
-      - ngemiloh_net
+
     deploy:
       resources:
         limits:
@@ -78,8 +74,7 @@ services:
       - JWT_REFRESH_EXPIRES=7d
     volumes:
       - storage_data:/var/storage/ngemiloh
-    networks:
-      - ngemiloh_net
+
     depends_on:
       postgres:
         condition: service_healthy
@@ -111,8 +106,7 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
-    networks:
-      - ngemiloh_net
+
     depends_on:
       nestjs-api:
         condition: service_started
@@ -137,8 +131,7 @@ services:
       POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD:-umami_secret_2026}
     volumes:
       - umami_db_data:/var/lib/postgresql/data
-    networks:
-      - ngemiloh_net
+
     deploy:
       resources:
         limits:
@@ -154,8 +147,7 @@ services:
       APP_SECRET: ${UMAMI_APP_SECRET:-umami_secret_key_2026}
     depends_on:
       - umami-db
-    networks:
-      - ngemiloh_net
+
     deploy:
       resources:
         limits:
