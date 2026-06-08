@@ -123,20 +123,24 @@ services:
     restart: unless-stopped
 
   umami-db:
-    image: 'mirror.gcr.io/library/postgres:15-alpine'
     container_name: ngemiloh_umami_db
+    image: 'mirror.gcr.io/library/postgres:15-alpine'
+    restart: unless-stopped
     environment:
       POSTGRES_DB: umami
       POSTGRES_USER: umami
       POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD:-umami_secret_2026}
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U umami -d umami"]
+      timeout: 5s
+      interval: 5s
+      retries: 10
     volumes:
       - umami_db_data:/var/lib/postgresql/data
-
     deploy:
       resources:
         limits:
           memory: 256M
-    restart: unless-stopped
 
   umami:
     image: ghcr.io/umami-software/umami:postgresql-latest
