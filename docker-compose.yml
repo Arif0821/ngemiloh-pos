@@ -38,7 +38,7 @@ services:
 
   pgbouncer:
     # Menggunakan image asli dari Docker Hub karena mirror.gcr.io tidak mensupport image komunitas
-    image: 'edoburu/pgbouncer:1.23.1'
+    image: 'edoburu/pgbouncer:latest'
     container_name: ngemiloh_pgbouncer
     environment:
       - DATABASE_URL=postgres://ngemiloh:${DB_PASSWORD}@postgres:5432/ngemiloh_db
