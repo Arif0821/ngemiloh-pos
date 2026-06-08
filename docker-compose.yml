@@ -1,7 +1,5 @@
 version: '3.8'
 
-
-
 volumes:
   postgres_data:
   redis_data:
@@ -12,6 +10,9 @@ volumes:
   pgbouncer_data:
 
 services:
+  # ============================================================
+  # Database: PostgreSQL 16
+  # ============================================================
   postgres:
     image: 'mirror.gcr.io/library/postgres:16-alpine'
     container_name: ngemiloh_db
@@ -21,7 +22,6 @@ services:
       POSTGRES_DB: ngemiloh_db
     volumes:
       - postgres_data:/var/lib/postgresql/data
-
     deploy:
       resources:
         limits:
@@ -33,7 +33,9 @@ services:
       retries: 10
     restart: unless-stopped
 
-  # PgBouncer: Connection pooler PostgreSQL (transaction mode)
+  # ============================================================
+  # PgBouncer: Connection pooler (transaction mode)
+  # ============================================================
   pgbouncer:
     image: edoburu/pgbouncer:latest
     container_name: ngemiloh_pgbouncer
@@ -64,20 +66,19 @@ services:
       retries: 5
     restart: unless-stopped
 
-
-
+  # ============================================================
+  # Redis: Cache & Queue
+  # ============================================================
   redis:
     image: 'mirror.gcr.io/library/redis:7-alpine'
     container_name: ngemiloh_redis
     command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
     volumes:
       - redis_data:/data
-
     deploy:
       resources:
         limits:
           memory: 128M
-    # FIX: Tambah healthcheck untuk redis
     healthcheck:
       test: ["CMD", "redis-cli", "-h", "127.0.0.1", "ping"]
       interval: 5s
@@ -86,65 +87,64 @@ services:
       start_period: 120s
     restart: unless-stopped
 
+  # ============================================================
+  # NestJS Backend API
+  # ============================================================
   nestjs-api:
     container_name: ngemiloh_api
-    depends_on:
-      postgres:
-        condition: service_healthy
-      pgbouncer:
-        condition: service_healthy
     build:
       context: ./backend
       dockerfile: Dockerfile
+      args:
+        - NODE_ENV=development
     environment:
-      # PRD-10: Transaction pooling via PgBouncer (max pool 20 connections)
       - DATABASE_URL=postgresql://ngemiloh:${DB_PASSWORD}@pgbouncer:6432/ngemiloh_db
       - DIRECT_URL=postgresql://ngemiloh:${DB_PASSWORD}@postgres:5432/ngemiloh_db
       - REDIS_URL=redis://redis:6379
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
       - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
       - PIN_PEPPER_SECRET=${PIN_PEPPER_SECRET}
-      # FIX: Hapus NODE_ENV dari sini — sudah di-set via Coolify sebagai Runtime Only
-      # Jika ingin tetap di sini, gunakan: NODE_ENV=production (tanpa fallback)
       - NODE_ENV=${NODE_ENV:-production}
       - STORAGE_PATH=/var/storage/ngemiloh
       - JWT_ACCESS_EXPIRES=8h
       - JWT_REFRESH_EXPIRES=7d
     volumes:
       - storage_data:/var/storage/ngemiloh
-
     depends_on:
       postgres:
         condition: service_healthy
-
+      pgbouncer:
+        condition: service_healthy
       redis:
-        # FIX: Ganti dari service_started ke service_healthy
         condition: service_healthy
     deploy:
       resources:
         limits:
           memory: 512M
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:3000/ || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 120s
     restart: unless-stopped
 
-
+  # ============================================================
+  # Caddy: Reverse Proxy + Static Files
+  # ============================================================
   caddy:
     build:
       context: .
-      # FIX: Caddy.Dockerfile sudah diperbaiki — FROM mirror.gcr.io/library/caddy:2-alpine
       dockerfile: Caddy.Dockerfile
+      args:
+        - NODE_ENV=development
     container_name: ngemiloh_caddy
     ports:
-      - "80"
+      - "80:80"
+      - "443:443"
     volumes:
       - caddy_data:/data
       - caddy_config:/config
-
     depends_on:
       nestjs-api:
         condition: service_started
@@ -153,16 +153,19 @@ services:
         limits:
           memory: 64M
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/health"]
+      test: ["CMD-SHELL", "wget --no-verbose --tries=1 --spider http://127.0.0.1:80/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 120s
     restart: unless-stopped
 
+  # ============================================================
+  # Umami Analytics - Database
+  # ============================================================
   umami-db:
-    container_name: ngemiloh_umami_db
     image: 'mirror.gcr.io/library/postgres:15-alpine'
+    container_name: ngemiloh_umami_db
     restart: unless-stopped
     environment:
       POSTGRES_DB: umami
@@ -180,6 +183,9 @@ services:
         limits:
           memory: 256M
 
+  # ============================================================
+  # Umami Analytics - App
+  # ============================================================
   umami:
     image: ghcr.io/umami-software/umami:postgresql-latest
     container_name: ngemiloh_umami
@@ -190,7 +196,6 @@ services:
     depends_on:
       umami-db:
         condition: service_healthy
-
     deploy:
       resources:
         limits:
