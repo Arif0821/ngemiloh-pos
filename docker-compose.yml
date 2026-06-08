@@ -65,7 +65,6 @@ services:
     restart: unless-stopped
 
   nestjs-api:
-    image: ngemiloh-api:latest
     container_name: ngemiloh_api
     build:
       context: ./backend
@@ -94,7 +93,6 @@ services:
     restart: unless-stopped
 
   sveltekit-frontend:
-    image: ngemiloh-frontend:latest
     container_name: ngemiloh_frontend_builder
     build:
       context: ./frontend

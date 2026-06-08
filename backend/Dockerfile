@@ -9,18 +9,14 @@ WORKDIR /app
 
 # Copy dependency files first (for Docker cache efficiency)
 COPY package.json ./
-RUN npm install --include=dev
 
 # Copy source code & Prisma schema
 COPY prisma ./prisma
 COPY tsconfig.json tsconfig.build.json nest-cli.json ./
 COPY src ./src
 
-# Generate Prisma Client
-RUN npx prisma generate
-
-# Build NestJS (tampilkan error lengkap jika gagal)
-RUN npm run build
+# Jalankan install, generate, dan build dalam 1 layer sekaligus untuk menghemat RAM ekstrim
+RUN npm ci && npx prisma generate && npm run build
 
 # ── Stage 2: Production ──────────────────────────────────────
 FROM mirror.gcr.io/library/node:20-alpine AS production

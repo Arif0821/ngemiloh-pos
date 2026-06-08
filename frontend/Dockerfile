@@ -9,11 +9,9 @@ ENV NODE_OPTIONS="--max-old-space-size=512"
 WORKDIR /app
 
 COPY package.json ./
-RUN npm install --include=dev
-
 COPY . .
-RUN npm run build
-
+# Jalankan install dan build dalam 1 layer untuk hemat RAM
+RUN npm ci && npm run build
 # ── Stage 2: Production ──────────────────────────────────────
 FROM mirror.gcr.io/library/node:20-alpine AS production
 
