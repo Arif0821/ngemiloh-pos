@@ -36,8 +36,8 @@ COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 # Copy built application
 COPY --from=builder /app/dist ./dist
 
-# ts-node needed for prisma seed
-RUN npm install -g ts-node typescript tsconfig-paths
+# ts-node and prisma needed for migration and seed
+RUN npm install -g prisma ts-node typescript tsconfig-paths
 
 # Create storage directory
 RUN mkdir -p /var/storage/ngemiloh
