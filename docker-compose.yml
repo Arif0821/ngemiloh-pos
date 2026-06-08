@@ -100,6 +100,12 @@ services:
       resources:
         limits:
           memory: 512M
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 60s
     restart: unless-stopped
 
   sveltekit-frontend:
@@ -139,6 +145,12 @@ services:
       resources:
         limits:
           memory: 64M
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
     restart: unless-stopped
 
   umami-db:
