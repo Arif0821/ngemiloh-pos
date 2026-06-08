@@ -52,9 +52,12 @@ RUN npm install -g prisma ts-node typescript tsconfig-paths
 
 # Buat direktori penyimpanan
 RUN mkdir -p /var/storage/ngemiloh
-
 EXPOSE 3000
 
-# Jalankan migration, seed, lalu start server
-# Seed menggunakan ts-node untuk menjalankan prisma/seed.ts
-CMD ["sh", "-c", "npx prisma migrate deploy && npx prisma db seed && node dist/main.js"]
+# Copy dan set executable startup script
+COPY docker-entrypoint.sh /app/docker-entrypoint.sh
+RUN chmod +x /app/docker-entrypoint.sh
+
+# Gunakan entrypoint script yang tahan banting
+# Seed boleh gagal, tapi server TETAP jalan (tidak restart loop)
+CMD ["/app/docker-entrypoint.sh"]
