@@ -11,7 +11,6 @@ volumes:
   umami_db_data:
   caddy_data:
   caddy_config:
-  frontend_build:
 
 services:
   postgres:
@@ -57,10 +56,11 @@ services:
           memory: 64M
     # FIX: Tambah healthcheck agar nestjs-api tidak konek sebelum pgbouncer siap
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -h localhost -p 6432 || exit 1"]
+      test: ["CMD-SHELL", "pg_isready -h 127.0.0.1 -p 6432 || exit 1"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 120s
     restart: unless-stopped
 
   redis:
@@ -77,10 +77,11 @@ services:
           memory: 128M
     # FIX: Tambah healthcheck untuk redis
     healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
+      test: ["CMD", "redis-cli", "-h", "127.0.0.1", "ping"]
       interval: 5s
       timeout: 3s
       retries: 10
+      start_period: 120s
     restart: unless-stopped
 
   nestjs-api:
@@ -120,27 +121,13 @@ services:
         limits:
           memory: 512M
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3000/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:3000/"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 60s
+      start_period: 120s
     restart: unless-stopped
 
-  sveltekit-frontend:
-    container_name: ngemiloh_frontend_builder
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    volumes:
-      - frontend_build:/app/shared_build
-    networks:
-      - ngemiloh_net
-    deploy:
-      resources:
-        limits:
-          memory: 512M
-    restart: "no"
 
   caddy:
     build:
@@ -151,7 +138,6 @@ services:
     ports:
       - "80"
     volumes:
-      - frontend_build:/srv
       - caddy_data:/data
       - caddy_config:/config
     networks:
@@ -159,18 +145,16 @@ services:
     depends_on:
       nestjs-api:
         condition: service_started
-      sveltekit-frontend:
-        condition: service_completed_successfully
     deploy:
       resources:
         limits:
           memory: 64M
     healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:80/"]
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://127.0.0.1:80/"]
       interval: 10s
       timeout: 5s
       retries: 5
-      start_period: 20s
+      start_period: 120s
     restart: unless-stopped
 
   umami-db:
