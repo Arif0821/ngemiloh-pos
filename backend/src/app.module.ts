@@ -25,10 +25,22 @@ import { AuditInterceptor } from './audit/presentation/audit.interceptor';
 @Module({
   imports: [
     BullModule.forRoot({
-      connection: {
-        host: process.env.REDIS_HOST || 'localhost',
-        port: Number(process.env.REDIS_PORT) || 6379,
-      },
+      connection: (() => {
+        // Support both REDIS_URL (dari docker-compose) dan REDIS_HOST+REDIS_PORT
+        const redisUrl = process.env.REDIS_URL;
+        if (redisUrl) {
+          try {
+            const url = new URL(redisUrl);
+            return { host: url.hostname, port: Number(url.port) || 6379 };
+          } catch {
+            // Fallback jika URL tidak valid
+          }
+        }
+        return {
+          host: process.env.REDIS_HOST || 'localhost',
+          port: Number(process.env.REDIS_PORT) || 6379,
+        };
+      })(),
     }),
     BullModule.registerQueue({
       name: 'SEND_EMAIL',

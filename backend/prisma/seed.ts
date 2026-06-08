@@ -54,41 +54,50 @@ async function main() {
   }
   const catFood: any = categoryRecords[0];
 
-  // 3. Create Product
-  const product = await prisma.product.create({
-    data: {
-      name: 'Macaroni Mateng',
-      base_price: 5450,
-      category_id: catFood.id,
-      created_by: superadmin.id,
-      modifier_groups: {
-        create: [
-          {
-            name: 'Pilih Bumbu Tabur',
-            is_required: true,
-            max_selections: 1,
-            options: {
-              create: [
-                { name: 'Keju', additional_price: 1500 },
-                { name: 'Balado', additional_price: 1500 },
-              ]
-            }
-          },
-          {
-            name: 'Pilih Saus',
-            is_required: true,
-            max_selections: 1,
-            options: {
-              create: [
-                { name: 'Saus BBQ', additional_price: 2500 },
-                { name: 'Saus Keju', additional_price: 3000 },
-              ]
-            }
-          }
-        ]
-      }
-    }
+  // 3. Create Product (idempotent — aman dijalankan berulang kali)
+  let product = await prisma.product.findFirst({
+    where: { name: 'Macaroni Mateng' }
   });
+
+  if (!product) {
+    product = await prisma.product.create({
+      data: {
+        name: 'Macaroni Mateng',
+        base_price: 5450,
+        category_id: catFood.id,
+        created_by: superadmin.id,
+        modifier_groups: {
+          create: [
+            {
+              name: 'Pilih Bumbu Tabur',
+              is_required: true,
+              max_selections: 1,
+              options: {
+                create: [
+                  { name: 'Keju', additional_price: 1500 },
+                  { name: 'Balado', additional_price: 1500 },
+                ]
+              }
+            },
+            {
+              name: 'Pilih Saus',
+              is_required: true,
+              max_selections: 1,
+              options: {
+                create: [
+                  { name: 'Saus BBQ', additional_price: 2500 },
+                  { name: 'Saus Keju', additional_price: 3000 },
+                ]
+              }
+            }
+          ]
+        }
+      }
+    });
+    console.log('Created Product: Macaroni Mateng with modifiers');
+  } else {
+    console.log('Product Macaroni Mateng already exists, skipping...');
+  }
 
   console.log('Seeded Category and Product with Modifiers');
 
@@ -138,15 +147,24 @@ async function main() {
       }
     });
     
-    // Seed an initial StockMovement for FIFO costing
-    await prisma.stockMovement.create({
-      data: {
+    // Seed an initial StockMovement for FIFO costing (idempotent)
+    const existingMovement = await prisma.stockMovement.findFirst({
+      where: {
         raw_material_id: rawMaterial.id,
-        type: 'in',
-        quantity: 5000,
         notes: 'Initial stock seed'
       }
     });
+
+    if (!existingMovement) {
+      await prisma.stockMovement.create({
+        data: {
+          raw_material_id: rawMaterial.id,
+          type: 'in',
+          quantity: 5000,
+          notes: 'Initial stock seed'
+        }
+      });
+    }
   }
 
   // 5. Relasikan Product dengan Raw Material (Resep)
@@ -155,7 +173,7 @@ async function main() {
   const minyak = await prisma.rawMaterial.findUnique({ where: { name: 'Minyak Goreng' } });
   const plastik = await prisma.rawMaterial.findUnique({ where: { name: 'Plastik Kemasan Kecil' } });
 
-  if (makaroni && bumbuAsin && minyak && plastik) {
+  if (product && makaroni && bumbuAsin && minyak && plastik) {
     await prisma.bomRecipe.createMany({
       data: [
         { product_id: product.id, raw_material_id: makaroni.id, quantity_per_serving: 100 }, // 100 gram
