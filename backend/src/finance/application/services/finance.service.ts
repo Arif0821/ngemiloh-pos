@@ -1,13 +1,13 @@
 import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { type IFinanceRepository, FINANCE_REPOSITORY } from '../../domain/interfaces/finance.repository.interface';
-import { MailService } from '../../../mail/mail.service';
+import { EmailService } from '../../../email/email.service';
 import { Prisma, Order } from '@prisma/client';
 
 @Injectable()
 export class FinanceService {
   constructor(
     @Inject(FINANCE_REPOSITORY) private readonly financeRepository: IFinanceRepository,
-    private mailService: MailService
+    private emailService: EmailService
   ) {}
 
   async getDashboardKpi(date: string) {
@@ -318,7 +318,7 @@ export class FinanceService {
 
     const threshold = Number(process.env.DISCREPANCY_THRESHOLD || 5000);
     if (Math.abs(discrepancy) > threshold) {
-      this.mailService.sendAlert(
+      this.emailService.sendAlert(
         'Peringatan Selisih Laci Kasir',
         `<p>Shift kasir dengan ID <strong>${cashierId}</strong> telah ditutup dengan <strong>selisih (discrepancy) Rp ${discrepancy}</strong>.</p>
          <p>Batas toleransi sistem adalah Rp ${threshold}. Mohon segera verifikasi laci kas.</p>`

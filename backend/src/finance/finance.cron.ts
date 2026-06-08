@@ -1,7 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
-import { MailService } from '../mail/mail.service';
+import { EmailService } from '../email/email.service';
 
 @Injectable()
 export class FinanceCronService {
@@ -9,7 +9,7 @@ export class FinanceCronService {
 
   constructor(
     private prisma: PrismaService,
-    private mailService: MailService
+    private emailService: EmailService
   ) {}
 
   // 0 8 1 * * => 08:00 on day 1 of every month
@@ -42,7 +42,7 @@ export class FinanceCronService {
 
     if (!log.is_paid) {
       const amount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(Number(log.cashier_share));
-      this.mailService.sendAlert(
+      this.emailService.sendAlert(
         `Reminder: Tunggakan Bagi Hasil Bulan ${month}/${year}`,
         `<p>Peringatan dari sistem. Anda <strong>belum membayar bagi hasil kasir</strong> untuk periode bulan ${month} tahun ${year}.</p>
          <p>Total yang harus dibayarkan: <strong>${amount}</strong>.</p>
