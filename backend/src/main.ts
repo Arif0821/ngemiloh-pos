@@ -9,10 +9,14 @@ import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
 async function bootstrap() {
   const requiredEnvVars = ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET', 'PIN_PEPPER_SECRET'];
-  for (const envVar of requiredEnvVars) {
-      if (!process.env[envVar]) {
-          throw new Error(`FATAL: ${envVar} is not defined in environment variables`);
-      }
+  const missingVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+  
+  if (missingVars.length > 0) {
+      const errorMsg = `\n\n==========================================================\nFATAL ERROR: Missing Required Environment Variables!\n\nThe following variables MUST be set in Coolify / .env:\n${missingVars.map(v => `- ${v}`).join('\n')}\n\nThe server cannot start without these security secrets.\n==========================================================\n`;
+      console.error(errorMsg);
+      // Wait a moment so the log is flushed to stdout before crashing
+      await new Promise(resolve => setTimeout(resolve, 100));
+      process.exit(1);
   }
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
