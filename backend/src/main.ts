@@ -8,9 +8,11 @@ import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 
 async function bootstrap() {
-  // Validate critical environment variables
-  if (!process.env.JWT_ACCESS_SECRET) {
-    throw new Error('FATAL: JWT_ACCESS_SECRET is not defined in environment variables');
+  const requiredEnvVars = ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET', 'PIN_PEPPER_SECRET'];
+  for (const envVar of requiredEnvVars) {
+      if (!process.env[envVar]) {
+          throw new Error(`FATAL: ${envVar} is not defined in environment variables`);
+      }
   }
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);

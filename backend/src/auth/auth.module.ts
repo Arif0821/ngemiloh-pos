@@ -10,9 +10,11 @@ import { AUTH_REPOSITORY } from './domain/interfaces/auth.repository.interface';
 @Module({
   imports: [
     PassportModule,
-    JwtModule.register({
-      secret: process.env.JWT_ACCESS_SECRET || 'dev_secret',
-      signOptions: { expiresIn: '8h' },
+    JwtModule.registerAsync({
+      useFactory: () => ({
+        secret: process.env.JWT_ACCESS_SECRET,
+        signOptions: { expiresIn: '8h' },
+      }),
     }),
   ],
   providers: [

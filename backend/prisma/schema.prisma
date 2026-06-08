@@ -347,7 +347,7 @@ model AuditLog {
 }
 
 model RevokedToken {
-  jti        String   @id @db.VarChar(36)
+  jti        String   @id @db.VarChar(64)
   user_id    String   @db.Uuid
   expires_at DateTime @db.Timestamptz
   revoked_at DateTime @default(now()) @db.Timestamptz
@@ -436,4 +436,6 @@ model IpLockout {
   locked_until    DateTime? @db.Timestamptz
   created_at      DateTime @default(now()) @db.Timestamptz
   updated_at      DateTime @updatedAt @db.Timestamptz
+
+  @@index([updated_at])
 }

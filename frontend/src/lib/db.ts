@@ -1,5 +1,19 @@
 import Dexie, { type Table } from 'dexie';
 
+export interface ModifierOption {
+  id: string;
+  name: string;
+  additional_price: number;
+}
+
+export interface ModifierGroup {
+  id: string;
+  name: string;
+  is_required: boolean;
+  max_selections: number;
+  options: ModifierOption[];
+}
+
 export interface LocalProduct {
   id: string;
   name: string;
@@ -7,7 +21,14 @@ export interface LocalProduct {
   category_id?: string;
   image_url?: string;
   is_out_of_stock: boolean;
-  modifier_groups: unknown[];
+  modifier_groups: ModifierGroup[];
+}
+
+export interface LocalOrderItem {
+  product_id: string;
+  quantity: number;
+  price: number;
+  modifiers?: any[];
 }
 
 export interface LocalOrder {
@@ -16,9 +37,9 @@ export interface LocalOrder {
   subtotal: number;
   tax_total: number;
   final_price: number;
-  payment_method: 'cash' | 'qris';
+  payment_method: 'cash' | 'qris' | 'split';
   status: string;
-  items: any[];
+  items: LocalOrderItem[];
   sync_status: 'pending' | 'synced';
   created_at: number;
 }

@@ -174,15 +174,18 @@ async function main() {
   const plastik = await prisma.rawMaterial.findUnique({ where: { name: 'Plastik Kemasan Kecil' } });
 
   if (product && makaroni && bumbuAsin && minyak && plastik) {
-    await prisma.bomRecipe.createMany({
-      data: [
-        { product_id: product.id, raw_material_id: makaroni.id, quantity_per_serving: 100 }, // 100 gram
-        { product_id: product.id, raw_material_id: minyak.id, quantity_per_serving: 0.05 }, // 0.05 liter
-        { product_id: product.id, raw_material_id: bumbuAsin.id, quantity_per_serving: 10 }, // 10 gram default
-        { product_id: product.id, raw_material_id: plastik.id, quantity_per_serving: 1 }     // 1 pcs
-      ],
-      skipDuplicates: true
-    });
+    const existingBoms = await prisma.bomRecipe.findMany({ where: { product_id: product.id } });
+    if (existingBoms.length === 0) {
+      await prisma.bomRecipe.createMany({
+        data: [
+          { product_id: product.id, raw_material_id: makaroni.id, quantity_per_serving: 100 },
+          { product_id: product.id, raw_material_id: minyak.id, quantity_per_serving: 0.05 },
+          { product_id: product.id, raw_material_id: bumbuAsin.id, quantity_per_serving: 10 },
+          { product_id: product.id, raw_material_id: plastik.id, quantity_per_serving: 1 }
+        ],
+        skipDuplicates: true
+      });
+    }
   }
 
   // 6. Seed Feature Flags (8 Item)

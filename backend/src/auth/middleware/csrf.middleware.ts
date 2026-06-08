@@ -13,7 +13,10 @@ export class CsrfMiddleware implements NestMiddleware {
         '/api/v1/auth/refresh',
         '/api/v1/webhooks/midtrans'
       ];
-      if (excludedRoutes.some(route => req.originalUrl.includes(route))) {
+      const isExcluded = excludedRoutes.some(route => 
+        req.originalUrl === route || req.originalUrl.startsWith(route + '?')
+      );
+      if (isExcluded) {
         return next();
       }
 

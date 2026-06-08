@@ -4,10 +4,11 @@ import * as crypto from 'crypto';
 import { InventoryService } from '../../../inventory/application/services/inventory.service';
 import { EmailService } from '../../../email/email.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { MailService } from '../../../mail/mail.service';
 import { ORDER_REPOSITORY, type OrderRepositoryInterface } from '../../domain/interfaces/order.repository.interface';
 
-const midtransClient = require('midtrans-client');
+import midtransClient from 'midtrans-client';
+
+import { CreateOrderDto } from '../../presentation/dto/create-order.dto';
 
 @Injectable()
 export class OrdersService {
@@ -18,8 +19,7 @@ export class OrdersService {
     @Inject(ORDER_REPOSITORY) private readonly orderRepository: OrderRepositoryInterface,
     private inventoryService: InventoryService,
     private emailService: EmailService,
-    private eventEmitter: EventEmitter2,
-    private mailService: MailService
+    private eventEmitter: EventEmitter2
   ) {
     this.midtransCore = new midtransClient.CoreApi({
       isProduction: process.env.MIDTRANS_ENV === 'production',
@@ -32,7 +32,7 @@ export class OrdersService {
     });
   }
 
-  async createOrder(data: any, kasirId: string) {
+  async createOrder(data: CreateOrderDto, kasirId: string) {
     const existingOrder = await this.orderRepository.findOrderByClientUuid(data.client_uuid);
     
     if (existingOrder) {
@@ -45,8 +45,12 @@ export class OrdersService {
     
     const activeDiscounts = await this.orderRepository.findActiveDiscounts();
 
+    const productIds = data.items.map((item: any) => item.product_id);
+    const products = await this.orderRepository.findProductsWithModifiers(productIds);
+    const productMap = new Map(products.map(p => [p.id, p]));
+
     for (const item of data.items) {
-      const product = await this.orderRepository.findProductWithModifiers(item.product_id);
+      const product = productMap.get(item.product_id);
       if (!product) throw new BadRequestException(`Product ${item.product_id} not found`);
 
       let basePrice = Number(product.base_price);
@@ -96,6 +100,7 @@ export class OrdersService {
 
       orderItemsPayload.push({
         product_id: product.id,
+        product_name_snapshot: product.name,
         discount_id: appliedDiscountId,
         quantity: item.quantity,
         unit_price: product.base_price,
@@ -157,7 +162,7 @@ export class OrdersService {
         create: orderItemsPayload.map(i => ({
           product_id: i.product_id,
           discount_id: i.discount_id,
-          product_name_snapshot: 'Menu',
+          product_name_snapshot: i.product_name_snapshot,
           base_price: i.unit_price,
           discounted_base: i.discounted_base,
           final_price: i.final_price, 
@@ -218,12 +223,12 @@ export class OrdersService {
     return order;
   }
 
-  async syncBatchOrders(orders: any[], kasirId: string) {
+  async syncBatchOrders(orders: CreateOrderDto[], kasirId: string) {
     const results: any[] = [];
     for (const orderData of orders) {
       try {
         // Flag to mark it came from offline sync
-        orderData.synced_from_offline = true;
+        (orderData as any).synced_from_offline = true;
         // The QRIS can't be used offline per BR-O01, but we still handle it
         if (orderData.payment_method === PaymentMethod.qris) {
            results.push({ client_uuid: orderData.client_uuid, status: 'error', message: 'QRIS not allowed in offline sync' });
@@ -429,7 +434,7 @@ export class OrdersService {
     const recentVoids = await this.orderRepository.countRecentVoids(tenMinsAgo);
 
     if (recentVoids >= 3) {
-      this.mailService.sendAlert(
+      this.emailService.sendAlert(
         'Indikasi Fraud - Banyak Void Transaksi',
         `<p>Sistem mendeteksi ada <strong>${recentVoids} transaksi</strong> yang di-void dalam 10 menit terakhir.</p><p>Mohon segera periksa log audit untuk detail lebih lanjut.</p>`
       );

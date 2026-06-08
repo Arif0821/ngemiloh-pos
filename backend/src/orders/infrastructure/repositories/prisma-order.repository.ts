@@ -33,6 +33,13 @@ export class PrismaOrderRepository implements OrderRepositoryInterface {
     });
   }
 
+  async findProductsWithModifiers(productIds: string[]): Promise<any[]> {
+    return this.prisma.product.findMany({
+      where: { id: { in: productIds } },
+      include: { modifier_groups: { include: { options: true } } }
+    });
+  }
+
   async createOrder(data: Prisma.OrderUncheckedCreateInput): Promise<Order> {
     return this.prisma.order.create({ data });
   }

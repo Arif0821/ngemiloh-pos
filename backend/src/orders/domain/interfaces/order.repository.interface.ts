@@ -6,6 +6,7 @@ export interface OrderRepositoryInterface {
   findOrderByClientUuid(clientUuid: string): Promise<Order | null>;
   findActiveDiscounts(): Promise<Discount[]>;
   findProductWithModifiers(productId: string): Promise<any>;
+  findProductsWithModifiers(productIds: string[]): Promise<any[]>;
   createOrder(data: Prisma.OrderUncheckedCreateInput): Promise<Order>;
   updateOrder(id: string, data: Prisma.OrderUncheckedUpdateInput): Promise<Order>;
   findOrderById(id: string): Promise<Order | null>;

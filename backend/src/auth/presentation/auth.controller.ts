@@ -15,7 +15,12 @@ export class AuthController {
   @Throttle({ login: { limit: 5, ttl: 600000 } }) // 5 requests per 10 mins
   async login(@Req() req: Request, @Body() body: LoginDto, @Res({ passthrough: true }) response: Response) {
     const { username, email, pin, password } = body;
-    const ipAddress = req.headers['x-forwarded-for'] || req.socket.remoteAddress || 'unknown';
+    const forwardedFor = req.headers['x-forwarded-for'];
+    const ipAddress = Array.isArray(forwardedFor) 
+        ? forwardedFor[0]
+        : typeof forwardedFor === 'string'
+            ? forwardedFor.split(',')[0].trim()
+            : req.socket.remoteAddress || 'unknown';
     const loginIdentifier = username || email;
     const loginSecret = pin || password;
     
@@ -37,7 +42,7 @@ export class AuthController {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
-      maxAge: 30 * 24 * 60 * 60 * 1000, // 30 days
+      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
     });
 
     // CSRF token is not HttpOnly so frontend can read it and send back in headers
@@ -54,6 +59,8 @@ export class AuthController {
     };
   }
 
+  @UseGuards(ThrottlerGuard)
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
   @Post('refresh')
   @HttpCode(HttpStatus.OK)
   async refresh(@Req() req: Request, @Res({ passthrough: true }) response: Response) {

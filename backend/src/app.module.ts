@@ -16,7 +16,6 @@ import { FinanceModule } from './finance/finance.module';
 import { EventEmitterModule } from '@nestjs/event-emitter';
 import { CsrfMiddleware } from './auth/middleware/csrf.middleware';
 import { FlagsModule } from './flags/flags.module';
-import { MailModule } from './mail/mail.module';
 import { AuditModule } from './audit/audit.module';
 import { BullModule } from '@nestjs/bullmq';
 import { APP_INTERCEPTOR } from '@nestjs/core';
@@ -50,7 +49,6 @@ import { AuditInterceptor } from './audit/presentation/audit.interceptor';
     }),
     ScheduleModule.forRoot(),
     FlagsModule,
-    MailModule,
     AuditModule,
     ThrottlerModule.forRoot([
       {
