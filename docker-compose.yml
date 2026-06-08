@@ -92,9 +92,9 @@ services:
       - DATABASE_URL=postgresql://ngemiloh:${DB_PASSWORD}@pgbouncer:6432/ngemiloh_db?schema=public&pgbouncer=true
       - DIRECT_URL=postgresql://ngemiloh:${DB_PASSWORD}@postgres:5432/ngemiloh_db?schema=public
       - REDIS_URL=redis://redis:6379
-      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
-      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
-      - PIN_PEPPER_SECRET=${PIN_PEPPER_SECRET}
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET:-ngemiloh_super_secret_jwt_key_2026_default}
+      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET:-ngemiloh_super_secret_refresh_key_2026_default}
+      - PIN_PEPPER_SECRET=${PIN_PEPPER_SECRET:-ngemiloh_super_secret_pepper_2026_default}
       # FIX: Hapus NODE_ENV dari sini — sudah di-set via Coolify sebagai Runtime Only
       # Jika ingin tetap di sini, gunakan: NODE_ENV=production (tanpa fallback)
       - NODE_ENV=${NODE_ENV:-production}
