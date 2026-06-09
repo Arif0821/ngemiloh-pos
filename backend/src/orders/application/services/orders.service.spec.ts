@@ -542,6 +542,7 @@ describe('OrdersService', () => {
         transaction_status: 'settlement',
         status_code: '200',
         gross_amount: '25000',
+        signature_key: MOCK_SIG,
       });
       mockOrderRepository.findOrderById.mockResolvedValue(null);
 
