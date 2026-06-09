@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "WebSearch"
+    ]
+  },
+  "ui": {
+    "showMCPResources": true
+  },
+  "directories": {
+    "commands": ".claude/commands"
+  }
+}
