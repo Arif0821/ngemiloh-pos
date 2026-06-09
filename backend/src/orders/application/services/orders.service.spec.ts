@@ -683,10 +683,17 @@ describe('OrdersService', () => {
       });
       mockOrderRepository.findOrderById.mockResolvedValue(null);
 
-      await expect(service.handleMidtransWebhook({
-        ...validWebhookPayload,
-        order_id: 'non-existent-order',
-      })).rejects.toThrow(NotFoundException);
+      // Suppress error logging for this expected error case
+      const loggerSpy = jest.spyOn(service['logger'], 'error').mockImplementation(() => {});
+
+      try {
+        await expect(service.handleMidtransWebhook({
+          ...validWebhookPayload,
+          order_id: 'non-existent-order',
+        })).rejects.toThrow(NotFoundException);
+      } finally {
+        loggerSpy.mockRestore();
+      }
     });
   });
 
@@ -724,12 +731,19 @@ describe('OrdersService', () => {
     it('should throw NotFoundException when order not found', async () => {
       mockOrderRepository.findOrderById.mockResolvedValue(null);
 
-      await expect(
-        service.voidOrder('non-existent-order', 'Pelanggan minta batal', 'admin-001'),
-      ).rejects.toThrow(NotFoundException);
-      await expect(
-        service.voidOrder('non-existent-order', 'Pelanggan minta batal', 'admin-001'),
-      ).rejects.toThrow('Order not found');
+      // Suppress error logging for this expected error case
+      const loggerSpy = jest.spyOn(service['logger'], 'error').mockImplementation(() => {});
+
+      try {
+        await expect(
+          service.voidOrder('non-existent-order', 'Pelanggan minta batal', 'admin-001'),
+        ).rejects.toThrow(NotFoundException);
+        await expect(
+          service.voidOrder('non-existent-order', 'Pelanggan minta batal', 'admin-001'),
+        ).rejects.toThrow('Order not found');
+      } finally {
+        loggerSpy.mockRestore();
+      }
     });
 
     it('should throw BadRequestException when order already voided', async () => {
@@ -738,21 +752,35 @@ describe('OrdersService', () => {
         status: OrderStatus.voided,
       });
 
-      await expect(
-        service.voidOrder('order-001', 'Pelanggan minta batal', 'admin-001'),
-      ).rejects.toThrow(BadRequestException);
-      await expect(
-        service.voidOrder('order-001', 'Pelanggan minta batal', 'admin-001'),
-      ).rejects.toThrow('Order sudah di-void');
+      // Suppress error logging for this expected error case
+      const loggerSpy = jest.spyOn(service['logger'], 'error').mockImplementation(() => {});
+
+      try {
+        await expect(
+          service.voidOrder('order-001', 'Pelanggan minta batal', 'admin-001'),
+        ).rejects.toThrow(BadRequestException);
+        await expect(
+          service.voidOrder('order-001', 'Pelanggan minta batal', 'admin-001'),
+        ).rejects.toThrow('Order sudah di-void');
+      } finally {
+        loggerSpy.mockRestore();
+      }
     });
 
     it('should throw BadRequestException when reason too short', async () => {
-      await expect(
-        service.voidOrder('order-001', 'short', 'admin-001'),
-      ).rejects.toThrow(BadRequestException);
-      await expect(
-        service.voidOrder('order-001', 'short', 'admin-001'),
-      ).rejects.toThrow('Alasan void wajib minimal 10 karakter');
+      // Suppress error logging for this expected error case
+      const loggerSpy = jest.spyOn(service['logger'], 'error').mockImplementation(() => {});
+
+      try {
+        await expect(
+          service.voidOrder('order-001', 'short', 'admin-001'),
+        ).rejects.toThrow(BadRequestException);
+        await expect(
+          service.voidOrder('order-001', 'short', 'admin-001'),
+        ).rejects.toThrow('Alasan void wajib minimal 10 karakter');
+      } finally {
+        loggerSpy.mockRestore();
+      }
     });
 
     it('should send alert email when 3 or more voids in 10 minutes', async () => {
@@ -898,7 +926,14 @@ describe('OrdersService', () => {
     it('should throw NotFoundException when order not found', async () => {
       mockOrderRepository.findOrderById.mockResolvedValue(null);
 
-      await expect(service.getOrder('non-existent-order')).rejects.toThrow(NotFoundException);
+      // Suppress error logging for this expected error case
+      const loggerSpy = jest.spyOn(service['logger'], 'error').mockImplementation(() => {});
+
+      try {
+        await expect(service.getOrder('non-existent-order')).rejects.toThrow(NotFoundException);
+      } finally {
+        loggerSpy.mockRestore();
+      }
     });
   });
 
@@ -1018,9 +1053,16 @@ describe('OrdersService', () => {
     it('should throw NotFoundException when order not found', async () => {
       mockOrderRepository.findOrderById.mockResolvedValue(null);
 
-      await expect(service.flagTransaction('non-existent', 'verified', 'admin-001')).rejects.toThrow(
-        NotFoundException,
-      );
+      // Suppress error logging for this expected error case
+      const loggerSpy = jest.spyOn(service['logger'], 'error').mockImplementation(() => {});
+
+      try {
+        await expect(service.flagTransaction('non-existent', 'verified', 'admin-001')).rejects.toThrow(
+          NotFoundException,
+        );
+      } finally {
+        loggerSpy.mockRestore();
+      }
     });
   });
 
