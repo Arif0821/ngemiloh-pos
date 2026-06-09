@@ -4,8 +4,8 @@
 # ============================================================
 FROM mirror.gcr.io/library/node:20-alpine AS builder
 
-# HARDCODE: Never let Coolify override this
-ENV NODE_ENV=development
+# Build SvelteKit requires NODE_ENV=production for proper prerendering
+ENV NODE_ENV=production
 ENV NODE_OPTIONS="--max-old-space-size=512"
 
 WORKDIR /app

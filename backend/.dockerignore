@@ -1,0 +1,49 @@
+# Dependencies (di-install saat build)
+node_modules/
+
+# Build artifacts
+dist/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Git
+.git/
+.gitignore
+
+# IDE
+.vscode/
+.idea/
+*.swp
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Test files
+*.test.ts
+*.spec.ts
+coverage/
+
+# Prisma (sudah di-generate saat build)
+# prisma/migrations/  # jangan di-exclude, dibutuhkan saat migrate deploy
+
+# Docker files
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# Security keys
+*.pem
+*.ppk
+*.key
+
+# Temporary
+tmp/
+temp/

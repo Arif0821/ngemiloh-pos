@@ -1,0 +1,61 @@
+# Git
+.git
+.gitignore
+
+# Dependencies yang tidak perlu di image
+backend/node_modules
+frontend/node_modules
+node_modules
+
+# Build artifacts
+backend/dist
+frontend/.svelte-kit
+frontend/build
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# IDE& editor
+.vscode
+.idea
+*.swp
+*.swo
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*
+
+# Documentation (tidak diperlukan di production)
+*.md
+docs/
+LICENSE
+
+# Docker files (tidak diperlukan di image)
+Dockerfile
+docker-compose*.yml
+.dockerignore
+
+# CI/CD (tidak diperlukan di image)
+.github/
+
+# Test files
+tests/
+*.test.ts
+*.spec.ts
+coverage/
+
+# Security keys
+*.pem
+*.ppk
+*.key
+
+# Temporary files
+tmp/
+temp/
+*.tmp
