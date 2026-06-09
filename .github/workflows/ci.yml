@@ -22,8 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          submodules: true
+          fetch-depth: 1
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
@@ -50,8 +49,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          submodules: true
+          fetch-depth: 1
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
@@ -100,8 +98,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          submodules: true
+          fetch-depth: 1
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
@@ -162,8 +159,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-          submodules: true
+          fetch-depth: 1
           token: ${{ secrets.GITHUB_TOKEN }}
 
       - uses: actions/setup-node@v4
@@ -238,10 +234,6 @@ jobs:
 
       - name: Install dependencies
         run: npm install --legacy-peer-deps
-
-      - name: Generate Prisma Client
-        run: npx prisma generate
-        working-directory: ./backend
 
       - name: Run Svelte-Check
         run: npm run check
