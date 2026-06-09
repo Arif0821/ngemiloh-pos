@@ -96,8 +96,11 @@ describe('OrdersService', () => {
   };
 
   beforeEach(async () => {
-    // Reset environment variable for threshold
+    // Reset environment variables
     process.env.PRICE_DELTA_THRESHOLD_PCT = '10';
+    process.env.MIDTRANS_ENV = 'sandbox';
+    process.env.MIDTRANS_SERVER_KEY_SANDBOX = 'test-server-key';
+    process.env.MIDTRANS_SERVER_KEY_PRODUCTION = 'prod-server-key';
 
     // Reset crypto mock to default state BEFORE each test
     const crypto = require('crypto');
@@ -624,16 +627,21 @@ describe('OrdersService', () => {
     });
 
     it('should ignore webhook with missing signature_key', async () => {
+      // Mock notification returns no signature_key
       mockMidtransCore.transaction.notification.mockResolvedValue({
         order_id: 'order-001',
         transaction_status: 'settlement',
         status_code: '200',
         gross_amount: '25000',
-        // No signature_key
+        // No signature_key - this is what the service will use
       });
 
+      // Pass payload without signature_key (not validWebhookPayload)
       const result = await service.handleMidtransWebhook({
-        ...validWebhookPayload,
+        order_id: 'order-001',
+        status_code: '200',
+        gross_amount: '25000',
+        transaction_status: 'settlement',
         signature_key: undefined,
       });
 
