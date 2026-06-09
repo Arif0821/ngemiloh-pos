@@ -60,8 +60,14 @@ export class InventoryService {
   async submitOpname(items: { id: string, physical_stock: number }[], userId: string) {
     return this.inventoryRepository.executeInTransaction(async (repo) => {
       const results: any[] = [];
+
+      // PERFORMANCE: Fetch all materials at once instead of N queries
+      const materialIds = items.map(i => i.id);
+      const materials = await repo.findManyRawMaterialsByIds(materialIds);
+      const materialMap = new Map(materials.map(m => [m.id, m]));
+
       for (const item of items) {
-        const material = await repo.findRawMaterialById(item.id);
+        const material = materialMap.get(item.id);
         if (!material) continue;
 
         const sysStock = Number(material.current_stock);
@@ -81,7 +87,7 @@ export class InventoryService {
           });
 
           await repo.updateRawMaterialStock(item.id, physStock, 'set');
-          
+
           results.push({ id: item.id, updated: true, difference });
         }
       }

@@ -190,6 +190,8 @@ model Order {
   refunds         OrderRefund[]
   stock_movements StockMovement[]
 
+  // PERFORMANCE: Composite index for shift summary queries (cashier + status + date)
+  @@index([cashier_id, status, created_at(sort: Desc)])
   @@index([cashier_id, client_created_at(sort: Desc)])
   @@index([client_created_at(sort: Desc)])
   @@index([status])
@@ -263,6 +265,7 @@ model CashRegister {
   cashier User @relation(fields: [cashier_id], references: [id])
 
   @@index([cashier_id, shift_date(sort: Desc)])
+  @@index([status])
 }
 
 model OperationalExpense {

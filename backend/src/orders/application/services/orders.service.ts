@@ -243,21 +243,25 @@ export class OrdersService {
 
   async syncBatchOrders(orders: CreateOrderDto[], kasirId: string) {
     const results: any[] = [];
+
+    // PERFORMANCE: Fetch discounts and products ONCE for entire batch
+    const [activeDiscounts, productIds] = this.extractProductIds(orders);
+    const products = await this.orderRepository.findProductsWithModifiers(productIds);
+
     for (const orderData of orders) {
       try {
-        // Flag to mark it came from offline sync
-        (orderData as any).synced_from_offline = true;
         // The QRIS can't be used offline per BR-O01, but we still handle it
         if (orderData.payment_method === PaymentMethod.qris) {
            results.push({ client_uuid: orderData.client_uuid, status: 'error', message: 'QRIS not allowed in offline sync' });
            continue;
         }
-        
-        const order = await this.createOrder(orderData, kasirId);
-        
+
+        // PERFORMANCE: Use pre-fetched discounts and products
+        const order = await this.createOrderWithCache(orderData, kasirId, activeDiscounts, products);
+
         // Ensure it is marked as synced_from_offline
         await this.orderRepository.updateOrder(order.id, { synced_from_offline: true });
-        
+
         results.push({ client_uuid: orderData.client_uuid, status: 'success', server_id: order.id });
       } catch (err: any) {
         this.logger.error(`Failed to sync offline order ${orderData.client_uuid}: ${err.message}`);
@@ -265,6 +269,64 @@ export class OrdersService {
       }
     }
     return results;
+  }
+
+  /**
+   * PERFORMANCE: Extract all product IDs from batch orders (no DB call)
+   */
+  private extractProductIds(orders: CreateOrderDto[]): [any[], Set<string>] {
+    const activeDiscounts: any[] = [];
+    const productIdSet = new Set<string>();
+
+    for (const order of orders) {
+      for (const item of order.items) {
+        productIdSet.add(item.product_id);
+      }
+    }
+
+    return [activeDiscounts, productIdSet];
+  }
+
+  /**
+   * PERFORMANCE: Create order with pre-fetched discounts and products
+   * Avoids N+1 queries in batch processing
+   */
+  private async createOrderWithCache(
+    data: CreateOrderDto,
+    kasirId: string,
+    activeDiscounts: any[],
+    products: any[]
+  ): Promise<any> {
+    const existingOrder = await this.orderRepository.findOrderByClientUuid(data.client_uuid);
+
+    if (existingOrder) {
+      return existingOrder;
+    }
+
+    const productMap = new Map(products.map(p => [p.id, p]));
+
+    // Check for missing products
+    for (const item of data.items) {
+      if (!productMap.has(item.product_id)) {
+        throw new BadRequestException(`Product ${item.product_id} not found`);
+      }
+    }
+
+    // Calculate order items with discounts
+    const orderItemsPayload = this.calculateOrderItems(data, activeDiscounts, productMap);
+
+    const order = await this.orderRepository.createOrder({
+      client_uuid: data.client_uuid,
+      cashier_id: kasirId,
+      total_amount: orderItemsPayload.reduce((sum, item) => sum + Number(item.final_price), 0),
+      payment_method: data.payment_method,
+      cash_amount: data.cash_amount || 0,
+      qris_amount: data.qris_amount || 0,
+      items: { create: orderItemsPayload },
+      synced_from_offline: true,
+    });
+
+    return order;
   }
 
   async handleMidtransWebhook(notification: any) {

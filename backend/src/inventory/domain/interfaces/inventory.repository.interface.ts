@@ -8,6 +8,7 @@ export interface IInventoryRepository {
   findAllRawMaterials(): Promise<RawMaterial[]>;
   findActiveRawMaterials(): Promise<RawMaterial[]>;
   findRawMaterialById(id: string): Promise<RawMaterial | null>;
+  findManyRawMaterialsByIds(ids: string[]): Promise<RawMaterial[]>;
   
   updateRawMaterialStock(id: string, amount: number, type: 'increment' | 'decrement' | 'set'): Promise<RawMaterial>;
   

@@ -41,6 +41,14 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     });
   }
 
+  // PERFORMANCE: Batch fetch materials by IDs to avoid N+1 queries
+  async findManyRawMaterialsByIds(ids: string[]): Promise<RawMaterial[]> {
+    if (ids.length === 0) return [];
+    return this.client.rawMaterial.findMany({
+      where: { id: { in: ids } },
+    });
+  }
+
   async updateRawMaterialStock(id: string, amount: number, type: 'increment' | 'decrement' | 'set'): Promise<RawMaterial> {
     let data: any = {};
     if (type === 'increment') {
