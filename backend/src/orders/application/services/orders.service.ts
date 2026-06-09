@@ -246,8 +246,19 @@ export class OrdersService {
     const results = [];
 
     // PERFORMANCE: Fetch discounts and products ONCE for entire batch
-    const productIdSet = this.extractProductIds(orders);
-    const products = await this.orderRepository.findProductsWithModifiers([...productIdSet]);
+    let products: any[] = [];
+    try {
+      const productIdSet = this.extractProductIds(orders);
+      products = await this.orderRepository.findProductsWithModifiers([...productIdSet]);
+    } catch (err: any) {
+      // If product fetch fails, all orders in batch fail
+      this.logger.error(`Failed to fetch products for batch sync: ${err.message}`);
+      return orders.map(order => ({
+        client_uuid: order.client_uuid,
+        status: 'error',
+        message: err.message,
+      }));
+    }
 
     for (const orderData of orders) {
       try {

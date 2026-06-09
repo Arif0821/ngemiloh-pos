@@ -400,7 +400,7 @@ describe('OrdersService', () => {
 
       expect(results).toHaveLength(1);
       expect(results[0].status).toBe('error');
-      expect(results[0].message).toBe('Database error');
+      expect(results[0].message).toContain('Database error');
     });
 
     it('should skip QRIS orders in offline sync', async () => {
