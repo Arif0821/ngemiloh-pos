@@ -32,7 +32,8 @@ async function bootstrap() {
   Sentry.init({
     dsn: process.env.SENTRY_DSN || '',
     integrations: [nodeProfilingIntegration()],
-    tracesSampleRate: 1.0,
+    // PERFORMANCE: Sample 10% of transactions in production to control costs
+    tracesSampleRate: process.env.NODE_ENV === 'production' ? 0.1 : 1.0,
     profilesSampleRate: 1.0,
   });
 

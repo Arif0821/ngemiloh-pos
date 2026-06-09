@@ -207,6 +207,23 @@ export class FinanceService {
     return updated;
   }
 
+  private buildTrend(orders: any[], period: 'daily' | 'weekly' | 'monthly'): { label: string; value: number }[] {
+    const map = new Map<string, number>();
+    for (const o of orders) {
+      const d = o.created_at;
+      let key: string;
+      if (period === 'daily') {
+        key = d.toISOString().split('T')[0];
+      } else if (period === 'weekly') {
+        key = `${d.getFullYear()}-M${d.getMonth() + 1}-W${Math.ceil(d.getDate() / 7)}`;
+      } else {
+        key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      }
+      map.set(key, (map.get(key) || 0) + Number(o.total_amount));
+    }
+    return Array.from(map.entries()).map(([label, value]) => ({ label, value }));
+  }
+
   async getAnalytics(period: 'daily' | 'weekly' | 'monthly') {
     const now = new Date();
     let startDate = new Date();
@@ -223,21 +240,7 @@ export class FinanceService {
       { items: true }
     );
 
-    const trendMap = new Map<string, number>();
-    for (const o of orders) {
-      let key = '';
-      const d = o.created_at;
-      if (period === 'daily') {
-        key = d.toISOString().split('T')[0];
-      } else if (period === 'weekly') {
-        const w = Math.ceil(d.getDate() / 7);
-        key = `${d.getFullYear()}-M${d.getMonth()+1}-W${w}`;
-      } else {
-        key = `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2, '0')}`;
-      }
-      trendMap.set(key, (trendMap.get(key) || 0) + Number(o.total_amount));
-    }
-    const trend = Array.from(trendMap.entries()).map(([label, value]) => ({ label, value }));
+    const trend = this.buildTrend(orders, period);
 
     const productMap = new Map<string, { name: string, qty: number, revenue: number }>();
     for (const o of orders) {

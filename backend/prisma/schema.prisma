@@ -196,6 +196,10 @@ model Order {
   @@index([client_created_at(sort: Desc)])
   @@index([status])
   @@index([payment_method])
+  // PERFORMANCE: Index for payment status webhook lookups
+  @@index([payment_status, status])
+  // PERFORMANCE: Index for analytics date range queries
+  @@index([created_at(sort: Desc), cashier_id])
 }
 
 model OrderItem {
@@ -266,6 +270,10 @@ model CashRegister {
 
   @@index([cashier_id, shift_date(sort: Desc)])
   @@index([status])
+  // PERFORMANCE: Index for checking open shift (cashier + open status)
+  @@index([cashier_id, status])
+  // PERFORMANCE: Index for daily cash reconciliation
+  @@index([cashier_id, shift_date, status])
 }
 
 model OperationalExpense {
@@ -347,6 +355,10 @@ model AuditLog {
 
   @@index([actor_id, created_at(sort: Desc)])
   @@index([action, created_at(sort: Desc)])
+  // PERFORMANCE: Index for fraud detection (counting recent voids per actor)
+  @@index([actor_id, action, created_at(sort: Desc)])
+  // PERFORMANCE: Index for entity-specific audit queries
+  @@index([entity_type, entity_id])
 }
 
 model RevokedToken {
@@ -390,6 +402,9 @@ model RawMaterial {
   price_history RawMaterialPriceHistory[]
   bom_recipes   BomRecipe[]
   movements     StockMovement[]
+
+  // PERFORMANCE: Index for low stock alert queries
+  @@index([current_stock, min_stock])
 }
 
 model RawMaterialPriceHistory {
@@ -431,6 +446,13 @@ model StockMovement {
   raw_material RawMaterial @relation(fields: [raw_material_id], references: [id], onDelete: Restrict)
   actor        User?       @relation(fields: [created_by], references: [id])
   order        Order?      @relation(fields: [reference_order_id], references: [id])
+
+  // PERFORMANCE: Index for FEFO batch tracking (FIFO by created_at)
+  @@index([raw_material_id, created_at(sort: Asc)])
+  // PERFORMANCE: Index for inventory history queries
+  @@index([raw_material_id, type, created_at(sort: Desc)])
+  // PERFORMANCE: Index for reference order lookups
+  @@index([reference_order_id])
 }
 
 model IpLockout {

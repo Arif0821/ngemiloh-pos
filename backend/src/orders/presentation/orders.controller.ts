@@ -128,12 +128,9 @@ export class OrdersController {
   }
 
   @Sse('orders/:id/sse')
+  @UseGuards(JwtAuthGuard)
   async sse(@Param('id') id: string, @Req() req: Request) {
-    // SECURITY: Require authentication for SSE endpoint
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      throw new ForbiddenException('Authentication required for real-time updates');
-    }
+    // SECURITY: JwtAuthGuard ensures only authenticated users can access SSE
     const orderEvents = fromEvent(this.eventEmitter, 'order.paid').pipe(
       filter((payload: any) => payload.orderId === id),
       map((payload: any) => ({

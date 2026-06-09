@@ -98,61 +98,33 @@ export class InventoryService {
   async reduceStockForOrder(orderId: string) {
     const order = await this.inventoryRepository.findOrderWithIngredients(orderId);
     if (!order) return;
-
-    const rawMaterialDeductions: Record<string, number> = {};
-
-    for (const item of order.items) {
-      const qtySold = item.quantity;
-      if (item.product.bom_recipes) {
+    await this.inventoryRepository.executeInTransaction(async (repo) => {
+      let totalCogs = 0;
+      const deductions: Record<string, number> = {};
+      for (const item of order.items) {
+        if (!item.product.bom_recipes) continue;
         for (const ingredient of item.product.bom_recipes) {
-          const totalQtyRequired = Number(ingredient.quantity_per_serving) * qtySold;
-          if (!rawMaterialDeductions[ingredient.raw_material_id]) {
-            rawMaterialDeductions[ingredient.raw_material_id] = 0;
-          }
-          rawMaterialDeductions[ingredient.raw_material_id] += totalQtyRequired;
+          deductions[ingredient.raw_material_id] = (deductions[ingredient.raw_material_id] || 0)
+            + Number(ingredient.quantity_per_serving) * item.quantity;
         }
       }
-    }
-
-    if (Object.keys(rawMaterialDeductions).length > 0) {
-      await this.inventoryRepository.executeInTransaction(async (repo) => {
-        let totalCogs = 0;
-
-        for (const [rawMaterialId, qty] of Object.entries(rawMaterialDeductions)) {
-          let qtyToDeduct = qty;
-          
-          const batches = await repo.findAvailableBatches(rawMaterialId);
-
-          for (const batch of batches) {
-            if (qtyToDeduct <= 0) break;
-
-            const remainingInBatch = Number(batch.qty_remaining);
-            const qtyFromThisBatch = Math.min(qtyToDeduct, remainingInBatch);
-            
-            await repo.decrementBatchStock(batch.id, qtyFromThisBatch);
-
-            totalCogs += (qtyFromThisBatch * Number(batch.cost_per_unit));
-            qtyToDeduct -= qtyFromThisBatch;
-          }
-
-          if (qtyToDeduct > 0) {
-             const rm = await repo.findRawMaterialById(rawMaterialId);
-             totalCogs += (qtyToDeduct * Number(rm?.cost_per_unit || 0));
-          }
-
-          await repo.createInventoryTransaction({
-            raw_material_id: rawMaterialId,
-            qty: qty,
-            transaction_type: 'OUT',
-            reference_id: order.id,
-            notes: `Auto-deduct for Order ${order.id}`
-          });
-          
-          await repo.updateRawMaterialStock(rawMaterialId, qty, 'decrement');
+      for (const [rawMaterialId, qty] of Object.entries(deductions)) {
+        let remaining = qty;
+        for (const batch of await repo.findAvailableBatches(rawMaterialId)) {
+          if (remaining <= 0) break;
+          const used = Math.min(remaining, Number(batch.qty_remaining));
+          await repo.decrementBatchStock(batch.id, used);
+          totalCogs += used * Number(batch.cost_per_unit);
+          remaining -= used;
         }
-
-        await repo.updateOrderCogs(order.id, totalCogs);
-      });
-    }
+        if (remaining > 0) {
+          const rm = await repo.findRawMaterialById(rawMaterialId);
+          totalCogs += remaining * Number(rm?.cost_per_unit || 0);
+        }
+        await repo.createInventoryTransaction({ raw_material_id: rawMaterialId, qty, transaction_type: 'OUT', reference_id: orderId, notes: `Auto-deduct for Order ${orderId}` });
+        await repo.updateRawMaterialStock(rawMaterialId, qty, 'decrement');
+      }
+      await repo.updateOrderCogs(orderId, totalCogs);
+    });
   }
 }

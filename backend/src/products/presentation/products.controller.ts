@@ -33,30 +33,21 @@ export class ProductsController {
     return { success: true, data: categories };
   }
 
+  private async processImageUpload(file: Express.Multer.File | undefined): Promise<string | undefined> {
+    if (!file) return undefined;
+    const uploadDir = process.env.STORAGE_PATH || join(__dirname, '..', '..', '..', '..', 'frontend', 'static', 'uploads');
+    if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
+    const filepath = join(uploadDir, `${uuidv4()}.webp`);
+    await sharp(file.buffer).resize({ width: 800, withoutEnlargement: true }).webp({ quality: 80 }).toFile(filepath);
+    return `/uploads/${filepath.split('/').pop()}`;
+  }
+
   @Post('admin/products')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
   @UseInterceptors(FileInterceptor('image', { limits: { fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 5) * 1024 * 1024 } }))
   async createProduct(@Body() body: CreateProductDto, @Req() req: Request & { user: any }, @UploadedFile() file: Express.Multer.File) {
-    
-    let imageUrl = body.image_url;
-    
-    if (file) {
-      const uploadDir = process.env.STORAGE_PATH || join(__dirname, '..', '..', '..', '..', 'frontend', 'static', 'uploads');
-      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-      
-      const filename = `${uuidv4()}.webp`;
-      const filepath = join(uploadDir, filename);
-      
-      await sharp(file.buffer)
-        .resize({ width: 800, withoutEnlargement: true })
-        .webp({ quality: 80 })
-        .toFile(filepath);
-        
-      imageUrl = `/uploads/${filename}`;
-    }
-
-    const payload = { ...body, base_price: Number(body.base_price), image_url: imageUrl };
+    const payload = { ...body, base_price: Number(body.base_price), image_url: await this.processImageUpload(file) };
     const product = await this.productsService.create(payload, req.user.id);
     return { success: true, data: product };
   }
@@ -66,28 +57,10 @@ export class ProductsController {
   @Roles(Role.superadmin)
   @UseInterceptors(FileInterceptor('image', { limits: { fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 5) * 1024 * 1024 } }))
   async updateProduct(@Param('id') id: string, @Body() body: UpdateProductDto, @Req() req: Request & { user: any }, @UploadedFile() file: Express.Multer.File) {
-    
-    let imageUrl = body.image_url;
-    
-    if (file) {
-      const uploadDir = process.env.STORAGE_PATH || join(__dirname, '..', '..', '..', '..', 'frontend', 'static', 'uploads');
-      if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
-      
-      const filename = `${uuidv4()}.webp`;
-      const filepath = join(uploadDir, filename);
-      
-      await sharp(file.buffer)
-        .resize({ width: 800, withoutEnlargement: true })
-        .webp({ quality: 80 })
-        .toFile(filepath);
-        
-      imageUrl = `/uploads/${filename}`;
-    }
-
-    const payload = { ...body };
+    const imageUrl = await this.processImageUpload(file) || body.image_url;
+    const payload: any = { ...body };
     if (body.base_price) payload.base_price = Number(body.base_price);
     if (imageUrl) payload.image_url = imageUrl;
-    
     const product = await this.productsService.update(id, payload, req.user.id);
     return { success: true, data: product };
   }

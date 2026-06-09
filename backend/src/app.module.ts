@@ -54,12 +54,22 @@ import { AuditInterceptor } from './audit/presentation/audit.interceptor';
       {
         name: 'short',
         ttl: 60000,
-        limit: 100, // 100 requests per minute
+        limit: 100, // 100 requests per minute per IP
+      },
+      {
+        name: 'medium',
+        ttl: 300000, // 5 mins
+        limit: 300, // 300 requests per 5 mins
       },
       {
         name: 'login',
         ttl: 600000, // 10 mins
-        limit: 5, // 5 requests per 10 mins
+        limit: 5, // 5 login attempts per 10 mins
+      },
+      {
+        name: 'long',
+        ttl: 3600000, // 1 hour
+        limit: 1000, // 1000 requests per hour
       }
     ]),
     EventEmitterModule.forRoot(),

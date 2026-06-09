@@ -137,7 +137,9 @@ export class OrdersService {
     const clientFinalPrice = Number(data.client_final_price);
     const thresholdPct = Number(process.env.PRICE_DELTA_THRESHOLD_PCT || '10');
     
-    const diffPct = Math.abs(calculatedFinalPrice - clientFinalPrice) / calculatedFinalPrice * 100;
+    const diffPct = calculatedFinalPrice > 0
+      ? Math.abs(calculatedFinalPrice - clientFinalPrice) / calculatedFinalPrice * 100
+      : clientFinalPrice > 0 ? 100 : 0;
     
     if (diffPct > thresholdPct) {
       this.logger.warn(`Price Discrepancy! Backend: ${calculatedFinalPrice}, Client: ${clientFinalPrice}`);

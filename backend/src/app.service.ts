@@ -9,6 +9,28 @@ export class AppService {
     return 'Hello World!';
   }
 
+  async healthCheck() {
+    const startDb = Date.now();
+    try {
+      await this.prisma.$queryRaw`SELECT 1`;
+      const dbLatency = Date.now() - startDb;
+      return {
+        status: 'ok',
+        database: 'connected',
+        latency_ms: dbLatency,
+        version: process.env.npm_package_version || '1.0.0',
+        timestamp: new Date().toISOString(),
+      };
+    } catch (error) {
+      return {
+        status: 'error',
+        database: 'disconnected',
+        error: error instanceof Error ? error.message : 'Unknown error',
+        timestamp: new Date().toISOString(),
+      };
+    }
+  }
+
   async getSettings() {
     return this.prisma.setting.findMany();
   }

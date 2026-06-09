@@ -9,54 +9,35 @@ import { LoginDto } from '../dto/login.dto';
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
 
+  private getClientIp(req: Request): string {
+    const forwardedFor = req.headers['x-forwarded-for'];
+    if (Array.isArray(forwardedFor)) return forwardedFor[0];
+    if (typeof forwardedFor === 'string') return forwardedFor.split(',')[0].trim();
+    return req.socket.remoteAddress || 'unknown';
+  }
+
+  private setAuthCookies(response: Response, accessToken: string, refreshToken: string, csrfToken?: string) {
+    const secure = process.env.NODE_ENV === 'production';
+    response.cookie('access_token', accessToken, { httpOnly: true, secure, sameSite: 'strict', maxAge: 8 * 60 * 60 * 1000 });
+    response.cookie('refresh_token', refreshToken, { httpOnly: true, secure, sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 });
+    if (csrfToken) {
+      response.cookie('csrf_token', csrfToken, { httpOnly: false, secure, sameSite: 'strict', maxAge: 8 * 60 * 60 * 1000 });
+    }
+  }
+
   @UseGuards(ThrottlerGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ login: { limit: 5, ttl: 600000 } }) // 5 requests per 10 mins
+  @Throttle({ login: { limit: 5, ttl: 600000 } })
   async login(@Req() req: Request, @Body() body: LoginDto, @Res({ passthrough: true }) response: Response) {
     const { username, email, pin, password } = body;
-    const forwardedFor = req.headers['x-forwarded-for'];
-    const ipAddress = Array.isArray(forwardedFor) 
-        ? forwardedFor[0]
-        : typeof forwardedFor === 'string'
-            ? forwardedFor.split(',')[0].trim()
-            : req.socket.remoteAddress || 'unknown';
     const loginIdentifier = username || email;
     const loginSecret = pin || password;
-    
-    if (!loginIdentifier || !loginSecret) {
-      throw new BadRequestException('Credentials missing');
-    }
+    if (!loginIdentifier || !loginSecret) throw new BadRequestException('Credentials missing');
 
-    const result = await this.authService.login(loginIdentifier, loginSecret, ipAddress as string);
-
-    // Set HttpOnly cookies
-    response.cookie('access_token', result.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 8 * 60 * 60 * 1000, // 8 hours
-    });
-
-    response.cookie('refresh_token', result.refreshToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
-    });
-
-    // CSRF token is not HttpOnly so frontend can read it and send back in headers
-    response.cookie('csrf_token', result.csrfToken, {
-      httpOnly: false,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 8 * 60 * 60 * 1000, // 8 hours
-    });
-
-    return {
-      success: true,
-      data: result.user,
-    };
+    const result = await this.authService.login(loginIdentifier, loginSecret, this.getClientIp(req));
+    this.setAuthCookies(response, result.accessToken, result.refreshToken, result.csrfToken);
+    return { success: true, data: result.user };
   }
 
   @UseGuards(ThrottlerGuard)
@@ -65,23 +46,11 @@ export class AuthController {
   @HttpCode(HttpStatus.OK)
   async refresh(@Req() req: Request, @Res({ passthrough: true }) response: Response) {
     const refreshToken = req.cookies['refresh_token'];
-    if (!refreshToken) {
-      throw new BadRequestException('Refresh token missing');
-    }
+    if (!refreshToken) throw new BadRequestException('Refresh token missing');
 
     const result = await this.authService.refreshToken(refreshToken);
-
-    response.cookie('access_token', result.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 8 * 60 * 60 * 1000, // 8 hours
-    });
-
-    return {
-      success: true,
-      message: 'Token refreshed'
-    };
+    response.cookie('access_token', result.accessToken, { httpOnly: true, secure: process.env.NODE_ENV === 'production', sameSite: 'strict', maxAge: 8 * 60 * 60 * 1000 });
+    return { success: true, message: 'Token refreshed' };
   }
 
   @Post('logout')
@@ -102,7 +71,14 @@ export class AuthController {
   @Get('me')
   @UseGuards(JwtAuthGuard)
   async getMe(@Req() req: Request) {
-    const user = (req as any).user as { id: string; role: string } | undefined;
+    const userId = (req as any).user?.id;
+    if (!userId) {
+      return { success: false, message: 'User not authenticated' };
+    }
+    const user = await this.authService.getUserById(userId);
+    if (!user) {
+      return { success: false, message: 'User not found' };
+    }
     return {
       success: true,
       data: user,

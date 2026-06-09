@@ -197,13 +197,23 @@ export class AuthService {
       const payload = this.jwtService.verify(refreshToken, {
         secret: process.env.JWT_REFRESH_SECRET,
       });
-      
+
       const expiresAt = new Date(payload.exp * 1000);
-      
+
       const tokenHash = crypto.createHash('sha256').update(refreshToken).digest('hex');
       await this.authRepository.revokeToken(tokenHash, payload.sub, expiresAt);
     } catch (e) {
       // Ignore invalid token during logout
     }
+  }
+
+  async getUserById(userId: string) {
+    const user = await this.authRepository.findUserById(userId);
+    if (!user) {
+      return null;
+    }
+    // Return safe user data (exclude sensitive fields)
+    const { pin_hash, password_hash, ...safeUser } = user;
+    return safeUser;
   }
 }

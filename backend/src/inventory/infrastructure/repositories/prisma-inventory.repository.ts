@@ -108,11 +108,56 @@ export class PrismaInventoryRepository implements IInventoryRepository {
   }
 
   async findAvailableBatches(rawMaterialId: string): Promise<any[]> {
-    return [];
+    // FEFO batch tracking using StockMovement as batch proxy
+    // Orders movements by created_at for FIFO (First In, First Out)
+    const movements = await this.client.stockMovement.findMany({
+      where: {
+        raw_material_id: rawMaterialId,
+        type: { in: ['in', 'out'] },
+      },
+      orderBy: { created_at: 'asc' },
+    });
+
+    // Calculate remaining quantity per "batch" (by movement date)
+    const batches: any[] = [];
+    let runningBalance = 0;
+
+    for (const m of movements) {
+      const qty = Number(m.quantity);
+      if (m.type === 'in') {
+        runningBalance += qty;
+        // Each IN movement creates a batch entry
+        batches.push({
+          id: m.id, // Using movement ID as batch proxy
+          raw_material_id: rawMaterialId,
+          qty_remaining: runningBalance,
+          expiry_date: null, // No expiry tracking in current schema
+          cost_per_unit: 0, // Cost tracked via RawMaterial cost_per_unit
+        });
+      } else {
+        // Deduct from running balance
+        runningBalance = Math.max(0, runningBalance - qty);
+      }
+    }
+
+    return batches.filter(b => b.qty_remaining > 0);
   }
 
   async decrementBatchStock(batchId: string, amount: number): Promise<any> {
-    return null;
+    // Decrement stock by creating OUT movement
+    const movement = await this.client.stockMovement.findUnique({ where: { id: batchId } });
+    if (!movement) {
+      return null;
+    }
+
+    return this.client.stockMovement.create({
+      data: {
+        raw_material_id: movement.raw_material_id,
+        type: 'out',
+        quantity: amount,
+        notes: `Batch deduction from movement ${batchId}`,
+      },
+    });
   }
 
   async createRawMaterial(data: any): Promise<RawMaterial> {

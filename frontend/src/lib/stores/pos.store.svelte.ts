@@ -1,6 +1,6 @@
 import { db, type LocalProduct } from '$lib/db';
 import type { Discount, OrderResponse, ModifierOption } from '../domain/models/types';
-import { DEFAULT_OPENING_BALANCE, QRIS_COUNTDOWN_SECONDS } from '../utils/format';
+import { DEFAULT_OPENING_BALANCE, QRIS_COUNTDOWN_SECONDS, formatRp } from '../utils/format';
 
 export type CartItem = LocalProduct & { quantity: number, cartItemId: string, selectedModifiers: ModifierOption[] };
 
@@ -8,7 +8,6 @@ export class PosStore {
   // Application State
   isOffline: boolean = $state(false);
   featureFlags: Record<string, boolean> = $state({});
-  isCartLoaded = false;
 
   // Products & Cart
   products: LocalProduct[] = $state([]);
@@ -95,9 +94,7 @@ export class PosStore {
     return bestDiscount;
   }
 
-  formatRp(amount: number) {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
-  }
+  formatRp = formatRp;
 
   addToCart(product: LocalProduct, modifiers: ModifierOption[]) {
     const modifierSig = modifiers.map(m => m.id).sort().join(',');

@@ -5,6 +5,7 @@ import { RolesGuard } from './auth/guards/roles.guard';
 import { Roles } from './auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { Request } from 'express';
+import { SkipThrottle } from '@nestjs/throttler';
 
 interface AuthenticatedRequest extends Request {
   user: { id: string; role: string };
@@ -17,6 +18,12 @@ export class AppController {
   @Get()
   getHello(): string {
     return this.appService.getHello();
+  }
+
+  @SkipThrottle()
+  @Get('health')
+  async healthCheck() {
+    return this.appService.healthCheck();
   }
 
   @Get('api/v1/admin/settings')
