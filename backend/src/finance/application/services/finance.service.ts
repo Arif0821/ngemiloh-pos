@@ -332,11 +332,11 @@ export class FinanceService {
 
     const threshold = Number(process.env.DISCREPANCY_THRESHOLD || 5000);
     if (Math.abs(discrepancy) > threshold) {
-      this.emailService.sendAlert(
+      await this.emailService.sendAlert(
         'Peringatan Selisih Laci Kasir',
         `<p>Shift kasir dengan ID <strong>${cashierId}</strong> telah ditutup dengan <strong>selisih (discrepancy) Rp ${discrepancy}</strong>.</p>
          <p>Batas toleransi sistem adalah Rp ${threshold}. Mohon segera verifikasi laci kas.</p>`
-      );
+      ).catch(err => this.logger.error('Failed to send discrepancy alert:', err.message));
     }
 
     await this.financeRepository.createAuditLog({

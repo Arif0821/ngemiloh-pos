@@ -5,6 +5,7 @@ import * as crypto from 'crypto';
 import { EmailService } from '../../../email/email.service';
 import { Role, User } from '@prisma/client';
 import { AUTH_REPOSITORY, type AuthRepositoryInterface } from '../../domain/interfaces/auth.repository.interface';
+import { LOCKOUT_DURATION_MS, LOCKOUT_THRESHOLD } from '../../../common/utils/constants';
 
 @Injectable()
 export class AuthService {
@@ -99,8 +100,8 @@ export class AuthService {
       // Increment Account Failures
       const updatedUser = await this.authRepository.incrementUserFailedLogin(user.id);
 
-      if (updatedUser.failed_login_count >= 5) {
-        await this.authRepository.lockUser(user.id, new Date(Date.now() + 30 * 60 * 1000));
+      if (updatedUser.failed_login_count >= LOCKOUT_THRESHOLD) {
+        await this.authRepository.lockUser(user.id, new Date(Date.now() + LOCKOUT_DURATION_MS));
 
         // NOTIF-01: Send alert
         await this.emailService.sendAlert(
@@ -112,8 +113,8 @@ export class AuthService {
       // Increment IP Failures
       const updatedIp = await this.authRepository.incrementIpLockout(ipAddress);
 
-      if (updatedIp.failed_count >= 5) {
-        await this.authRepository.lockIpAddress(ipAddress, new Date(Date.now() + 30 * 60 * 1000));
+      if (updatedIp.failed_count >= LOCKOUT_THRESHOLD) {
+        await this.authRepository.lockIpAddress(ipAddress, new Date(Date.now() + LOCKOUT_DURATION_MS));
         throw new HttpException('Too Many Requests. IP is temporarily locked.', HttpStatus.TOO_MANY_REQUESTS);
       }
 

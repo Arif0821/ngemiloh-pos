@@ -5,6 +5,7 @@ import { InventoryService } from '../../../inventory/application/services/invent
 import { EmailService } from '../../../email/email.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { ORDER_REPOSITORY, type OrderRepositoryInterface } from '../../domain/interfaces/order.repository.interface';
+import { startOfDay, endOfDay } from '../../../common/utils/date';
 
 import midtransClient from 'midtrans-client';
 
@@ -59,7 +60,7 @@ export class OrdersService {
 
     let calculatedSubtotal = 0;
     let totalDiscountAmount = 0;
-    const orderItemsPayload: any[] = [];
+    const orderItemsPayload = [];
     
     const activeDiscounts = await this.orderRepository.findActiveDiscounts();
 
@@ -98,7 +99,7 @@ export class OrdersService {
       let itemTotal = basePrice - maxDiscountAmount;
       let modifierTotal = 0;
 
-      if (item.modifiers && item.modifiers.length > 0) {
+      if (item.modifiers?.length) {
         for (const mod of item.modifiers) {
           let foundOption: any = null;
           for (const group of product.modifier_groups) {
@@ -242,7 +243,7 @@ export class OrdersService {
   }
 
   async syncBatchOrders(orders: CreateOrderDto[], kasirId: string) {
-    const results: any[] = [];
+    const results = [];
 
     // PERFORMANCE: Fetch discounts and products ONCE for entire batch
     const productIdSet = this.extractProductIds(orders);
@@ -341,7 +342,7 @@ export class OrdersService {
       let itemTotal = Number(product.base_price);
       let modifierTotal = 0;
 
-      if (item.modifiers && item.modifiers.length > 0) {
+      if (item.modifiers?.length) {
         for (const mod of item.modifiers) {
           for (const group of product.modifier_groups || []) {
              const option = group.options?.find((o: any) => o.id === mod.option_id);
@@ -371,18 +372,30 @@ export class OrdersService {
   async handleMidtransWebhook(notification: any) {
     try {
       const statusResponse = await this.midtransCore.transaction.notification(notification);
-      
+
       const orderId = statusResponse.order_id;
       const transactionStatus = statusResponse.transaction_status;
-      const fraudStatus = statusResponse.fraud_status;
+
+      // SECURITY: Validate signature_key exists before comparison
+      const signatureKey = statusResponse.signature_key;
+      if (!signatureKey) {
+        this.logger.warn('Missing signature_key in Midtrans webhook');
+        return { status: 'IGNORED' };
+      }
 
       const serverKey = process.env.MIDTRANS_ENV === 'production' ? process.env.MIDTRANS_SERVER_KEY_PRODUCTION : process.env.MIDTRANS_SERVER_KEY_SANDBOX;
       const hash = crypto.createHash('sha512').update(orderId + statusResponse.status_code + statusResponse.gross_amount + serverKey).digest('hex');
-      
-      const expectedBuffer = Buffer.from(hash, 'hex');
-      const signatureBuffer = Buffer.from(statusResponse.signature_key || '', 'hex');
 
-      if (expectedBuffer.length !== signatureBuffer.length || !crypto.timingSafeEqual(expectedBuffer, signatureBuffer)) {
+      const expectedBuffer = Buffer.from(hash, 'hex');
+      const signatureBuffer = Buffer.from(signatureKey, 'hex');
+
+      // SECURITY: Check buffer lengths match before timingSafeEqual
+      if (expectedBuffer.length !== signatureBuffer.length) {
+        this.logger.warn(`Invalid Midtrans Signature Key: order ${orderId}`);
+        return { status: 'IGNORED' };
+      }
+
+      if (!crypto.timingSafeEqual(expectedBuffer, signatureBuffer)) {
         this.logger.warn(`Invalid Midtrans Signature Key: order ${orderId}`);
         return { status: 'IGNORED' };
       }
@@ -448,10 +461,9 @@ export class OrdersService {
   }
 
   async getHistory(kasirId?: string) {
-    let whereClause: any = {};
+    let whereClause = {};
     if (kasirId) {
-      const today = new Date();
-      today.setHours(0,0,0,0);
+      const today = startOfDay();
       whereClause = { cashier_id: kasirId, created_at: { gte: today } };
     }
     return this.orderRepository.findOrders(
@@ -462,8 +474,7 @@ export class OrdersService {
   }
 
   async getShiftSummary(kasirId: string) {
-    const today = new Date();
-    today.setHours(0,0,0,0);
+    const today = startOfDay();
     
     const orders = await this.orderRepository.findOrders(
       {
@@ -493,17 +504,14 @@ export class OrdersService {
   }
 
   async getCurrentShift(kasirId: string) {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    return this.orderRepository.findCurrentShift(kasirId, today);
+    return this.orderRepository.findCurrentShift(kasirId, startOfDay());
   }
 
   async startShift(kasirId: string) {
     const existing = await this.getCurrentShift(kasirId);
     if (existing) return existing;
 
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = startOfDay();
 
     const setting = await this.orderRepository.getSetting('DEFAULT_OPENING_BALANCE');
     const openingBalance = setting && setting.value ? Number(setting.value) : 500000;
@@ -557,10 +565,10 @@ export class OrdersService {
     const recentVoids = await this.orderRepository.countRecentVoids(tenMinsAgo);
 
     if (recentVoids >= 3) {
-      this.emailService.sendAlert(
+      await this.emailService.sendAlert(
         'Indikasi Fraud - Banyak Void Transaksi',
         `<p>Sistem mendeteksi ada <strong>${recentVoids} transaksi</strong> yang di-void dalam 10 menit terakhir.</p><p>Mohon segera periksa log audit untuk detail lebih lanjut.</p>`
-      );
+      ).catch(err => this.logger.error('Failed to send fraud alert:', err.message));
     }
 
     return { success: true, message: 'Order voided successfully' };
@@ -588,8 +596,7 @@ export class OrdersService {
 
   async exportOrdersCsv(startDate: string, endDate: string): Promise<string> {
     const start = startDate ? new Date(startDate) : new Date(0);
-    const end = endDate ? new Date(endDate) : new Date();
-    end.setHours(23, 59, 59, 999);
+    const end = endDate ? endOfDay(new Date(endDate)) : endOfDay();
 
     const orders = await this.orderRepository.findOrders(
       {
@@ -635,16 +642,13 @@ export class OrdersService {
   }
 
   async getAllShifts(kasirId?: string, dateStr?: string) {
-    const where: any = {};
+    const where = {};
     if (kasirId) {
       where.cashier_id = kasirId;
     }
     if (dateStr) {
       const d = new Date(dateStr);
-      d.setHours(0,0,0,0);
-      const end = new Date(d);
-      end.setHours(23,59,59,999);
-      where.shift_start = { gte: d, lte: end };
+      where.shift_start = { gte: startOfDay(d), lte: endOfDay(d) };
     }
     
     return this.orderRepository.findShifts(

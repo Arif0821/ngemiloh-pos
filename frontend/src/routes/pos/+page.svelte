@@ -3,7 +3,8 @@
   import { posStore } from '$lib/stores/pos.store.svelte';
   import { posService } from '$lib/services/pos.service';
   import { db } from '$lib/db';
-  
+  import { FLAG_REFRESH_INTERVAL_MS } from '$lib/utils/format';
+
   import ProductList from '$lib/components/pos/ProductList.svelte';
   import CartSidebar from '$lib/components/pos/CartSidebar.svelte';
   import Modals from '$lib/components/pos/Modals.svelte';
@@ -30,7 +31,7 @@
     await posService.loadProductsFromDb();
     if (!posStore.isOffline) {
       posService.fetchFlags();
-      setInterval(() => posService.fetchFlags(), 60000); 
+      setInterval(() => posService.fetchFlags(), FLAG_REFRESH_INTERVAL_MS);
       await posService.checkShift();
       await posService.fetchProductsFromApi();
       await posService.fetchDiscounts();

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { api } from '$lib/services/api.client';
+  import { formatRp } from '$lib/utils/format';
   import { onMount } from 'svelte';
   import Chart from 'chart.js/auto';
 
@@ -17,10 +18,6 @@
   });
 
   let refreshTimer: ReturnType<typeof setInterval>;
-
-  function formatRp(amount: number) {
-    return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
-  }
 
   let paymentChart: unknown = null;
 

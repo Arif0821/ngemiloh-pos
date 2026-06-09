@@ -6,6 +6,15 @@ import { Request } from 'express';
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
+    const secret = process.env.JWT_ACCESS_SECRET;
+    if (!secret) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('FATAL: JWT_ACCESS_SECRET environment variable is required');
+      }
+      // SECURITY: Only allow fallback in development
+      console.warn('WARNING: JWT_ACCESS_SECRET not set - using insecure fallback (development only)');
+    }
+
     super({
       jwtFromRequest: ExtractJwt.fromExtractors([
         (request: Request) => {
@@ -17,7 +26,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         },
       ]),
       ignoreExpiration: false,
-      secretOrKey: process.env.JWT_ACCESS_SECRET || 'dev_secret',
+      secretOrKey: secret || 'dev-secret-insecure-fallback',
     });
   }
 

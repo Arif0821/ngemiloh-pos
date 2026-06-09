@@ -2,7 +2,6 @@ import { Controller, Post, Get, Body, UseGuards, Req, HttpCode, HttpStatus, Para
 import { OrdersService } from '../application/services/orders.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
-import { WebhookGuard } from '../guards/webhook.guard';
 import { Request } from 'express';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
@@ -11,15 +10,6 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Observable, filter, map, fromEvent, merge, interval } from 'rxjs';
 import type { Response } from 'express';
 import { CreateOrderDto, SyncBatchDto } from './dto/create-order.dto';
-
-// Allowed Midtrans IP addresses for webhook verification
-// In production, verify requests come from Midtrans servers
-const MIDTRANS_ALLOWED_IPS = [
-  '10.112.177.116', // Midtrans production IPs (example)
-  '10.112.177.117',
-  '10.112.177.118',
-  '103.58.100.0/24', // Midtrans sandbox
-];
 
 @Controller('api/v1')
 export class OrdersController {
@@ -62,9 +52,14 @@ export class OrdersController {
   @Roles(Role.superadmin)
   @Throttle({ default: { limit: 5, ttl: 3600000 } })
   async exportCsv(@Query('startDate') startDate: string, @Query('endDate') endDate: string, @Res() res: Response) {
+    // SECURITY: Sanitize filename parameters to prevent CRLF injection
+    const sanitizeFilename = (str: string) => str.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const safeStartDate = sanitizeFilename(startDate || 'start');
+    const safeEndDate = sanitizeFilename(endDate || 'end');
+
     const csv = await this.ordersService.exportOrdersCsv(startDate, endDate);
     res.header('Content-Type', 'text/csv');
-    res.attachment(`laporan_transaksi_${startDate}_to_${endDate}.csv`);
+    res.attachment(`laporan_transaksi_${safeStartDate}_to_${safeEndDate}.csv`);
     return res.send(csv);
   }
 

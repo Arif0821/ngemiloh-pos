@@ -8,6 +8,18 @@ export class UsersService {
     @Inject(USER_REPOSITORY) private userRepository: IUserRepository
   ) {}
 
+  private getPepper(): string {
+    const pepper = process.env.PIN_PEPPER_SECRET;
+    if (!pepper) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('FATAL: PIN_PEPPER_SECRET environment variable is required');
+      }
+      console.warn('WARNING: PIN_PEPPER_SECRET not set - using insecure fallback (development only)');
+      return 'default_pepper_insecure_fallback';
+    }
+    return pepper;
+  }
+
   async findAllCashiers() {
     return this.userRepository.findCashiers();
   }
@@ -16,8 +28,7 @@ export class UsersService {
     const exists = await this.userRepository.findByUsername(data.username.toLowerCase());
     if (exists) throw new BadRequestException('Username already taken');
 
-    const pepper = process.env.PIN_PEPPER_SECRET || 'default_pepper';
-    const pinHash = await bcrypt.hash(data.pin + pepper, 12);
+    const pinHash = await bcrypt.hash(data.pin + this.getPepper(), 12);
 
     const user = await this.userRepository.create({
       name: data.name,
@@ -34,8 +45,7 @@ export class UsersService {
     const user = await this.userRepository.findById(id);
     if (!user || user.role !== 'kasir') throw new NotFoundException('Cashier not found');
 
-    const pepper = process.env.PIN_PEPPER_SECRET || 'default_pepper';
-    const pinHash = await bcrypt.hash(newPin + pepper, 12);
+    const pinHash = await bcrypt.hash(newPin + this.getPepper(), 12);
 
     await this.userRepository.update(id, {
       pin_hash: pinHash,

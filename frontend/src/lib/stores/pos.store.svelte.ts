@@ -1,5 +1,6 @@
 import { db, type LocalProduct } from '$lib/db';
 import type { Discount, OrderResponse, ModifierOption } from '../domain/models/types';
+import { DEFAULT_OPENING_BALANCE, QRIS_COUNTDOWN_SECONDS } from '../utils/format';
 
 export type CartItem = LocalProduct & { quantity: number, cartItemId: string, selectedModifiers: ModifierOption[] };
 
@@ -8,11 +9,11 @@ export class PosStore {
   isOffline: boolean = $state(false);
   featureFlags: Record<string, boolean> = $state({});
   isCartLoaded = false;
-  
+
   // Products & Cart
   products: LocalProduct[] = $state([]);
   cart: CartItem[] = $state([]);
-  
+
   // Modals & UI Toggles
   showPaymentModal: boolean = $state(false);
   showModifierModal: boolean = $state(false);
@@ -22,8 +23,8 @@ export class PosStore {
   showCloseShiftModal = $state(false);
 
   // Shift Logic
-  hasOpenShift = $state(true); 
-  openingBalance = $state(500000);
+  hasOpenShift = $state(true);
+  openingBalance = $state(DEFAULT_OPENING_BALANCE);
   closingBalance = $state(0);
   isCheckingShift = $state(true);
 
@@ -66,7 +67,7 @@ export class PosStore {
 
   // QRIS Waiting State
   isWaitingQris: boolean = $state(false);
-  qrisCountdown: number = $state(900); // 15 minutes
+  qrisCountdown: number = $state(QRIS_COUNTDOWN_SECONDS); // 15 minutes
   qrisOrderInfo: OrderResponse | null = $state(null);
   lastOrderDetails: OrderResponse | null = $state(null);
   historyOrders: OrderResponse[] = $state([]);

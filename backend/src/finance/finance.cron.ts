@@ -42,12 +42,12 @@ export class FinanceCronService {
 
     if (!log.is_paid) {
       const amount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(Number(log.cashier_share));
-      this.emailService.sendAlert(
+      await this.emailService.sendAlert(
         `Reminder: Tunggakan Bagi Hasil Bulan ${month}/${year}`,
         `<p>Peringatan dari sistem. Anda <strong>belum membayar bagi hasil kasir</strong> untuk periode bulan ${month} tahun ${year}.</p>
          <p>Total yang harus dibayarkan: <strong>${amount}</strong>.</p>
          <p>Deadline penyelesaian adalah <strong>tanggal 5 bulan ini</strong>. Mohon segera melunasi dan memperbarui status di halaman laporan.</p>`
-      );
+      ).catch(err => console.error('Failed to send profit share reminder:', err.message));
     }
   }
 }
