@@ -17,12 +17,13 @@ jest.mock('midtrans-client', () => ({
   })),
 }));
 
-// Mock crypto module - make timingSafeEqual always return true for tests
+// Mock crypto module - use proper128-char hex for SHA-512
+const MOCK_SIGNATURE_KEY = 'a'.repeat(128);
 jest.mock('crypto', () => ({
   ...jest.requireActual('crypto'),
   createHash: jest.fn().mockReturnValue({
     update: jest.fn().mockReturnValue({
-      digest: jest.fn().mockReturnValue(Buffer.from('mock-signature')),
+      digest: jest.fn().mockReturnValue(Buffer.from(MOCK_SIGNATURE_KEY)),
     }),
   }),
   timingSafeEqual: jest.fn().mockReturnValue(true),
@@ -405,6 +406,8 @@ describe('OrdersService', () => {
   });
 
   describe('handleMidtransWebhook', () => {
+    // SHA-512 produces 128-character hex string
+    const MOCK_SIGNATURE_KEY = 'a'.repeat(128);
     const validWebhookPayload = {
       order_id: 'order-001',
       status_code: '200',
@@ -412,7 +415,7 @@ describe('OrdersService', () => {
       transaction_status: 'settlement',
       fraud_status: 'accept',
       transaction_id: 'txn-123',
-      signature_key: Buffer.from('mock-signature').toString('hex'),
+      signature_key: MOCK_SIGNATURE_KEY,
     };
 
     it('should handle settlement webhook successfully', async () => {
