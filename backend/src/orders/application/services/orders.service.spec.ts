@@ -417,6 +417,29 @@ describe('OrdersService', () => {
       expect(results[0].status).toBe('error');
       expect(results[0].message).toBe('QRIS not allowed in offline sync');
     });
+
+    it('should handle partial batch failures', async () => {
+      // First order succeeds, second fails due to missing product
+      mockOrderRepository.findOrderByClientUuid
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce(null);
+      mockOrderRepository.findActiveDiscounts.mockResolvedValue([]);
+      mockOrderRepository.findProductsWithModifiers.mockResolvedValue([mockProduct]);
+      mockOrderRepository.createOrder
+        .mockResolvedValueOnce({ ...mockOrder, id: 'order-001' })
+        .mockRejectedValueOnce(new Error('Database error'));
+
+      const results = await service.syncBatchOrders(batchOrders as any[], 'kasir-001');
+
+      expect(results).toHaveLength(2);
+      expect(results[0].status).toBe('success');
+    });
+
+    it('should handle empty batch', async () => {
+      const results = await service.syncBatchOrders([] as any[], 'kasir-001');
+
+      expect(results).toHaveLength(0);
+    });
   });
 
   describe('handleMidtransWebhook', () => {
@@ -474,6 +497,7 @@ describe('OrdersService', () => {
         transaction_status: 'expire',
         status_code: '201',
         gross_amount: '25000',
+        signature_key: MOCK_SIG,
       });
       mockOrderRepository.findOrderById.mockResolvedValue({
         ...mockOrder,
@@ -501,6 +525,7 @@ describe('OrdersService', () => {
         transaction_status: 'cancel',
         status_code: '202',
         gross_amount: '25000',
+        signature_key: MOCK_SIG,
       });
       mockOrderRepository.findOrderById.mockResolvedValue({
         ...mockOrder,
@@ -533,9 +558,84 @@ describe('OrdersService', () => {
         transaction_status: 'settlement',
         status_code: '200',
         gross_amount: '25000',
+        signature_key: MOCK_SIG,
       });
 
       const result = await service.handleMidtransWebhook(validWebhookPayload);
+
+      expect(result).toEqual({ status: 'IGNORED' });
+      expect(mockOrderRepository.updateOrder).not.toHaveBeenCalled();
+    });
+
+    it('should handle pending webhook successfully', async () => {
+      mockMidtransCore.transaction.notification.mockResolvedValue({
+        order_id: 'order-001',
+        transaction_status: 'pending',
+        status_code: '201',
+        gross_amount: '25000',
+        signature_key: MOCK_SIG,
+      });
+      mockOrderRepository.findOrderById.mockResolvedValue({
+        ...mockOrder,
+        status: OrderStatus.pending_sync,
+      });
+      mockOrderRepository.updateOrder.mockResolvedValue({ ...mockOrder, status: OrderStatus.pending_sync });
+
+      const result = await service.handleMidtransWebhook({
+        ...validWebhookPayload,
+        transaction_status: 'pending',
+        status_code: '201',
+      });
+
+      expect(result).toEqual({ status: 'success' });
+      expect(mockOrderRepository.updateOrder).toHaveBeenCalledWith('order-001', {
+        status: OrderStatus.pending_sync,
+        payment_status: 'unpaid',
+        payment_settled_at: null,
+      });
+    });
+
+    it('should handle deny webhook successfully', async () => {
+      mockMidtransCore.transaction.notification.mockResolvedValue({
+        order_id: 'order-001',
+        transaction_status: 'deny',
+        status_code: '202',
+        gross_amount: '25000',
+        signature_key: MOCK_SIG,
+      });
+      mockOrderRepository.findOrderById.mockResolvedValue({
+        ...mockOrder,
+        status: OrderStatus.pending_sync,
+      });
+      mockOrderRepository.updateOrder.mockResolvedValue({ ...mockOrder, status: OrderStatus.voided });
+
+      const result = await service.handleMidtransWebhook({
+        ...validWebhookPayload,
+        transaction_status: 'deny',
+        status_code: '202',
+      });
+
+      expect(result).toEqual({ status: 'success' });
+      expect(mockOrderRepository.updateOrder).toHaveBeenCalledWith('order-001', {
+        status: OrderStatus.voided,
+        payment_status: 'failed',
+        payment_settled_at: null,
+      });
+    });
+
+    it('should ignore webhook with missing signature_key', async () => {
+      mockMidtransCore.transaction.notification.mockResolvedValue({
+        order_id: 'order-001',
+        transaction_status: 'settlement',
+        status_code: '200',
+        gross_amount: '25000',
+        // No signature_key
+      });
+
+      const result = await service.handleMidtransWebhook({
+        ...validWebhookPayload,
+        signature_key: undefined,
+      });
 
       expect(result).toEqual({ status: 'IGNORED' });
       expect(mockOrderRepository.updateOrder).not.toHaveBeenCalled();
