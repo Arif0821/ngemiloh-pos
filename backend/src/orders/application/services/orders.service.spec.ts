@@ -439,14 +439,19 @@ describe('OrdersService', () => {
         gross_amount: '25000',
         fraud_status: 'accept',
         transaction_id: 'txn-123',
-        signature_key: Buffer.from('mock-signature').toString('hex'),
+        signature_key: MOCK_SIG,
       });
       mockOrderRepository.findOrderById.mockResolvedValue({
         ...mockOrder,
         status: OrderStatus.pending_sync,
         cashier_id: 'kasir-001',
       });
-      mockOrderRepository.updateOrder.mockResolvedValue({ ...mockOrder, status: OrderStatus.completed });
+      mockOrderRepository.updateOrder.mockResolvedValue({
+        ...mockOrder,
+        status: OrderStatus.completed,
+        payment_status: 'paid',
+        payment_settled_at: new Date(),
+      });
       mockOrderRepository.createAuditLog.mockResolvedValue({});
 
       const result = await service.handleMidtransWebhook(validWebhookPayload);
