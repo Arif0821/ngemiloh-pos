@@ -948,6 +948,8 @@ describe('OrdersService', () => {
         {},
         { created_at: 'desc' },
         { items: true, cashier: { select: { name: true, username: true } } },
+        50,  // default limit
+        0,   // default skip (page 1 -> skip 0)
       );
     });
 
@@ -963,6 +965,22 @@ describe('OrdersService', () => {
         { cashier_id: 'kasir-001', created_at: { gte: today } },
         { created_at: 'desc' },
         { items: true, cashier: { select: { name: true, username: true } } },
+        50,  // default limit
+        0,   // default skip (page 1 -> skip 0)
+      );
+    });
+
+    it('should respect pagination parameters', async () => {
+      mockOrderRepository.findOrders.mockResolvedValue([mockOrder]);
+
+      await service.getHistory(undefined, 2, 50);
+
+      expect(mockOrderRepository.findOrders).toHaveBeenCalledWith(
+        {},
+        { created_at: 'desc' },
+        { items: true, cashier: { select: { name: true, username: true } } },
+        50,
+        50,  // page 2 with limit 50 -> skip 50
       );
     });
   });

@@ -475,16 +475,19 @@ export class OrdersService {
     return order;
   }
 
-  async getHistory(kasirId?: string) {
+  async getHistory(kasirId?: string, page: number = 1, limit: number = 50) {
     let whereClause = {};
     if (kasirId) {
       const today = startOfDay();
       whereClause = { cashier_id: kasirId, created_at: { gte: today } };
     }
+    const skip = (page - 1) * limit;
     return this.orderRepository.findOrders(
       whereClause,
       { created_at: 'desc' },
-      { items: true, cashier: { select: { name: true, username: true } } }
+      { items: true, cashier: { select: { name: true, username: true } } },
+      limit,
+      skip
     );
   }
 

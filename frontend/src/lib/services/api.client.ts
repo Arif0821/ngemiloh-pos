@@ -40,8 +40,8 @@ export class ApiClient {
       });
 
       if (refreshRes.ok) {
-        // Retry the original request
-        response = await fetch(url, options);
+        // Retry the original request (re-fetch CSRF token for new request)
+        return this.request(endpoint, options);
       } else {
         if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
           window.location.href = '/login';

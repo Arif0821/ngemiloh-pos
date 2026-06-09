@@ -35,16 +35,17 @@ export class OrdersController {
 
   @Get('orders')
   @UseGuards(JwtAuthGuard)
-  async getHistory(@Req() req: Request & { user: any }, @Query('page') page: string = '1') {
+  async getHistory(
+    @Req() req: Request& { user: any },
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '50'
+  ) {
     const filterKasir = req.user.role === 'kasir' ? req.user.id : undefined;
-    const pageNum = parseInt(page, 10) || 1;
-    const limit = 50;
-    const skip = (pageNum - 1) * limit;
-    
-    const result = await this.ordersService.getHistory(filterKasir);
-    // Note: getHistory returned array in original code, but controller expected { orders, total }. 
-    // Adapting to match what service actually returned.
-    return { success: true, data: result }; 
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 50));
+
+    const result = await this.ordersService.getHistory(filterKasir, pageNum, limitNum);
+    return { success: true, data: result };
   }
 
   @Get('admin/reports/export')
@@ -151,8 +152,40 @@ export class OrdersController {
   @Post('webhooks/midtrans')
   @HttpCode(HttpStatus.OK)
   async midtransWebhook(@Body() body: any, @Ip() ip: string) {
+    // SECURITY: Verify request comes from Midtrans IPs
+    // Midtrans official IP ranges (production)
+    const midtransIps = (process.env.MIDTRANS_ALLOWED_IPS || '')
+      .split(',')
+      .map(s => s.trim())
+      .filter(Boolean);
+
+    // Add default Midtrans production IPs if not configured
+    const defaultMidtransIps = [
+      '13.229.87.0/24',   // Singapore
+      '54.255.192.0/24',  // Singapore
+      '103.211.86.0/24',  // Indonesia
+    ];
+
+    const allowedIps = midtransIps.length > 0 ? midtransIps : defaultMidtransIps;
+    const isAllowed = allowedIps.some(allowedIp => {
+      // Simple IP match (for /24 CIDR, check first 3 octets)
+      if (allowedIp.includes('/')) {
+        const [baseIp, prefix] = allowedIp.split('/');
+        if (prefix === '24') {
+          return ip.startsWith(baseIp.substring(0, baseIp.lastIndexOf('.')));
+        }
+        return false; // Only support /24 for now
+      }
+      return ip === allowedIp;
+    });
+
+    // Allow localhost in development
+    const isDev = process.env.NODE_ENV !== 'production';
+    if (!isAllowed && !isDev) {
+      throw new ForbiddenException(`Webhook request from untrusted IP: ${ip}`);
+    }
+
     // SECURITY: Verify webhook signature from Midtrans
-    // In production, always verify the signature
     const signatureKey = body.signature_key || body.signature;
     const isProduction = process.env.MIDTRANS_ENV === 'production';
 

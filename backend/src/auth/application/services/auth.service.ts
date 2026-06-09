@@ -103,11 +103,11 @@ export class AuthService {
       if (updatedUser.failed_login_count >= LOCKOUT_THRESHOLD) {
         await this.authRepository.lockUser(user.id, new Date(Date.now() + LOCKOUT_DURATION_MS));
 
-        // NOTIF-01: Send alert
-        await this.emailService.sendAlert(
+        // NOTIF-01: Send alert (non-critical, don't fail login on email error)
+        this.emailService.sendAlert(
           'Akun Terkunci - Gagal Login',
           `Akun kasir dengan username <strong>${user.username}</strong> telah dikunci karena 5 kali percobaan login gagal berturut-turut. Akun akan terbuka kembali dalam 30 menit.`
-        );
+        ).catch(err => this.logger.error('Failed to send lockout alert email', err.message));
       }
 
       // Increment IP Failures

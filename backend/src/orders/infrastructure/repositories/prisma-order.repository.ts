@@ -57,11 +57,13 @@ export class PrismaOrderRepository implements OrderRepositoryInterface {
     });
   }
 
-  async findOrders(where: Prisma.OrderWhereInput, orderBy: Prisma.OrderOrderByWithRelationInput, include?: Prisma.OrderInclude): Promise<any[]> {
+  async findOrders(where: Prisma.OrderWhereInput, orderBy: Prisma.OrderOrderByWithRelationInput, include?: Prisma.OrderInclude, take?: number, skip?: number): Promise<any[]> {
     return this.prisma.order.findMany({
       where,
       orderBy,
-      include
+      include,
+      take,
+      skip
     });
   }
 
