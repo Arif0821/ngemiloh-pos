@@ -34,7 +34,8 @@ export class AuditInterceptor implements NestInterceptor {
 
     // Capture old state (optional, for advanced implementations)
     // Here we just log the action and the request body as the new_value
-    const newValue = request.body ? { body: request.body } : null;
+    // Use JSON serialization to ensure type compatibility with Prisma's InputJsonValue
+    const newValue = request.body ? { body: JSON.parse(JSON.stringify(request.body)) } : null;
 
     return next.handle().pipe(
       tap(() => {

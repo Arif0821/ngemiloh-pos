@@ -99,6 +99,15 @@ describe('OrdersService', () => {
     // Reset environment variable for threshold
     process.env.PRICE_DELTA_THRESHOLD_PCT = '10';
 
+    // Reset crypto mock to default state BEFORE each test
+    const crypto = require('crypto');
+    crypto.timingSafeEqual.mockReturnValue(true);
+    crypto.createHash.mockReturnValue({
+      update: jest.fn().mockReturnValue({
+        digest: jest.fn().mockReturnValue(Buffer.from(MOCK_SIG)),
+      }),
+    });
+
     mockOrderRepository = {
       findOrderByClientUuid: jest.fn(),
       findActiveDiscounts: jest.fn().mockResolvedValue([]),
@@ -512,6 +521,14 @@ describe('OrdersService', () => {
       // Mock timingSafeEqual to return false for invalid signature
       const crypto = require('crypto');
       (crypto.timingSafeEqual as jest.Mock).mockReturnValueOnce(false);
+
+      // Mock the notification response
+      mockMidtransCore.transaction.notification.mockResolvedValue({
+        order_id: 'order-001',
+        transaction_status: 'settlement',
+        status_code: '200',
+        gross_amount: '25000',
+      });
 
       const result = await service.handleMidtransWebhook(validWebhookPayload);
 
