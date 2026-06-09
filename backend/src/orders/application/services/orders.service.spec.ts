@@ -22,12 +22,13 @@ jest.mock('midtrans-client', () => ({
 
 // Mock crypto module - define key inline in factory to avoid hoisting issues
 jest.mock('crypto', () => {
-  const SIG = 'a'.repeat(128);
+  const SIG = 'a'.repeat(128); // 128 hex chars = 64 bytes when decoded
   return {
     ...jest.requireActual('crypto'),
     createHash: jest.fn().mockReturnValue({
       update: jest.fn().mockReturnValue({
-        digest: jest.fn().mockReturnValue(Buffer.from(SIG)),
+        // SHA-512 produces 128 hex chars = 64 bytes
+        digest: jest.fn().mockReturnValue(Buffer.from(SIG, 'hex')),
       }),
     }),
     timingSafeEqual: jest.fn().mockReturnValue(true),
@@ -107,7 +108,8 @@ describe('OrdersService', () => {
     crypto.timingSafeEqual.mockReturnValue(true);
     crypto.createHash.mockReturnValue({
       update: jest.fn().mockReturnValue({
-        digest: jest.fn().mockReturnValue(Buffer.from(MOCK_SIG)),
+        // SHA-512 produces 128 hex chars = 64 bytes when decoded
+        digest: jest.fn().mockReturnValue(Buffer.from(MOCK_SIG, 'hex')),
       }),
     });
 
