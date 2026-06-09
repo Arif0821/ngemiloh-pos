@@ -2,7 +2,6 @@ import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Inject } fr
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
 import { AUDIT_REPOSITORY, type IAuditRepository } from '../domain/interfaces/audit.repository.interface';
-import { Role } from '@prisma/client';
 
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
@@ -11,24 +10,27 @@ export class AuditInterceptor implements NestInterceptor {
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    const request = context.switchToHttp().getRequest();
-    const method = request.method;
-    
+    const request = context.switchToHttp().getRequest() as Record<string, unknown>;
+    const method = String(request.method ?? '').toUpperCase();
+
     // Only log mutating requests automatically
-    const isMutatingRequest = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method.toUpperCase());
-    
+    const isMutatingRequest = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+
     if (!isMutatingRequest) {
       return next.handle();
     }
 
+    const requestUrl = String(request.url ?? '');
     // Skip login as it's handled manually in AuthService for more detailed logging
-    if (request.url.includes('/api/v1/auth/login')) {
+    if (requestUrl.includes('/api/v1/auth/login')) {
       return next.handle();
     }
 
-    const userId = request.user?.id;
-    const ipAddress = request.headers['x-forwarded-for'] || request.socket.remoteAddress || 'unknown';
-    const action = `${method}_${request.url.split('?')[0].replace(/\//g, '_').toUpperCase()}`;
+    const user = request.user as { id?: string } | undefined;
+    const userId = user?.id ?? null;
+    const headers = request.headers as Record<string, string | undefined>;
+    const ipAddress = headers['x-forwarded-for'] || 'unknown';
+    const action = `${method}_${requestUrl.split('?')[0].replace(/\//g, '_')}`;
 
     // Capture old state (optional, for advanced implementations)
     // Here we just log the action and the request body as the new_value
@@ -41,9 +43,9 @@ export class AuditInterceptor implements NestInterceptor {
           actor_id: userId,
           action: action,
           entity_type: 'API_REQUEST',
-          entity_id: request.url,
-          old_value: null as any,
-          new_value: newValue as any,
+          entity_id: requestUrl,
+          old_value: null,
+          new_value: newValue,
           ip_address: ipAddress,
         }).catch(err => {
           console.error('Failed to write audit log:', err);

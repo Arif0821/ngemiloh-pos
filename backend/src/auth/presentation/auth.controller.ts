@@ -101,10 +101,11 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  async getMe(@Req() req: Request & { user: any }) {
+  async getMe(@Req() req: Request) {
+    const user = (req as Record<string, unknown>).user as { id: string; role: string } | undefined;
     return {
       success: true,
-      data: req.user,
+      data: user,
     };
   }
 }

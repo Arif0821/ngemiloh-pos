@@ -642,7 +642,7 @@ export class OrdersService {
   }
 
   async getAllShifts(kasirId?: string, dateStr?: string) {
-    const where = {};
+    const where: any = {};
     if (kasirId) {
       where.cashier_id = kasirId;
     }
@@ -650,7 +650,7 @@ export class OrdersService {
       const d = new Date(dateStr);
       where.shift_start = { gte: startOfDay(d), lte: endOfDay(d) };
     }
-    
+
     return this.orderRepository.findShifts(
       where,
       {

@@ -4,6 +4,11 @@ import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { Roles } from './auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
+import { Request } from 'express';
+
+interface AuthenticatedRequest extends Request {
+  user: { id: string; role: string };
+}
 
 @Controller()
 export class AppController {
@@ -25,7 +30,7 @@ export class AppController {
   @Patch('api/v1/admin/settings')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
-  async updateSettings(@Body() body: Record<string, string>, @Req() req: any) {
+  async updateSettings(@Body() body: Record<string, string>, @Req() req: AuthenticatedRequest) {
     const data = await this.appService.updateSettings(body, req.user.id);
     return { success: true, data };
   }
@@ -41,7 +46,7 @@ export class AppController {
   @Patch('api/v1/admin/feature-flags/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
-  async toggleFeatureFlag(@Param('id') id: string, @Body('is_enabled') isEnabled: boolean, @Req() req: any) {
+  async toggleFeatureFlag(@Param('id') id: string, @Body('is_enabled') isEnabled: boolean, @Req() req: AuthenticatedRequest) {
     const data = await this.appService.toggleFeatureFlag(id, isEnabled, req.user.id);
     return { success: true, data };
   }

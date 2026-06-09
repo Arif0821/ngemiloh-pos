@@ -16,21 +16,16 @@ export class AuditService implements OnModuleInit {
   }
 
   async getLogs(filters: { actor_id?: string; action?: string; date_from?: string; date_to?: string }, page: number = 1, limit: number = 50) {
-    const parsedFilters: any = {
-      actor_id: filters.actor_id,
-      action: filters.action,
-    };
+    const parsedFilters: Record<string, unknown> = {};
 
-    if (filters.date_from) {
-      parsedFilters.date_from = new Date(filters.date_from);
-    }
-    if (filters.date_to) {
-      parsedFilters.date_to = new Date(filters.date_to + 'T23:59:59.999Z');
-    }
+    if (filters.actor_id) parsedFilters.actor_id = filters.actor_id;
+    if (filters.action) parsedFilters.action = filters.action;
+    if (filters.date_from) parsedFilters.date_from = new Date(filters.date_from);
+    if (filters.date_to) parsedFilters.date_to = new Date(filters.date_to + 'T23:59:59.999Z');
 
     const skip = (page - 1) * limit;
 
-    const [logs, total] = await this.auditRepository.findLogs(parsedFilters, skip, limit);
+    const [logs, total] = await this.auditRepository.findLogs(parsedFilters as any, skip, limit);
 
     // Handle BigInt serialization
     const serializedLogs = logs.map(l => ({

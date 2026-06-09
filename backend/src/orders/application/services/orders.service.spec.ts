@@ -7,6 +7,9 @@ import { InventoryService } from '../../../inventory/application/services/invent
 import { EmailService } from '../../../email/email.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 
+// SHA-512 produces 128-character hex string
+const MOCK_SIG = 'a'.repeat(128);
+
 // Mock midtrans-client
 jest.mock('midtrans-client', () => ({
   CoreApi: jest.fn().mockImplementation(() => ({
@@ -17,17 +20,19 @@ jest.mock('midtrans-client', () => ({
   })),
 }));
 
-// Mock crypto module - use proper128-char hex for SHA-512
-const MOCK_SIGNATURE_KEY = 'a'.repeat(128);
-jest.mock('crypto', () => ({
-  ...jest.requireActual('crypto'),
-  createHash: jest.fn().mockReturnValue({
-    update: jest.fn().mockReturnValue({
-      digest: jest.fn().mockReturnValue(Buffer.from(MOCK_SIGNATURE_KEY)),
+// Mock crypto module - define key inline in factory to avoid hoisting issues
+jest.mock('crypto', () => {
+  const SIG = 'a'.repeat(128);
+  return {
+    ...jest.requireActual('crypto'),
+    createHash: jest.fn().mockReturnValue({
+      update: jest.fn().mockReturnValue({
+        digest: jest.fn().mockReturnValue(Buffer.from(SIG)),
+      }),
     }),
-  }),
-  timingSafeEqual: jest.fn().mockReturnValue(true),
-}));
+    timingSafeEqual: jest.fn().mockReturnValue(true),
+  };
+});
 
 describe('OrdersService', () => {
   let service: OrdersService;
@@ -406,8 +411,7 @@ describe('OrdersService', () => {
   });
 
   describe('handleMidtransWebhook', () => {
-    // SHA-512 produces 128-character hex string
-    const MOCK_SIGNATURE_KEY = 'a'.repeat(128);
+    // SHA-512 produces 128-character hex string (defined at top of file as MOCK_SIG)
     const validWebhookPayload = {
       order_id: 'order-001',
       status_code: '200',
@@ -415,7 +419,7 @@ describe('OrdersService', () => {
       transaction_status: 'settlement',
       fraud_status: 'accept',
       transaction_id: 'txn-123',
-      signature_key: MOCK_SIGNATURE_KEY,
+      signature_key: MOCK_SIG,
     };
 
     it('should handle settlement webhook successfully', async () => {
