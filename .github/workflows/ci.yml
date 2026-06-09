@@ -25,7 +25,7 @@ jobs:
           cache-dependency-path: ./backend/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Run ESLint
         run: npm run lint
@@ -49,7 +49,7 @@ jobs:
           cache-dependency-path: ./backend/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Generate Prisma Client
         run: npx prisma generate
@@ -92,7 +92,7 @@ jobs:
           cache-dependency-path: ./backend/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Generate Prisma Client
         run: npx prisma generate
@@ -148,7 +148,7 @@ jobs:
           cache-dependency-path: ./backend/package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        run: npm install --legacy-peer-deps
 
       - name: Run npm audit
         run: npm audit --audit-level=high
