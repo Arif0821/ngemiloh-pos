@@ -196,6 +196,7 @@ describe('OrdersService', () => {
         });
         mockOrderRepository.updateOrder.mockResolvedValue({
           ...mockOrder,
+          payment_method: PaymentMethod.qris,
           qr_string: 'mock-qr-url',
           midtrans_transaction_id: 'txn-123',
         });
@@ -210,8 +211,9 @@ describe('OrdersService', () => {
             }),
           }),
         );
-        expect(result.qr_string).toBe('mock-qr-url');
-        expect(result.midtrans_transaction_id).toBe('txn-123');
+        // Type assertion needed since qr_string/midtrans_transaction_id are added dynamically
+        expect((result as any).qr_string).toBe('mock-qr-url');
+        expect((result as any).midtrans_transaction_id).toBe('txn-123');
       });
 
       it('should create order with split payment successfully', async () => {
