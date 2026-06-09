@@ -7,26 +7,32 @@ export class EmailService {
   private readonly logger = new Logger(EmailService.name);
 
   constructor() {
+    // Support both variable naming conventions
+    const smtpUser = process.env.EMAIL_USER || process.env.SMTP_USER;
+    const smtpPass = process.env.EMAIL_APP_PASSWORD || process.env.SMTP_PASS;
+
     this.transporter = nodemailer.createTransport({
       service: 'gmail',
       auth: {
-        user: process.env.SMTP_USER,
-        pass: process.env.SMTP_PASS,
+        user: smtpUser,
+        pass: smtpPass,
       },
     });
   }
 
   async sendAlert(subject: string, message: string) {
     try {
-      if (process.env.SMTP_PASS === 'GANTI_DENGAN_APP_PASSWORD_GMAIL') {
+      const smtpPass = process.env.EMAIL_APP_PASSWORD || process.env.SMTP_PASS;
+      if (smtpPass === 'GANTI_DENGAN_APP_PASSWORD_GMAIL' || !smtpPass) {
         this.logger.warn(`Email alert skipped (App password not configured): ${subject}`);
         return;
       }
-      
-      const adminEmail = process.env.SMTP_USER || 'a.gaul0812@gmail.com';
-      
+
+      const adminEmail = process.env.EMAIL_ALERT_TO || process.env.SMTP_USER || 'a.gaul0812@gmail.com';
+      const fromEmail = process.env.EMAIL_USER || process.env.SMTP_USER;
+
       await this.transporter.sendMail({
-        from: `"Ngemiloh POS Alert" <${process.env.SMTP_USER}>`,
+        from: `"Ngemiloh POS Alert" <${fromEmail}>`,
         to: adminEmail,
         subject: `[ALERT] ${subject}`,
         html: `
@@ -47,15 +53,17 @@ export class EmailService {
 
   async sendReminder(subject: string, message: string) {
     try {
-      if (process.env.SMTP_PASS === 'GANTI_DENGAN_APP_PASSWORD_GMAIL') {
+      const smtpPass = process.env.EMAIL_APP_PASSWORD || process.env.SMTP_PASS;
+      if (smtpPass === 'GANTI_DENGAN_APP_PASSWORD_GMAIL' || !smtpPass) {
         this.logger.warn(`Reminder email skipped (App password not configured): ${subject}`);
         return;
       }
-      
-      const adminEmail = process.env.SMTP_USER || 'a.gaul0812@gmail.com';
-      
+
+      const adminEmail = process.env.EMAIL_ALERT_TO || process.env.SMTP_USER || 'a.gaul0812@gmail.com';
+      const fromEmail = process.env.EMAIL_USER || process.env.SMTP_USER;
+
       await this.transporter.sendMail({
-        from: `"Ngemiloh POS Reminder" <${process.env.SMTP_USER}>`,
+        from: `"Ngemiloh POS Reminder" <${fromEmail}>`,
         to: adminEmail,
         subject: `[REMINDER] ${subject}`,
         html: `
