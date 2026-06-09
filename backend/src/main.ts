@@ -59,8 +59,8 @@ async function bootstrap() {
         formAction: ["'self'"],
         frameSrc: ["'self'", 'https://app.sandbox.midtrans.com'], // Midtrans sandbox
         connectSrc: ["'self'", 'https://api.sandbox.midtrans.com'], // Midtrans sandbox
-        scriptSrc: ["'self'", "'unsafe-inline'", 'https://cdn.tailwindcss.com'],
-        styleSrc: ["'self'", "'unsafe-inline'", 'https://cdn.tailwindcss.com'],
+        scriptSrc: ["'self'", "'nonce'", 'https://cdn.tailwindcss.com'],
+        styleSrc: ["'self'", "'nonce'", 'https://cdn.tailwindcss.com'],
         upgradeInsecureRequests: [],
       },
     },

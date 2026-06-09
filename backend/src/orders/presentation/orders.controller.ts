@@ -99,8 +99,10 @@ export class OrdersController {
   @Post('admin/transactions/:id/void')
   @UseGuards(JwtAuthGuard)
   async voidTransaction(@Param('id') id: string, @Body('reason') reason: string, @Req() req: Request & { user: any }) {
+    // SECURITY: Check role in controller, not via Roles decorator for detailed control
+    // @Roles decorator is still applied at class level, this is additional check
     if (req.user.role !== 'superadmin') {
-      return { success: false, message: 'Forbidden' };
+      throw new ForbiddenException('Only superadmin can void orders');
     }
     const order = await this.ordersService.voidOrder(id, reason, req.user.id);
     return { success: true, data: order };
@@ -109,21 +111,18 @@ export class OrdersController {
   @Patch('admin/transactions/:id/flag')
   @UseGuards(JwtAuthGuard)
   async flagTransaction(@Param('id') id: string, @Body('status') status: string, @Req() req: Request & { user: any }) {
+    // SECURITY: Check role in controller for proper 403 response
     if (req.user.role !== 'superadmin') {
-      return { success: false, message: 'Forbidden' };
+      throw new ForbiddenException('Only superadmin can flag transactions');
     }
     const order = await this.ordersService.flagTransaction(id, status, req.user.id);
     return { success: true, data: order };
   }
 
   @Get('orders/:id/status')
+  @UseGuards(JwtAuthGuard)
   async getOrderStatus(@Param('id') id: string, @Req() req: Request) {
-    // SECURITY: Require authentication for order status
-    // Extract user from JWT if present
-    const authHeader = req.headers.authorization;
-    if (!authHeader) {
-      return { success: false, message: 'Authentication required' };
-    }
+    // SECURITY: Require authentication via guard for proper 401 response
     const order = await this.ordersService.getOrder(id);
     return { success: true, data: { status: order.status, payment_status: order.payment_status } };
   }

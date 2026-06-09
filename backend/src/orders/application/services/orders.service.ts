@@ -462,6 +462,8 @@ export class OrdersService {
       if (e instanceof NotFoundException) {
         throw e;
       }
+      // Return IGNORED for other errors to prevent Midtrans retries
+      return { status: 'IGNORED', error: e instanceof Error ? e.message : 'Unknown error' };
     }
   }
 
