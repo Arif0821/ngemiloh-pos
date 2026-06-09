@@ -422,12 +422,14 @@ describe('OrdersService', () => {
     });
 
     it('should handle partial batch failures', async () => {
-      // First order succeeds, second fails due to missing product
-      mockOrderRepository.findOrderByClientUuid
-        .mockResolvedValueOnce(null)
-        .mockResolvedValueOnce(null);
+      // Return BOTH products so both orders can start processing
+      mockOrderRepository.findProductsWithModifiers.mockResolvedValue([
+        { ...mockProduct, id: 'prod-001', base_price: 25000 },
+        { ...mockProduct, id: 'prod-002', base_price: 30000 },
+      ]);
+      mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
       mockOrderRepository.findActiveDiscounts.mockResolvedValue([]);
-      mockOrderRepository.findProductsWithModifiers.mockResolvedValue([mockProduct]);
+      // First order succeeds, second fails with database error
       mockOrderRepository.createOrder
         .mockResolvedValueOnce({ ...mockOrder, id: 'order-001' })
         .mockRejectedValueOnce(new Error('Database error'));
@@ -506,7 +508,12 @@ describe('OrdersService', () => {
         ...mockOrder,
         status: OrderStatus.pending_sync,
       });
-      mockOrderRepository.updateOrder.mockResolvedValue({ ...mockOrder, status: OrderStatus.voided });
+      mockOrderRepository.updateOrder.mockResolvedValue({
+        ...mockOrder,
+        status: OrderStatus.voided,
+        payment_status: 'expire',
+        payment_settled_at: null,
+      });
 
       const result = await service.handleMidtransWebhook({
         ...validWebhookPayload,
@@ -534,7 +541,12 @@ describe('OrdersService', () => {
         ...mockOrder,
         status: OrderStatus.pending_sync,
       });
-      mockOrderRepository.updateOrder.mockResolvedValue({ ...mockOrder, status: OrderStatus.voided });
+      mockOrderRepository.updateOrder.mockResolvedValue({
+        ...mockOrder,
+        status: OrderStatus.voided,
+        payment_status: 'failed',
+        payment_settled_at: null,
+      });
 
       const result = await service.handleMidtransWebhook({
         ...validWebhookPayload,
@@ -582,7 +594,12 @@ describe('OrdersService', () => {
         ...mockOrder,
         status: OrderStatus.pending_sync,
       });
-      mockOrderRepository.updateOrder.mockResolvedValue({ ...mockOrder, status: OrderStatus.pending_sync });
+      mockOrderRepository.updateOrder.mockResolvedValue({
+        ...mockOrder,
+        status: OrderStatus.pending_sync,
+        payment_status: 'unpaid',
+        payment_settled_at: null,
+      });
 
       const result = await service.handleMidtransWebhook({
         ...validWebhookPayload,
@@ -610,7 +627,12 @@ describe('OrdersService', () => {
         ...mockOrder,
         status: OrderStatus.pending_sync,
       });
-      mockOrderRepository.updateOrder.mockResolvedValue({ ...mockOrder, status: OrderStatus.voided });
+      mockOrderRepository.updateOrder.mockResolvedValue({
+        ...mockOrder,
+        status: OrderStatus.voided,
+        payment_status: 'failed',
+        payment_settled_at: null,
+      });
 
       const result = await service.handleMidtransWebhook({
         ...validWebhookPayload,
