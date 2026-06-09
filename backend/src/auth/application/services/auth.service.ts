@@ -154,35 +154,40 @@ export class AuthService {
 
 
   async refreshToken(token: string) {
+    let payload: any;
     try {
-      const payload = this.jwtService.verify(token, {
+      payload = this.jwtService.verify(token, {
         secret: process.env.JWT_REFRESH_SECRET,
       });
-
-      // AUTH-07: Check if token is revoked
-      const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-      const isRevoked = await this.authRepository.findRevokedToken(tokenHash);
-      if (isRevoked) {
-        throw new UnauthorizedException('Token revoked');
-      }
-
-      const user = await this.authRepository.findUserById(payload.sub);
-      if (!user || !user.is_active) {
-        throw new UnauthorizedException('Invalid or inactive user');
-      }
-
-      const newPayload = { sub: user.id, role: user.role };
-      const newAccessToken = this.jwtService.sign(newPayload, {
-        secret: process.env.JWT_ACCESS_SECRET,
-        expiresIn: process.env.JWT_ACCESS_EXPIRES as any,
-      });
-
-      return {
-        accessToken: newAccessToken
-      };
     } catch (e) {
       throw new UnauthorizedException('Invalid token');
     }
+
+    // AUTH-07: Check if token is revoked
+    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
+    const isRevoked = await this.authRepository.findRevokedToken(tokenHash);
+    if (isRevoked) {
+      throw new UnauthorizedException('Token revoked');
+    }
+
+    const user = await this.authRepository.findUserById(payload.sub);
+    if (!user) {
+      throw new UnauthorizedException('Invalid or inactive user');
+    }
+
+    if (!user.is_active) {
+      throw new UnauthorizedException('Invalid or inactive user');
+    }
+
+    const newPayload = { sub: user.id, role: user.role };
+    const newAccessToken = this.jwtService.sign(newPayload, {
+      secret: process.env.JWT_ACCESS_SECRET,
+      expiresIn: process.env.JWT_ACCESS_EXPIRES as any,
+    });
+
+    return {
+      accessToken: newAccessToken
+    };
   }
 
   async logout(refreshToken: string) {

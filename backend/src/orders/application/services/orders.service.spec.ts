@@ -352,9 +352,11 @@ describe('OrdersService', () => {
     it('should sync multiple orders successfully', async () => {
       mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
       mockOrderRepository.findActiveDiscounts.mockResolvedValue([]);
-      mockOrderRepository.findProductsWithModifiers
-        .mockResolvedValueOnce([{ ...mockProduct, id: 'prod-001' }])
-        .mockResolvedValueOnce([{ ...mockProduct, id: 'prod-002', base_price: 30000 }]);
+      // Return BOTH products in one call (batched query)
+      mockOrderRepository.findProductsWithModifiers.mockResolvedValue([
+        { ...mockProduct, id: 'prod-001' },
+        { ...mockProduct, id: 'prod-002', base_price: 30000 }
+      ]);
       mockOrderRepository.createOrder.mockImplementation(async (data: any) => ({
         id: `order-${data.client_uuid}`,
         ...data,

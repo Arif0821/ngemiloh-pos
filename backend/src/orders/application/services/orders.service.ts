@@ -245,8 +245,8 @@ export class OrdersService {
     const results: any[] = [];
 
     // PERFORMANCE: Fetch discounts and products ONCE for entire batch
-    const [activeDiscounts, productIds] = this.extractProductIds(orders);
-    const products = await this.orderRepository.findProductsWithModifiers(productIds);
+    const productIdSet = this.extractProductIds(orders);
+    const products = await this.orderRepository.findProductsWithModifiers([...productIdSet]);
 
     for (const orderData of orders) {
       try {
@@ -257,7 +257,7 @@ export class OrdersService {
         }
 
         // PERFORMANCE: Use pre-fetched discounts and products
-        const order = await this.createOrderWithCache(orderData, kasirId, activeDiscounts, products);
+        const order = await this.createOrderWithCache(orderData, kasirId, products);
 
         // Ensure it is marked as synced_from_offline
         await this.orderRepository.updateOrder(order.id, { synced_from_offline: true });
@@ -274,8 +274,7 @@ export class OrdersService {
   /**
    * PERFORMANCE: Extract all product IDs from batch orders (no DB call)
    */
-  private extractProductIds(orders: CreateOrderDto[]): [any[], Set<string>] {
-    const activeDiscounts: any[] = [];
+  private extractProductIds(orders: CreateOrderDto[]): Set<string> {
     const productIdSet = new Set<string>();
 
     for (const order of orders) {
@@ -284,7 +283,7 @@ export class OrdersService {
       }
     }
 
-    return [activeDiscounts, productIdSet];
+    return productIdSet;
   }
 
   /**
@@ -294,7 +293,6 @@ export class OrdersService {
   private async createOrderWithCache(
     data: CreateOrderDto,
     kasirId: string,
-    activeDiscounts: any[],
     products: any[]
   ): Promise<any> {
     const existingOrder = await this.orderRepository.findOrderByClientUuid(data.client_uuid);
@@ -312,12 +310,13 @@ export class OrdersService {
       }
     }
 
-    // Calculate order items with discounts
-    const orderItemsPayload = this.calculateOrderItems(data, activeDiscounts, productMap);
+    // Calculate order items
+    const orderItemsPayload = this.buildOrderItems(data, productMap);
 
     const order = await this.orderRepository.createOrder({
       client_uuid: data.client_uuid,
       cashier_id: kasirId,
+      client_created_at: new Date(),
       total_amount: orderItemsPayload.reduce((sum, item) => sum + Number(item.final_price), 0),
       payment_method: data.payment_method,
       cash_amount: data.cash_amount || 0,
@@ -327,6 +326,46 @@ export class OrdersService {
     });
 
     return order;
+  }
+
+  /**
+   * Build order items from DTO with pre-fetched products
+   */
+  private buildOrderItems(data: CreateOrderDto, productMap: Map<string, any>): any[] {
+    const orderItems: any[] = [];
+
+    for (const item of data.items) {
+      const product = productMap.get(item.product_id);
+      if (!product) continue;
+
+      let itemTotal = Number(product.base_price);
+      let modifierTotal = 0;
+
+      if (item.modifiers && item.modifiers.length > 0) {
+        for (const mod of item.modifiers) {
+          for (const group of product.modifier_groups || []) {
+             const option = group.options?.find((o: any) => o.id === mod.option_id);
+             if (option) {
+               modifierTotal += Number(option.additional_price);
+               itemTotal += Number(option.additional_price);
+             }
+          }
+        }
+      }
+
+      orderItems.push({
+        product_id: product.id,
+        product_name_snapshot: product.name,
+        discount_id: null,
+        quantity: item.quantity,
+        base_price: product.base_price,
+        discounted_base: itemTotal,
+        final_price: itemTotal,
+        subtotal: itemTotal * item.quantity
+      });
+    }
+
+    return orderItems;
   }
 
   async handleMidtransWebhook(notification: any) {
@@ -395,6 +434,10 @@ export class OrdersService {
       return { status: 'success' };
     } catch (e) {
       this.logger.error('Error processing midtrans webhook', e);
+      // Re-throw NotFoundException so tests can catch it
+      if (e instanceof NotFoundException) {
+        throw e;
+      }
     }
   }
 

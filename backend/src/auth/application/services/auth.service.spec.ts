@@ -6,6 +6,13 @@ import { AUTH_REPOSITORY } from '../../domain/interfaces/auth.repository.interfa
 import { EmailService } from '../../../email/email.service';
 import { createMockUser, createMockIpLockout } from '../../../test/mocks';
 import { Role } from '@prisma/client';
+import * as bcrypt from 'bcrypt';
+
+// Mock bcrypt
+jest.mock('bcrypt', () => ({
+  compare: jest.fn().mockResolvedValue(true),
+  hash: jest.fn().mockResolvedValue('$2b$12$mocked-hash'),
+}));
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -14,6 +21,9 @@ describe('AuthService', () => {
   let mockEmailService: any;
 
   beforeEach(async () => {
+    // Reset bcrypt mock before each test
+    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
     // Create mock implementations for all repository methods
     mockAuthRepository = {
       findIpLockout: jest.fn(),
@@ -163,6 +173,8 @@ describe('AuthService', () => {
 
       mockAuthRepository.findIpLockout.mockResolvedValue(null);
       mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
+      // Mock bcrypt to return false for invalid PIN
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
       // Mock failed login increment
       mockAuthRepository.incrementUserFailedLogin.mockResolvedValue({
         ...mockUser,
@@ -237,6 +249,8 @@ describe('AuthService', () => {
 
       mockAuthRepository.findIpLockout.mockResolvedValue(null);
       mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
+      // Mock bcrypt to return false for invalid PIN
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
       // After5th failed attempt, return failed_count >= 5
       mockAuthRepository.incrementUserFailedLogin.mockResolvedValue({
         ...mockUser,
@@ -266,6 +280,8 @@ describe('AuthService', () => {
 
       mockAuthRepository.findIpLockout.mockResolvedValue(null);
       mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
+      // Mock bcrypt to return false for invalid PIN
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
       // After 5th failed attempt
       mockAuthRepository.incrementUserFailedLogin.mockResolvedValue({
         ...mockUser,
