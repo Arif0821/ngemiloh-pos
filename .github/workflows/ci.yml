@@ -53,6 +53,8 @@ jobs:
 
       - name: Generate Prisma Client
         run: npx prisma generate
+        env:
+          DIRECT_URL: "postgresql://postgres:test@localhost:5432/ngemiloh_test"
 
       - name: Run TypeScript compiler
         run: npx tsc --noEmit
@@ -101,11 +103,13 @@ jobs:
         run: npx prisma migrate deploy
         env:
           DATABASE_URL: "postgresql://postgres:test@localhost:5432/ngemiloh_test"
+          DIRECT_URL: "postgresql://postgres:test@localhost:5432/ngemiloh_test"
 
       - name: Run tests with coverage
         run: npm test -- --coverage --coverageReporters=lcov
         env:
           DATABASE_URL: "postgresql://postgres:test@localhost:5432/ngemiloh_test"
+          DIRECT_URL: "postgresql://postgres:test@localhost:5432/ngemiloh_test"
           REDIS_URL: "redis://localhost:6379"
           JWT_ACCESS_SECRET: "test-secret"
           JWT_REFRESH_SECRET: "test-refresh-secret"

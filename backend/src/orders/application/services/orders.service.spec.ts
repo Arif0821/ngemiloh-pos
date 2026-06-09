@@ -187,10 +187,17 @@ describe('OrdersService', () => {
           ...mockOrder,
           payment_method: PaymentMethod.qris,
           status: OrderStatus.pending_sync,
+          qr_string: null,
+          midtrans_transaction_id: null,
         });
         mockMidtransCore.charge.mockResolvedValue({
           transaction_id: 'txn-123',
           actions: [{ name: 'generate-qr-code', url: 'mock-qr-url' }],
+        });
+        mockOrderRepository.updateOrder.mockResolvedValue({
+          ...mockOrder,
+          qr_string: 'mock-qr-url',
+          midtrans_transaction_id: 'txn-123',
         });
 
         const result = await service.createOrder(qrisOrder, 'kasir-001');

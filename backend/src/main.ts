@@ -5,12 +5,13 @@ import { ValidationPipe, Logger } from '@nestjs/common';
 import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import * as Sentry from '@sentry/node';
-import { nodeProfilingIntegration } from '@sentry/profiling-integration';
+import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import * as compression from 'compression';
 import { join } from 'path';
 
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { SentryErrorInterceptor } from './common/interceptors/sentry-error.interceptor';
+import { setupSwagger } from './common/swagger/swagger.setup';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
@@ -138,7 +139,6 @@ async function bootstrap() {
   // SWAGGER DOCUMENTATION
   // ========================================
   if (process.env.NODE_ENV !== 'production') {
-    const { setupSwagger } = await import('./common/swagger/swagger.setup');
     setupSwagger(app);
     logger.log('Swagger documentation available at /api/docs');
   }
