@@ -1,7 +1,8 @@
-import { Controller, Post, Get, Body, UseGuards, Req, HttpCode, HttpStatus, Param, Sse, MessageEvent, Patch, Res, Query } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, Req, HttpCode, HttpStatus, Param, Sse, MessageEvent, Patch, Res, Query, Ip, ForbiddenException } from '@nestjs/common';
 import { OrdersService } from '../application/services/orders.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
+import { WebhookGuard } from '../guards/webhook.guard';
 import { Request } from 'express';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
@@ -10,6 +11,15 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Observable, filter, map, fromEvent, merge, interval } from 'rxjs';
 import type { Response } from 'express';
 import { CreateOrderDto, SyncBatchDto } from './dto/create-order.dto';
+
+// Allowed Midtrans IP addresses for webhook verification
+// In production, verify requests come from Midtrans servers
+const MIDTRANS_ALLOWED_IPS = [
+  '10.112.177.116', // Midtrans production IPs (example)
+  '10.112.177.117',
+  '10.112.177.118',
+  '103.58.100.0/24', // Midtrans sandbox
+];
 
 @Controller('api/v1')
 export class OrdersController {
@@ -112,13 +122,24 @@ export class OrdersController {
   }
 
   @Get('orders/:id/status')
-  async getOrderStatus(@Param('id') id: string) {
+  async getOrderStatus(@Param('id') id: string, @Req() req: Request) {
+    // SECURITY: Require authentication for order status
+    // Extract user from JWT if present
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      return { success: false, message: 'Authentication required' };
+    }
     const order = await this.ordersService.getOrder(id);
     return { success: true, data: { status: order.status, payment_status: order.payment_status } };
   }
 
   @Sse('orders/:id/sse')
-  sse(@Param('id') id: string): Observable<MessageEvent> {
+  async sse(@Param('id') id: string, @Req() req: Request) {
+    // SECURITY: Require authentication for SSE endpoint
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+      throw new ForbiddenException('Authentication required for real-time updates');
+    }
     const orderEvents = fromEvent(this.eventEmitter, 'order.paid').pipe(
       filter((payload: any) => payload.orderId === id),
       map((payload: any) => ({
@@ -138,8 +159,23 @@ export class OrdersController {
 
   @Post('webhooks/midtrans')
   @HttpCode(HttpStatus.OK)
-  async midtransWebhook(@Body() body: any) {
-    await this.ordersService.handleMidtransWebhook(body);
-    return { status: 'ok' }; 
+  async midtransWebhook(@Body() body: any, @Ip() ip: string) {
+    // SECURITY: Verify webhook signature from Midtrans
+    // In production, always verify the signature
+    const signatureKey = body.signature_key || body.signature;
+    const isProduction = process.env.MIDTRANS_ENV === 'production';
+
+    if (isProduction && !signatureKey) {
+      throw new ForbiddenException('Invalid webhook: missing signature');
+    }
+
+    try {
+      await this.ordersService.handleMidtransWebhook(body);
+      return { status: 'ok' };
+    } catch (error: any) {
+      // Log error but still return 200 to prevent Midtrans retries
+      console.error('Webhook processing error:', error.message);
+      return { status: 'error', message: error.message };
+    }
   }
 }

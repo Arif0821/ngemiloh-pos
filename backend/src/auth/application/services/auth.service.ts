@@ -9,22 +9,34 @@ import { AUTH_REPOSITORY, type AuthRepositoryInterface } from '../../domain/inte
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
+  private readonly pepper: string;
 
   constructor(
     @Inject(AUTH_REPOSITORY) private authRepository: AuthRepositoryInterface,
     private jwtService: JwtService,
     private emailService: EmailService
-  ) {}
+  ) {
+    // SECURITY: Require PIN_PEPPER_SECRET in production
+    const configuredPepper = process.env.PIN_PEPPER_SECRET;
+    if (!configuredPepper) {
+      if (process.env.NODE_ENV === 'production') {
+        throw new Error('FATAL: PIN_PEPPER_SECRET environment variable is required');
+      }
+      // Only allow fallback in development
+      this.pepper = 'dev-only-fallback-pepper-do-not-use-in-production';
+      this.logger.warn('PIN_PEPPER_SECRET not set - using insecure fallback (development only)');
+    } else {
+      this.pepper = configuredPepper;
+    }
+  }
 
   private async hashPin(pin: string): Promise<string> {
     const saltRounds = 12;
-    const pepper = process.env.PIN_PEPPER_SECRET || 'DEFAULT_PEPPER_SUPER_SECRET';
-    return bcrypt.hash(pin + pepper, saltRounds);
+    return bcrypt.hash(pin + this.pepper, saltRounds);
   }
 
   private async verifyPin(pin: string, hash: string): Promise<boolean> {
-    const pepper = process.env.PIN_PEPPER_SECRET || 'DEFAULT_PEPPER_SUPER_SECRET';
-    return bcrypt.compare(pin + pepper, hash);
+    return bcrypt.compare(pin + this.pepper, hash);
   }
 
   // PRD AUTH-02: Superadmin password requirements
@@ -37,8 +49,9 @@ export class AuthService {
     const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
 
     if (password.length < minLength) {
+      // SECURITY: Don't leak password length in error message
       throw new BadRequestException(
-        `Password must be at least ${minLength} characters. Current: ${password.length} characters.`
+        'Password must be at least 16 characters'
       );
     }
     if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSymbol) {

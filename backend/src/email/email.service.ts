@@ -1,6 +1,21 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
 
+/**
+ * Escape HTML special characters to prevent XSS
+ * This sanitizes user-controlled content before inserting into HTML template
+ */
+function escapeHtml(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;')
+    .replace(/\n/g, '<br>');
+}
+
 @Injectable()
 export class EmailService {
   private transporter: nodemailer.Transporter;
@@ -31,6 +46,9 @@ export class EmailService {
       const adminEmail = process.env.EMAIL_ALERT_TO || process.env.SMTP_USER || 'a.gaul0812@gmail.com';
       const fromEmail = process.env.EMAIL_USER || process.env.SMTP_USER;
 
+      // SECURITY: Escape HTML to prevent XSS in email
+      const safeMessage = escapeHtml(message);
+
       await this.transporter.sendMail({
         from: `"Ngemiloh POS Alert" <${fromEmail}>`,
         to: adminEmail,
@@ -39,7 +57,7 @@ export class EmailService {
           <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #ff4444; border-radius: 8px;">
             <h2 style="color: #ff4444;">Ngemiloh POS - Security Alert</h2>
             <p><strong>Waktu:</strong> ${new Date().toLocaleString('id-ID')}</p>
-            <p style="font-size: 16px;">${message}</p>
+            <p style="font-size: 16px;">${safeMessage}</p>
             <hr style="border: none; border-top: 1px solid #eee; margin: 20px 0;" />
             <p style="font-size: 12px; color: #888;">Email ini di-*generate* otomatis oleh sistem Ngemiloh POS.</p>
           </div>
@@ -62,6 +80,9 @@ export class EmailService {
       const adminEmail = process.env.EMAIL_ALERT_TO || process.env.SMTP_USER || 'a.gaul0812@gmail.com';
       const fromEmail = process.env.EMAIL_USER || process.env.SMTP_USER;
 
+      // SECURITY: Escape HTML to prevent XSS in email
+      const safeMessage = escapeHtml(message);
+
       await this.transporter.sendMail({
         from: `"Ngemiloh POS Reminder" <${fromEmail}>`,
         to: adminEmail,
@@ -70,7 +91,7 @@ export class EmailService {
           <div style="font-family: Arial, sans-serif; padding: 20px; border: 1px solid #4f46e5; border-radius: 8px;">
             <h2 style="color: #4f46e5;">Ngemiloh POS - System Reminder</h2>
             <p><strong>Waktu:</strong> ${new Date().toLocaleString('id-ID')}</p>
-            <p style="font-size: 16px;">${message}</p>
+            <p style="font-size: 16px;">${safeMessage}</p>
           </div>
         `,
       });

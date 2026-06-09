@@ -10,6 +10,24 @@ import midtransClient from 'midtrans-client';
 
 import { CreateOrderDto } from '../../presentation/dto/create-order.dto';
 
+/**
+ * Escape CSV field to prevent formula injection
+ * Prepends single quote to fields starting with =, +, -, @, tab, carriage return
+ */
+function escapeCsvField(value: unknown): string {
+  if (value === null || value === undefined) return '';
+  const str = String(value);
+  // Check for formula injection patterns
+  if (/^[=+\-@\t\r]/.test(str)) {
+    return `'${str}`;
+  }
+  // Escape quotes and wrap in quotes if contains comma, quote, or newline
+  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
+    return `"${str.replace(/"/g, '""')}"`;
+  }
+  return str;
+}
+
 @Injectable()
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
@@ -489,16 +507,16 @@ export class OrdersService {
     for (const o of orders) {
       const date = o.created_at.toISOString();
       const id = o.client_uuid || o.id;
-      const cashier = o.cashier?.name || 'Unknown';
+      const cashier = escapeCsvField(o.cashier?.name || 'Unknown');
       const method = o.payment_method;
       const status = o.status;
 
       if (o.items && o.items.length > 0) {
         for (const item of o.items) {
-          const itemName = item.product_name_snapshot || 'Item';
+          const itemName = escapeCsvField(item.product_name_snapshot || 'Item');
           const qty = item.quantity;
           const basePrice = item.base_price;
-          const discountName = item.discount?.name || '-';
+          const discountName = escapeCsvField(item.discount?.name || '-');
           const discountAmt = Number(item.base_price) - Number(item.discounted_base);
           const finalPrice = item.final_price;
           rows.push(`${date},${id},${cashier},${method},${status},${itemName},${qty},${basePrice},${discountName},${discountAmt},${finalPrice}`);
