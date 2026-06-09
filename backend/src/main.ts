@@ -6,7 +6,7 @@ import cookieParser from 'cookie-parser';
 import helmet from 'helmet';
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
-import * as compression from 'compression';
+import compression from 'compression';
 import { join } from 'path';
 
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';

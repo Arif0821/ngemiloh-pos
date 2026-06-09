@@ -1,5 +1,5 @@
 // Jest setup file
-import { jest } from '@jest/globals';
+// Note: 'jest' is available globally in Jest environment
 
 // Set test environment
 process.env.JWT_ACCESS_SECRET = 'test-secret';

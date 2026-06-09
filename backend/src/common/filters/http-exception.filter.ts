@@ -64,19 +64,21 @@ export class GlobalExceptionFilter implements ExceptionFilter {
         : exception.message;
     }
 
-    const errorResponse: Record<string, unknown> = {
-      success: false,
-      error: {
-        code,
-        message,
-      },
-      timestamp: new Date().toISOString(),
-      path: request.url,
+    const errorData: { code: string; message: string; details?: unknown } = {
+      code,
+      message,
     };
 
     if (details) {
-      errorResponse.error = { ...errorResponse.error, details };
+      errorData.details = details;
     }
+
+    const errorResponse = {
+      success: false,
+      error: errorData,
+      timestamp: new Date().toISOString(),
+      path: request.url,
+    };
 
     response.status(status).json(errorResponse);
   }
