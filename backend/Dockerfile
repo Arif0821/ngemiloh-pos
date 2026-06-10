@@ -25,8 +25,15 @@ COPY tsconfig.json tsconfig.build.json nest-cli.json ./
 COPY src ./src
 
 # Generate Prisma Client & Build NestJS
-RUN npx prisma generate
-RUN npm run build
+RUN npx prisma generate && \
+    echo "=== Checking src structure ===" && \
+    ls -la src/ && \
+    echo "=== Running nest build ===" && \
+    npm run build && \
+    echo "=== Checking dist output ===" && \
+    find /app/dist -name "*.js" | head -20 && \
+    echo "=== Checking for main.js ===" && \
+    ls -la /app/dist/main.js 2>/dev/null || echo "main.js NOT FOUND!"
 
 # ============================================================
 # Stage 2: Production Runtime
@@ -45,7 +52,7 @@ COPY --from=builder /app/prisma ./prisma
 COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
-# Copy built application
+# Copy built application - EXPLICIT copy for main.js
 COPY --from=builder /app/dist ./dist
 
 # Copy tsconfig.json - dibutuhkan oleh ts-node untuk migration
@@ -56,11 +63,16 @@ RUN npm install -g prisma ts-node typescript tsconfig-paths
 
 # Buat direktori penyimpanan
 RUN mkdir -p /var/storage/ngemiloh
+
 EXPOSE 3000
 
 # Copy dan set executable startup script
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
+
+# Verify dist/main.js exists before shipping
+RUN echo "=== Verifying dist/main.js exists ===" && \
+    ls -la /app/dist/main.js || (echo "ERROR: dist/main.js not found!" && exit 1)
 
 # Seed boleh gagal, tapi server TETAP jalan (tidak restart loop)
 CMD ["/app/docker-entrypoint.sh"]

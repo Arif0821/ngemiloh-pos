@@ -5,25 +5,32 @@ echo "=============================================="
 echo "  Ngemiloh POS - Container Startup"
 echo "=============================================="
 
-# Debug: Check if dist exists
+# Debug: Check if dist exists and list contents
+echo ""
+echo "[DEBUG] Checking /app directory..."
+ls -la /app/
+
 echo ""
 echo "[DEBUG] Checking /app/dist directory..."
 if [ -d "/app/dist" ]; then
-    echo "[DEBUG] /app/dist exists!"
+    echo "/app/dist exists!"
     ls -la /app/dist/
+    echo ""
+    echo "[DEBUG] Finding all JS files in /app/dist..."
+    find /app/dist -name "*.js" -type f 2>/dev/null | head -30
 else
-    echo "[DEBUG] /app/dist does NOT exist!"
-    echo "[DEBUG] Listing /app contents:"
-    ls -la /app/
+    echo "/app/dist does NOT exist!"
 fi
 
-# Debug: Check if main.js exists
 echo ""
 echo "[DEBUG] Checking for main.js..."
 if [ -f "/app/dist/main.js" ]; then
-    echo "[DEBUG] /app/dist/main.js EXISTS!"
+    echo "/app/dist/main.js EXISTS!"
+    ls -la /app/dist/main.js
 else
-    echo "[DEBUG] /app/dist/main.js DOES NOT EXIST!"
+    echo "/app/dist/main.js DOES NOT EXIST!"
+    echo "[DEBUG] Looking for any main*.js files:"
+    find /app -name "main*.js" -type f 2>/dev/null
 fi
 
 # Debug: Check Node and TypeScript
@@ -60,6 +67,11 @@ echo "=============================================="
 if [ ! -f "/app/dist/main.js" ]; then
     echo "[ERROR] Cannot start - /app/dist/main.js not found!"
     echo "[ERROR] Build artifacts are missing!"
+    echo "[DEBUG] Current directory: $(pwd)"
+    echo "[DEBUG] /app contents:"
+    ls -la /app/
+    echo "[DEBUG] /app/dist contents:"
+    ls -la /app/dist/ 2>/dev/null || echo "/app/dist not found"
     exit 1
 fi
 
