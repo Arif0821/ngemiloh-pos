@@ -42,21 +42,27 @@ FROM mirror.gcr.io/library/node:20-alpine AS production
 ENV NODE_ENV=production
 WORKDIR /app
 
-# Copy package files for reference (not for install)
+# Copy package files
 COPY package.json package-lock.json* ./
 
-# Copy entire node_modules from builder - this includes ALL dependencies
-# including express, nestjs, and all production dependencies
-COPY --from=builder /app/node_modules ./node_modules
+# Install production dependencies
+RUN npm install --omit=dev --legacy-peer-deps && \
+    echo "=== Verifying express installed ===" && \
+    test -d node_modules/express && echo "express OK" || npm install express --save --legacy-peer-deps
 
 # Copy Prisma schema + generated client dari builder
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 # Copy built application
 COPY --from=builder /app/dist ./dist
 
 # Copy tsconfig.json - dibutuhkan oleh ts-node untuk migration
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
+
+# Install runtime tools (global)
+RUN npm install -g prisma ts-node typescript tsconfig-paths
 
 # Buat direktori penyimpanan
 RUN mkdir -p /var/storage/ngemiloh
