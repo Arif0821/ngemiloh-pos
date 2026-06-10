@@ -11,7 +11,9 @@ ENV NODE_OPTIONS="--max-old-space-size=512"
 WORKDIR /app
 
 COPY frontend/package.json frontend/package-lock.json* ./
-RUN npm install --include=dev
+# Retry logic untuk handle transient network errors
+RUN npm install --include=dev --retry 3 --fetch-retry-mintimeout 20000 --fetch-retry-maxtimeout 120000 || \
+    npm install --include=dev --retry 3 --retry-delay 5
 
 COPY frontend/ .
 RUN npm run build

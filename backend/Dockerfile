@@ -15,7 +15,9 @@ COPY package.json package-lock.json* ./
 
 # KRITIS: Selalu gunakan --include=dev secara eksplisit
 # Ini tetap menginstall devDependencies meskipun NODE_ENV=production
-RUN npm install --include=dev
+# Retry logic untuk handle transient network errors
+RUN npm install --include=dev --retry 3 --fetch-retry-mintimeout 20000 --fetch-retry-maxtimeout 120000 || \
+    npm install --include=dev --retry 3 --retry-delay 5
 
 # Copy source code & Prisma schema
 COPY prisma ./prisma
