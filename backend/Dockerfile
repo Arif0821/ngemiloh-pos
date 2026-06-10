@@ -42,23 +42,23 @@ FROM mirror.gcr.io/library/node:20-alpine AS production
 ENV NODE_ENV=production
 WORKDIR /app
 
-# Install production dependencies only
+# Copy package files
 COPY package.json package-lock.json* ./
+
+# Install production dependencies
 RUN npm install --omit=dev
+
+# Copy entire node_modules from builder (all dependencies needed for runtime)
+COPY --from=builder /app/node_modules ./node_modules
 
 # Copy Prisma schema + generated client dari builder
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
 
 # Copy built application
 COPY --from=builder /app/dist ./dist
 
 # Copy tsconfig.json - dibutuhkan oleh ts-node untuk migration
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
-
-# Install tools yang dibutuhkan saat runtime untuk migration & seed
-RUN npm install -g prisma ts-node typescript tsconfig-paths
 
 # Buat direktori penyimpanan
 RUN mkdir -p /var/storage/ngemiloh
@@ -68,12 +68,6 @@ EXPOSE 3000
 # Copy dan set executable startup script
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
-
-# Verify dist files exist before shipping
-RUN echo "=== Verifying dist files exist ===" && \
-    (test -f /app/dist/main.js && echo "/app/dist/main.js OK" || \
-     test -f /app/dist/src/main.js && echo "/app/dist/src/main.js OK (nested path)" || \
-     (echo "ERROR: main.js not found!" && exit 1))
 
 # Seed boleh gagal, tapi server TETAP jalan (tidak restart loop)
 CMD ["/app/docker-entrypoint.sh"]
