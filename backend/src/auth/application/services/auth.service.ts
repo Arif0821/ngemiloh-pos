@@ -91,6 +91,20 @@ export class AuthService {
       isValid = await this.verifyPin(pinOrPassword, user.pin_hash);
     } else if (user.role === Role.superadmin) {
       if (!user.password_hash) throw new UnauthorizedException('Invalid credentials');
+
+      // PRD AUTH-02: Validate password format BEFORE comparing
+      // This provides immediate feedback for weak passwords
+      if (pinOrPassword.length < 16) {
+        throw new BadRequestException('Password must be at least 16 characters');
+      }
+      const hasUpperCase = /[A-Z]/.test(pinOrPassword);
+      const hasLowerCase = /[a-z]/.test(pinOrPassword);
+      const hasNumber = /[0-9]/.test(pinOrPassword);
+      const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pinOrPassword);
+      if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSymbol) {
+        throw new BadRequestException('Password must contain uppercase, lowercase, number, and symbol');
+      }
+
       isValid = await bcrypt.compare(pinOrPassword, user.password_hash);
     }
 
