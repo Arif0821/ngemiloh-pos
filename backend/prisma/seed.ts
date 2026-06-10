@@ -11,8 +11,7 @@ async function main() {
   // Superadmin Password: min 16 characters (wajib: angka, huruf kapital, simbol)
   const adminPassword = await bcrypt.hash('SuperAdminP@ssw0rd123!', 12);
   const kasirPinPlain = '1234';
-  const kasirPinPeppered = `${pepper}:${kasirPinPlain}:${pepper}`;
-  const kasirPinHash = await bcrypt.hash(kasirPinPeppered, 12);
+  const kasirPinHash = await bcrypt.hash(kasirPinPlain + pepper, 12);
 
   const superadmin = await prisma.user.upsert({
     where: { email: 'admin@ngemiloh.com' },

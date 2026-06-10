@@ -221,7 +221,7 @@ export class PosService {
       }
     }, 1000);
 
-    this.sseEventSource = new EventSource(`/api/v1/orders/${orderData.id}/sse`);
+    this.sseEventSource = new EventSource(`/api/v1/orders/${orderData.id}/sse`, { withCredentials: true });
     this.sseEventSource.onmessage = (event) => {
       const data = JSON.parse(event.data);
       if (data.status === 'completed') {

@@ -507,8 +507,13 @@ export class OrdersService {
     let totalQris = 0;
 
     orders.forEach((o: any) => {
-      if (o.payment_method === PaymentMethod.cash) totalCash += Number(o.total_amount);
-      if (o.payment_method === PaymentMethod.qris) totalQris += Number(o.total_amount);
+      const amount = Number(o.total_amount);
+      if (o.payment_method === PaymentMethod.cash) totalCash += amount;
+      else if (o.payment_method === PaymentMethod.qris) totalQris += amount;
+      else if (o.payment_method === PaymentMethod.split) {
+        totalCash += Number(o.cash_amount || 0);
+        totalQris += Number(o.qris_amount || 0);
+      }
     });
 
     return {

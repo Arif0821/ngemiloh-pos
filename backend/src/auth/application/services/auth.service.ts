@@ -91,8 +91,6 @@ export class AuthService {
       isValid = await this.verifyPin(pinOrPassword, user.pin_hash);
     } else if (user.role === Role.superadmin) {
       if (!user.password_hash) throw new UnauthorizedException('Invalid credentials');
-      // PRD AUTH-02: Validasi password requirements sebelum verify
-      this.validatePasswordRequirements(pinOrPassword);
       isValid = await bcrypt.compare(pinOrPassword, user.password_hash);
     }
 
