@@ -570,7 +570,8 @@ export class OrdersService {
   }
 
   async voidOrder(orderId: string, reason: string, adminId: string) {
-    if (!reason || reason.length < 10) {
+    // SECURITY: Prevent type confusion attack - ensure reason is a string, not an array
+    if (typeof reason !== 'string' || !reason || reason.length < 10) {
       throw new BadRequestException('Alasan void wajib minimal 10 karakter');
     }
 
