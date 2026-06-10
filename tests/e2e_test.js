@@ -26,8 +26,8 @@ function log(name, passed, detail = '') {
   const icon = passed ? '✅' : '❌';
   results.tests.push({ name, passed, detail });
   if (passed) results.passed++; else results.failed++;
-  // CodeQL: test file - only logs HTTP status codes (non-sensitive)
-  console.log(`  ${icon} ${name}${detail ? ` — ${detail}` : ''}`);
+  // CodeQL: Only log test name and result, not response data
+  console.log(`${icon} ${name}`);
 }
 
 async function fetchJSON(url, opts = {}) {
