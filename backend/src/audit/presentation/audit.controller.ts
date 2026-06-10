@@ -1,9 +1,10 @@
-import { Controller, Get, Query, UseGuards, Post } from '@nestjs/common';
+import { Controller, Get, Query, UseGuards, Post, Req, ForbiddenException } from '@nestjs/common';
 import { AuditService } from '../application/services/audit.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
+import { Request } from 'express';
 
 @Controller('admin/audit-logs')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -26,7 +27,11 @@ export class AuditController {
   }
 
   @Post('archive')
-  async archiveLogs() {
+  async archiveLogs(@Req() req: Request) {
+    // SECURITY: Explicit role check as defense-in-depth
+    if (req.user?.role !== Role.superadmin) {
+      throw new ForbiddenException('Only superadmin can archive audit logs');
+    }
     const result = await this.auditService.archiveOldLogs();
     return { success: true, data: result };
   }

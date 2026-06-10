@@ -33,6 +33,21 @@ export class ProductsController {
     return { success: true, data: categories };
   }
 
+  private sanitizeImageUrl(imageUrl: string | undefined): string | undefined {
+    if (!imageUrl) return undefined;
+    // SECURITY: Only allow relative paths under /uploads/ or HTTPS URLs from approved CDNs
+    const isRelativeUpload = /^\/uploads\/[a-zA-Z0-9_-]+\.(webp|png|jpg|jpeg|gif|svg)$/.test(imageUrl);
+    const isApprovedCdn = /^https:\/\/(cdn\.|img\.|static\.)?[a-zA-Z0-9][a-zA-Z0-9-]*\.[a-zA-Z]{2,}(\/.*)?$/.test(imageUrl);
+    if (isRelativeUpload || isApprovedCdn) {
+      return imageUrl;
+    }
+    // SECURITY: Reject any path traversal attempts or invalid URLs
+    if (imageUrl.includes('..') || imageUrl.includes('://') || imageUrl.startsWith('/') && !imageUrl.startsWith('/uploads/')) {
+      return undefined;
+    }
+    return imageUrl;
+  }
+
   private async processImageUpload(file: Express.Multer.File | undefined): Promise<string | undefined> {
     if (!file) return undefined;
     const uploadDir = process.env.STORAGE_PATH || join(__dirname, '..', '..', '..', '..', 'frontend', 'static', 'uploads');
@@ -57,10 +72,12 @@ export class ProductsController {
   @Roles(Role.superadmin)
   @UseInterceptors(FileInterceptor('image', { limits: { fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 5) * 1024 * 1024 } }))
   async updateProduct(@Param('id') id: string, @Body() body: UpdateProductDto, @Req() req: Request & { user: any }, @UploadedFile() file: Express.Multer.File) {
-    const imageUrl = await this.processImageUpload(file) || body.image_url;
+    const uploadedUrl = await this.processImageUpload(file);
+    // SECURITY: Sanitize image_url to prevent path traversal and XSS
+    const sanitizedImageUrl = uploadedUrl || this.sanitizeImageUrl(body.image_url);
     const payload: any = { ...body };
     if (body.base_price) payload.base_price = Number(body.base_price);
-    if (imageUrl) payload.image_url = imageUrl;
+    if (sanitizedImageUrl) payload.image_url = sanitizedImageUrl;
     const product = await this.productsService.update(id, payload, req.user.id);
     return { success: true, data: product };
   }

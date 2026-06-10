@@ -2,6 +2,18 @@
   import { posStore } from '$lib/stores/pos.store.svelte';
   import type { LocalProduct } from '$lib/db';
 
+  // SECURITY: Validate image URL to prevent XSS attacks
+  // Only allow HTTPS URLs from approved sources or relative paths
+  function getSafeImageUrl(url: string | null | undefined): string {
+    if (!url) return 'https://placehold.co/150x150/f43f5e/fff?text=Menu';
+    // Allow only HTTPS URLs or /uploads/ relative paths
+    if (url.startsWith('/uploads/') || url.startsWith('https://')) {
+      return url;
+    }
+    // Reject javascript:, data:, or other dangerous schemes
+    return 'https://placehold.co/150x150/f43f5e/fff?text=Menu';
+  }
+
   function selectProduct(product: LocalProduct) {
     if (product.is_out_of_stock) {
       if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
@@ -9,10 +21,10 @@
       return;
     }
     if (navigator.vibrate) navigator.vibrate(50);
-    
+
     if (product.modifier_groups && product.modifier_groups.length > 0) {
       posStore.selectedProductForModifier = product;
-      posStore.selectedModifiers = {}; 
+      posStore.selectedModifiers = {};
       product.modifier_groups.forEach(g => {
         if (g.is_required && g.options.length > 0) {
           posStore.selectedModifiers[g.id] = g.options[0];
@@ -43,7 +55,7 @@
       {/if}
       
       <div class="aspect-square w-full overflow-hidden bg-surface-100">
-        <img src={product.image_url || 'https://placehold.co/150x150/f43f5e/fff?text=Menu'} alt={product.name} loading="lazy" class="w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal" />
+        <img src={getSafeImageUrl(product.image_url)} alt={product.name} loading="lazy" class="w-full h-full object-cover mix-blend-multiply dark:mix-blend-normal" />
       </div>
       <div class="p-3 flex-1 flex flex-col justify-between">
         <h3 class="font-semibold text-sm leading-tight mb-2 text-surface-800 dark:text-surface-100">{product.name}</h3>

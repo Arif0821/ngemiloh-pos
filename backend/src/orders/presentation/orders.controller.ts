@@ -168,21 +168,31 @@ export class OrdersController {
 
     const allowedIps = midtransIps.length > 0 ? midtransIps : defaultMidtransIps;
     const isAllowed = allowedIps.some(allowedIp => {
-      // Simple IP match (for /24 CIDR, check first 3 octets)
+      // Support /32 (single IP), /24, and /16 CIDR blocks
       if (allowedIp.includes('/')) {
         const [baseIp, prefix] = allowedIp.split('/');
-        if (prefix === '24') {
+        const prefixNum = parseInt(prefix, 10);
+        if (prefixNum === 32) {
+          return ip === baseIp;
+        }
+        if (prefixNum === 24) {
           return ip.startsWith(baseIp.substring(0, baseIp.lastIndexOf('.')));
         }
-        return false; // Only support /24 for now
+        if (prefixNum === 16) {
+          return ip.startsWith(baseIp.substring(0, baseIp.indexOf('.', baseIp.indexOf('.') + 1)));
+        }
+        // SECURITY: Log warning for unsupported CIDR notation
+        this.logger.warn(`Unsupported CIDR notation: ${allowedIp} in MIDTRANS_ALLOWED_IPS`);
+        return false;
       }
       return ip === allowedIp;
     });
 
-    // Allow localhost in development
-    const isDev = process.env.NODE_ENV !== 'production';
-    if (!isAllowed && !isDev) {
-      throw new ForbiddenException(`Webhook request from untrusted IP: ${ip}`);
+    // SECURITY: Only bypass IP validation in known test environments
+    const isDevOrTest = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+    if (!isAllowed && !isDevOrTest) {
+      this.logger.warn(`Midtrans webhook blocked - untrusted IP: ${ip}`);
+      throw new ForbiddenException('Webhook request from untrusted IP');
     }
 
     // SECURITY: Verify webhook signature from Midtrans
@@ -197,9 +207,10 @@ export class OrdersController {
       await this.ordersService.handleMidtransWebhook(body);
       return { status: 'ok' };
     } catch (error: any) {
-      // Log error but still return 200 to prevent Midtrans retries
-      console.error('Webhook processing error:', error.message);
-      return { status: 'error', message: error.message };
+      // SECURITY: Log internal error details server-side only, never expose to webhook caller
+      // Return generic response to prevent order ID enumeration
+      this.logger.error(`Webhook processing error: ${error.message}`, error.stack);
+      return { status: 'ok' };  // Always return ok to prevent Midtrans retries on our errors
     }
   }
 }

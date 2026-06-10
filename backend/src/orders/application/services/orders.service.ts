@@ -12,21 +12,29 @@ import midtransClient from 'midtrans-client';
 import { CreateOrderDto } from '../../presentation/dto/create-order.dto';
 
 /**
- * Escape CSV field to prevent formula injection
- * Prepends single quote to fields starting with =, +, -, @, tab, carriage return
+ * Escape CSV field to prevent formula injection and CSV injection attacks
+ * - Prepends single quote to fields starting with =, +, -, @, tab, carriage return
+ * - Removes or escapes newlines and carriage returns that could inject CSV rows
+ * - Escapes quotes and wraps in quotes if contains comma, quote, or newline
  */
 function escapeCsvField(value: unknown): string {
   if (value === null || value === undefined) return '';
   const str = String(value);
-  // Check for formula injection patterns
-  if (/^[=+\-@\t\r]/.test(str)) {
-    return `'${str}`;
+  // SECURITY: Remove control characters and newlines that could inject CSV rows
+  const sanitized = str.replace(/[\r\n\x00-\x1F]/g, '');
+  // Check for formula injection patterns at start of field
+  if (/^[=+\-@\t\r]/.test(sanitized)) {
+    return `'${sanitized}`;
+  }
+  // Check for formula characters anywhere in the string (Excel attack vector)
+  if (/[=+\-@\t\r]/.test(sanitized)) {
+    return `'${sanitized}`;
   }
   // Escape quotes and wrap in quotes if contains comma, quote, or newline
-  if (str.includes(',') || str.includes('"') || str.includes('\n')) {
-    return `"${str.replace(/"/g, '""')}"`;
+  if (sanitized.includes(',') || sanitized.includes('"') || sanitized.includes('\n')) {
+    return `"${sanitized.replace(/"/g, '""')}"`;
   }
-  return str;
+  return sanitized;
 }
 
 @Injectable()
@@ -612,6 +620,12 @@ export class OrdersService {
   }
 
   async flagTransaction(orderId: string, status: string, adminId: string) {
+    // SECURITY: Validate status against allowed values to prevent data integrity issues
+    const validStatuses = ['pending', 'verified', 'flagged', 'cleared', 'reviewed'];
+    if (!validStatuses.includes(status)) {
+      throw new BadRequestException(`Invalid verification status. Allowed: ${validStatuses.join(', ')}`);
+    }
+
     const order = await this.orderRepository.findOrderById(orderId);
     if (!order) throw new NotFoundException('Order not found');
 

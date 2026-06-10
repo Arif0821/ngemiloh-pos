@@ -10,6 +10,7 @@ export class FlagsController {
   constructor(private flagsService: FlagsService) {}
 
   @Get()
+  @UseGuards(JwtAuthGuard)
   async getPublicFlags() {
     // POS kasir will call this, it returns the fast cached map
     const data = await this.flagsService.getFlagsMap();

@@ -18,14 +18,17 @@ export class ApiClient {
     options.credentials = 'include'; // Always include credentials
     options.headers = options.headers || {};
     
+    // SECURITY: Make CSRF token mandatory for state-changing requests
     if (options.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method.toUpperCase())) {
       const csrfToken = this.getCookie('csrf_token');
-      if (csrfToken) {
-        options.headers = {
-          ...options.headers,
-          'X-CSRF-Token': csrfToken
-        };
+      // Throw error if CSRF token is missing - never silently proceed without it
+      if (!csrfToken) {
+        throw new Error('CSRF token missing - cannot perform state-changing request');
       }
+      options.headers = {
+        ...options.headers,
+        'X-CSRF-Token': csrfToken
+      };
     }
 
     // Call native fetch

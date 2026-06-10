@@ -43,7 +43,12 @@ export class EmailService {
         return;
       }
 
-      const adminEmail = process.env.EMAIL_ALERT_TO || process.env.SMTP_USER || 'a.gaul0812@gmail.com';
+      // SECURITY: Require admin email to be configured in production
+      const adminEmail = process.env.EMAIL_ALERT_TO || process.env.SMTP_USER;
+      if (!adminEmail) {
+        this.logger.warn(`Email alert skipped (no admin email configured): ${subject}`);
+        return;
+      }
       const fromEmail = process.env.EMAIL_USER || process.env.SMTP_USER;
 
       // SECURITY: Escape HTML to prevent XSS in email
@@ -77,7 +82,12 @@ export class EmailService {
         return;
       }
 
-      const adminEmail = process.env.EMAIL_ALERT_TO || process.env.SMTP_USER || 'a.gaul0812@gmail.com';
+      // SECURITY: Require admin email to be configured in production
+      const adminEmail = process.env.EMAIL_ALERT_TO || process.env.SMTP_USER;
+      if (!adminEmail) {
+        this.logger.warn(`Email alert skipped (no admin email configured): ${subject}`);
+        return;
+      }
       const fromEmail = process.env.EMAIL_USER || process.env.SMTP_USER;
 
       // SECURITY: Escape HTML to prevent XSS in email

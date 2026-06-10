@@ -7,6 +7,19 @@ import { Role, User } from '@prisma/client';
 import { AUTH_REPOSITORY, type AuthRepositoryInterface } from '../../domain/interfaces/auth.repository.interface';
 import { LOCKOUT_DURATION_MS, LOCKOUT_THRESHOLD } from '../../../common/utils/constants';
 
+/**
+ * Escape HTML special characters to prevent XSS in email content
+ */
+function escapeHtml(text: string): string {
+  if (!text) return '';
+  return text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
+}
+
 @Injectable()
 export class AuthService {
   private readonly logger = new Logger(AuthService.name);
@@ -116,9 +129,11 @@ export class AuthService {
         await this.authRepository.lockUser(user.id, new Date(Date.now() + LOCKOUT_DURATION_MS));
 
         // NOTIF-01: Send alert (non-critical, don't fail login on email error)
+        // SECURITY: Escape username to prevent HTML injection in email
+        const safeUsername = escapeHtml(user.username);
         this.emailService.sendAlert(
           'Akun Terkunci - Gagal Login',
-          `Akun kasir dengan username <strong>${user.username}</strong> telah dikunci karena 5 kali percobaan login gagal berturut-turut. Akun akan terbuka kembali dalam 30 menit.`
+          `Akun kasir dengan username <strong>${safeUsername}</strong> telah dikunci karena 5 kali percobaan login gagal berturut-turut. Akun akan terbuka kembali dalam 30 menit.`
         ).catch(err => this.logger.error('Failed to send lockout alert email', err.message));
       }
 
