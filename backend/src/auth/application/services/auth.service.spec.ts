@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException, BadRequestException, HttpException, HttpStatus } from '@nestjs/common';
+import { UnauthorizedException, HttpException, HttpStatus } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AUTH_REPOSITORY } from '../../domain/interfaces/auth.repository.interface';
 import { EmailService } from '../../../email/email.service';

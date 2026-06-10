@@ -9,37 +9,34 @@ export class AuditInterceptor implements NestInterceptor {
     @Inject(AUDIT_REPOSITORY) private readonly auditRepository: IAuditRepository
   ) {}
 
-  intercept(context: ExecutionContext, next: CallHandler): Observable<any> {
-    const request = context.switchToHttp().getRequest() as Record<string, unknown>;
+  intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
+    const http = context.switchToHttp();
+    const request = http.getRequest();
     const method = String(request.method ?? '').toUpperCase();
 
-    // Only log mutating requests automatically
+    // Only log mutating requests
     const isMutatingRequest = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
-
     if (!isMutatingRequest) {
       return next.handle();
     }
 
     const requestUrl = String(request.url ?? '');
-    // Skip login as it's handled manually in AuthService for more detailed logging
+    // Skip login as it's handled manually in AuthService
     if (requestUrl.includes('/api/v1/auth/login')) {
       return next.handle();
     }
 
     const user = request.user as { id?: string } | undefined;
     const userId = user?.id ?? null;
-    const headers = request.headers as Record<string, string | undefined>;
-    const ipAddress = headers['x-forwarded-for'] || 'unknown';
-    const action = `${method}_${requestUrl.split('?')[0].replace(/\//g, '_')}`;
-
-    // Capture old state (optional, for advanced implementations)
-    // Here we just log the action and the request body as the new_value
-    // Use JSON serialization to ensure type compatibility with Prisma's InputJsonValue
-    const newValue = request.body ? { body: JSON.parse(JSON.stringify(request.body)) } : null;
+    const headers = http.getRequestHeaders();
+    const ipAddress = String(headers['x-forwarded-for'] ?? 'unknown');
+    const sanitizedUrl = requestUrl.split('?')[0].replace(/\//g, '_');
+    const action = `${method}_${sanitizedUrl}`;
+    const body = request.body;
+    const newValue = body ? { body: JSON.stringify(body) } : null;
 
     return next.handle().pipe(
       tap(() => {
-        // Run async without blocking response
         this.auditRepository.createAuditLog({
           actor_id: userId,
           action: action,
@@ -48,8 +45,8 @@ export class AuditInterceptor implements NestInterceptor {
           old_value: null,
           new_value: newValue,
           ip_address: ipAddress,
-        }).catch(err => {
-          console.error('Failed to write audit log:', err);
+        }).catch((err: Error) => {
+          console.error('Failed to write audit log:', err.message);
         });
       })
     );
