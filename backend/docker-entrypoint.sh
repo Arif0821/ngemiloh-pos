@@ -24,11 +24,15 @@ fi
 
 echo ""
 echo "[DEBUG] Checking for main.js..."
+# Check multiple possible locations for main.js
 if [ -f "/app/dist/main.js" ]; then
     echo "/app/dist/main.js EXISTS!"
     ls -la /app/dist/main.js
+elif [ -f "/app/dist/src/main.js" ]; then
+    echo "/app/dist/src/main.js EXISTS!"
+    ls -la /app/dist/src/main.js
 else
-    echo "/app/dist/main.js DOES NOT EXIST!"
+    echo "main.js NOT FOUND in expected locations!"
     echo "[DEBUG] Looking for any main*.js files:"
     find /app -name "main*.js" -type f 2>/dev/null
 fi
@@ -63,10 +67,13 @@ echo ""
 echo "[3/3] Starting NestJS server on port 3000..."
 echo "=============================================="
 
-# Check one more time before starting
-if [ ! -f "/app/dist/main.js" ]; then
-    echo "[ERROR] Cannot start - /app/dist/main.js not found!"
-    echo "[ERROR] Build artifacts are missing!"
+# Find main.js in possible locations
+if [ -f "/app/dist/main.js" ]; then
+    MAIN_JS="/app/dist/main.js"
+elif [ -f "/app/dist/src/main.js" ]; then
+    MAIN_JS="/app/dist/src/main.js"
+else
+    echo "[ERROR] Cannot start - main.js not found!"
     echo "[DEBUG] Current directory: $(pwd)"
     echo "[DEBUG] /app contents:"
     ls -la /app/
@@ -75,4 +82,5 @@ if [ ! -f "/app/dist/main.js" ]; then
     exit 1
 fi
 
-exec node /app/dist/main.js
+echo "[DEBUG] Starting NestJS with main.js at: $MAIN_JS"
+exec node "$MAIN_JS"
