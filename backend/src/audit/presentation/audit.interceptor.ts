@@ -28,7 +28,7 @@ export class AuditInterceptor implements NestInterceptor {
 
     const user = request.user as { id?: string } | undefined;
     const userId = user?.id ?? null;
-    const headers = http.getRequestHeaders();
+    const headers = request.headers as Record<string, string | undefined>;
     const ipAddress = String(headers['x-forwarded-for'] ?? 'unknown');
     const sanitizedUrl = requestUrl.split('?')[0].replace(/\//g, '_');
     const action = `${method}_${sanitizedUrl}`;
