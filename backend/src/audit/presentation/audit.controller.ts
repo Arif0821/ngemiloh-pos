@@ -27,7 +27,7 @@ export class AuditController {
   }
 
   @Post('archive')
-  async archiveLogs(@Req() req: Request) {
+  async archiveLogs(@Req() req: Request & { user: { role: string } }) {
     // SECURITY: Explicit role check as defense-in-depth
     if (req.user?.role !== Role.superadmin) {
       throw new ForbiddenException('Only superadmin can archive audit logs');
