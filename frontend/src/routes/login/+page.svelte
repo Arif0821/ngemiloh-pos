@@ -100,7 +100,7 @@
             {/if}
           </div>
 
-          <div class="grid grid-cols-3 gap-3 w-full max-w-[280px]">
+          <div class="grid grid-cols-3 gap-3 w-full max-w-70">
             {#each ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as num}
               <button class="h-14 rounded-2xl bg-slate-50 hover:bg-slate-200 text-2xl font-black text-slate-800 transition-colors active:scale-95" onclick={() => handlePinInput(num)}>
                 {num}
