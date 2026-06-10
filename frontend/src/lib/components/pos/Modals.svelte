@@ -336,7 +336,7 @@
                     <span class="font-bold text-slate-800">#{order.client_uuid.split('-')[0].toUpperCase()}</span>
                     <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded uppercase">{order.payment_status || 'PENDING'}</span>
                   </div>
-                  <p class="text-sm text-slate-500 mb-2">{new Date(order.created_at).toLocaleString('id-ID')} • {order.payment_method.toUpperCase()}</p>
+                  <p class="text-sm text-slate-500 mb-2">{new Date(order.created_at ?? Date.now()).toLocaleString('id-ID')} • {order.payment_method.toUpperCase()}</p>
                 </div>
                 <div class="text-right">
                   <p class="text-lg font-black text-brand-600">{posStore.formatRp(order.final_price)}</p>

@@ -72,6 +72,11 @@ export class FinanceService {
       created_at: { gte: start, lte: end },
       status: { not: 'voided' }
     });
+
+    if (!orders || orders.length === 0) {
+      throw new NotFoundException('No orders found for the specified period.');
+    }
+
     const revenue = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
 
     const opexList = await this.financeRepository.findOperationalExpenses({

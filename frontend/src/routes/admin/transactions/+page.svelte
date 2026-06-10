@@ -156,7 +156,7 @@
                 {#each orders as order}
                   <tr class="hover:bg-slate-50 transition-colors {order.status === 'voided' ? 'bg-red-50/50 opacity-75' : ''}">
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                      {new Date(order.client_created_at || order.created_at).toLocaleString('id-ID')}
+                      {new Date(order.client_created_at ?? order.created_at ?? Date.now()).toLocaleString('id-ID')}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-slate-900">
                       {order.cashier?.name || 'Kasir'}
@@ -240,7 +240,7 @@
         </div>
         <div>
           <p class="text-xs text-slate-500 uppercase tracking-wider mb-1">Waktu</p>
-          <p class="font-bold text-slate-900">{new Date(selectedOrder.client_created_at || selectedOrder.created_at).toLocaleString('id-ID')}</p>
+          <p class="font-bold text-slate-900">{new Date(selectedOrder.client_created_at ?? selectedOrder.created_at ?? Date.now()).toLocaleString('id-ID')}</p>
         </div>
         <div>
           <p class="text-xs text-slate-500 uppercase tracking-wider mb-1">Metode Pembayaran</p>

@@ -71,7 +71,7 @@
                 {#each auditLogs as log}
                   <tr class="hover:bg-slate-50">
                     <td class="px-6 py-4 whitespace-nowrap text-slate-600 font-mono text-xs">
-                      {new Date(log.created_at).toLocaleString('id-ID')}
+                      {new Date(log.created_at ?? Date.now()).toLocaleString('id-ID')}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       {#if log.actor}
