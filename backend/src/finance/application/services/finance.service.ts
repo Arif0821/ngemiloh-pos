@@ -61,6 +61,10 @@ export class FinanceService {
   }
 
   async getProfitShare(month: number, year: number) {
+    if (month < 1 || month > 12) {
+      throw new BadRequestException('Invalid month. Month must be between 1 and 12.');
+    }
+
     const start = new Date(year, month - 1, 1);
     const end = new Date(year, month, 0, 23, 59, 59, 999);
 
