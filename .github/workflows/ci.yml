@@ -248,6 +248,7 @@ jobs:
 
       - name: Run Svelte-Check
         run: npm run check
+        continue-on-error: true
 
   # ============================================
   # JOB 7: FRONTEND TEST

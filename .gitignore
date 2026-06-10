@@ -33,6 +33,9 @@ ngemiloh-key.pem
 *.log
 *.tmp
 
+# ── Agent Skills (keep as regular directory, not submodule) ──
+agent-skills/
+
 # ── Development/Utility Files (tidak perlu di repo) ──
 read_docx.py
 prd_v3.txt
