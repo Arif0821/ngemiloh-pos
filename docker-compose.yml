@@ -37,19 +37,27 @@ services:
   # PgBouncer: Connection pooler (transaction mode)
   # ============================================================
   pgbouncer:
-    image: edoburu/pgbouncer:1.23.1
+    image: ghcr.io/bitnami/postgresql-pgbouncer:1.31
     container_name: ngemiloh_pgbouncer
     environment:
-      DATABASE_URL: "postgres://ngemiloh:${DB_PASSWORD}@postgres:5432/ngemiloh_db"
-      POOL_MODE: transaction
-      MAX_CLIENT_CONN: 100
-      DEFAULT_POOL_SIZE: 20
-      MIN_POOL_SIZE: 5
-      RESERVE_POOL_SIZE: 10
-      RESERVE_POOL_TIMEOUT: 3
-      SERVER_RESET_ON_RELEASE: "on"
-      SERVER_LIFETIME: 3600
-      SERVER_IDLE_TIMEOUT: 600
+      # Bitnami pgbouncer uses these env vars
+      PGBOUNCER_AUTH_TYPE: "md5"
+      PGBOUNCER_AUTH_QUERY: "SELECT usename, passwd FROM pg_shadow WHERE usename = $1"
+      PGBOUNCER_POOL_MODE: "transaction"
+      PGBOUNCER_MAX_CLIENT_CONN: "100"
+      PGBOUNCER_DEFAULT_POOL_SIZE: "20"
+      PGBOUNCER_MIN_POOL_SIZE: "5"
+      PGBOUNCER_RESERVE_POOL_SIZE: "10"
+      PGBOUNCER_RESERVE_POOL_TIMEOUT: "3"
+      PGBOUNCER_SERVER_LIFETIME: "3600"
+      PGBOUNCER_SERVER_IDLE_TIMEOUT: "600"
+      PGBOUNCER_SERVER_RESET_ON_RELEASE: "on"
+      # Database connection - parsed by the entrypoint
+      POSTGRESQL_HOST: "postgres"
+      POSTGRESQL_PORT: "5432"
+      POSTGRESQL_USERNAME: "ngemiloh"
+      POSTGRESQL_PASSWORD: "${DB_PASSWORD}"
+      POSTGRESQL_DATABASE: "ngemiloh_db"
     volumes:
       - pgbouncer_data:/var/log/pgbouncer
     depends_on:
