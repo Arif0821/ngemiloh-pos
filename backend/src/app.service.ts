@@ -61,7 +61,7 @@ export class AppService {
   async getAuditLogs() {
     return this.prisma.auditLog.findMany({
       orderBy: { created_at: 'desc' },
-      take: 100, // Limit to recent 100 for MVP
+      take: 1000, // Increased for security audit investigation
       include: { actor: { select: { name: true, role: true } } }
     });
   }

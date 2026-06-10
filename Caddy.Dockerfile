@@ -1,6 +1,6 @@
 # ============================================================
-# Stage 1: Build Frontend
-# Always uses NODE_ENV=development for SvelteKit build
+# Stage 1: Build Frontend (SvelteKit)
+# NODE_ENV=production required for static prerendering
 # ============================================================
 FROM mirror.gcr.io/library/node:20-alpine AS builder
 

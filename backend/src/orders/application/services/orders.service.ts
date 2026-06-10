@@ -126,6 +126,7 @@ export class OrdersService {
         subtotal: rowTotal,
         notes: item.notes,
         discounted_base: basePrice - maxDiscountAmount,
+        modifier_total: modifierTotal,
         final_price: itemTotal
       });
     }
@@ -326,6 +327,19 @@ export class OrdersService {
 
     // Calculate order items
     const orderItemsPayload = this.buildOrderItems(data, productMap);
+
+    // Validate price consistency (same as createOrder)
+    const calculatedFinalPrice = orderItemsPayload.reduce((sum, item) => sum + Number(item.final_price), 0);
+    const clientFinalPrice = Number(data.client_final_price);
+    const thresholdPct = Number(process.env.PRICE_DELTA_THRESHOLD_PCT || '10');
+    const diffPct = calculatedFinalPrice > 0
+      ? Math.abs(calculatedFinalPrice - clientFinalPrice) / calculatedFinalPrice * 100
+      : clientFinalPrice > 0 ? 100 : 0;
+
+    if (diffPct > thresholdPct) {
+      this.logger.warn(`[createOrderWithCache] Price Discrepancy! Backend: ${calculatedFinalPrice}, Client: ${clientFinalPrice}`);
+      throw new BadRequestException('Price calculation discrepancy exceeds threshold');
+    }
 
     const order = await this.orderRepository.createOrder({
       client_uuid: data.client_uuid,

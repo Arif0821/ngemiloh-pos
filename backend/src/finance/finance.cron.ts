@@ -36,7 +36,13 @@ export class FinanceCronService {
     });
 
     if (!log) {
-      this.logger.warn(`Laporan bagi hasil untuk bulan ${month}/${year} belum ditutup. Cannot send reminder.`);
+      this.logger.warn(`Laporan bagi hasil untuk bulan ${month}/${year} belum ditutup. Sending reminder...`);
+      await this.emailService.sendAlert(
+        `Peringatan: Laporan Bagi Hasil Belum Ditutup - ${month}/${year}`,
+        `<p>Laporan bagi hasil untuk bulan ${month} tahun ${year} <strong>belum ditutup</strong>.</p>
+         <p>Mohon segera tutup buku laporan bagi hasil sebelum tanggal 5 bulan ini.</p>
+         <p>Jika laporan sudah ditutup, abaikan email ini.</p>`
+      ).catch(err => console.error('Failed to send profit share reminder:', err.message));
       return;
     }
 

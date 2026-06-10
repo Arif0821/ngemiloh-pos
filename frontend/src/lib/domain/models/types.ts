@@ -37,6 +37,7 @@ export interface Discount {
   scope: 'all_products' | 'category' | 'specific_product';
   target_id: string | null;
   is_active: boolean;
+  applicable_days?: number[];
 }
 
 export interface OrderItem {

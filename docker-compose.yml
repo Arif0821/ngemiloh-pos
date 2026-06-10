@@ -37,7 +37,7 @@ services:
   # PgBouncer: Connection pooler (transaction mode)
   # ============================================================
   pgbouncer:
-    image: edoburu/pgbouncer:latest
+    image: edoburu/pgbouncer:1.23.1
     container_name: ngemiloh_pgbouncer
     environment:
       DATABASE_URL: "postgres://ngemiloh:${DB_PASSWORD}@postgres:5432/ngemiloh_db"
@@ -121,6 +121,7 @@ services:
       - SENTRY_DSN=${SENTRY_DSN}
       - DISCREPANCY_THRESHOLD=${DISCREPANCY_THRESHOLD:-5000}
       - PRICE_DELTA_THRESHOLD_PCT=${PRICE_DELTA_THRESHOLD_PCT:-10}
+      - TZ=${TZ:-Asia/Jakarta}
     volumes:
       - storage_data:/var/storage/ngemiloh
     depends_on:

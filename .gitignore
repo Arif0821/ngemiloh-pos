@@ -36,6 +36,9 @@ ngemiloh-key.pem
 # ── Agent Skills (keep as regular directory, not submodule) ──
 agent-skills/
 
+# ── Review & Documentation (local reference only) ──
+full_review_ngemiloh_pos.md
+
 # ── Development/Utility Files (tidak perlu di repo) ──
 read_docx.py
 prd_v3.txt

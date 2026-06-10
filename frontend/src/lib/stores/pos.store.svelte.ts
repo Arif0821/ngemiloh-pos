@@ -57,7 +57,14 @@ export class PosStore {
   );
   
   discountTotal: number = $derived(
-    this.appliedDiscount ? (this.appliedDiscount.type === 'percentage' ? this.cartTotalBeforeDiscount * (Number(this.appliedDiscount.value) / 100) : Number(this.appliedDiscount.value)) : 0
+    this.cart.reduce((sum, item) => {
+      const discount = this.getBestDiscountForProduct(item);
+      if (!discount) return sum;
+      const itemBase = Number(item.base_price) * item.quantity;
+      const modifierTotal = item.selectedModifiers.reduce((s: number, m: ModifierOption) => s + Number(m.additional_price || 0), 0) * item.quantity;
+      const itemTotal = itemBase + modifierTotal;
+      return sum + (discount.type === 'percentage' ? itemTotal * (Number(discount.value) / 100) : Number(discount.value));
+    }, 0)
   );
   
   cartTotal: number = $derived(Math.max(0, this.cartTotalBeforeDiscount - this.discountTotal));
