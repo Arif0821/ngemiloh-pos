@@ -42,13 +42,11 @@ FROM mirror.gcr.io/library/node:20-alpine AS production
 ENV NODE_ENV=production
 WORKDIR /app
 
-# Copy package files
+# Copy package files for reference (not for install)
 COPY package.json package-lock.json* ./
 
-# Install production dependencies
-RUN npm install --omit=dev
-
-# Copy entire node_modules from builder (all dependencies needed for runtime)
+# Copy entire node_modules from builder - this includes ALL dependencies
+# including express, nestjs, and all production dependencies
 COPY --from=builder /app/node_modules ./node_modules
 
 # Copy Prisma schema + generated client dari builder
