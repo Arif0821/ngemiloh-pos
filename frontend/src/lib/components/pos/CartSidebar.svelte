@@ -37,7 +37,7 @@
               <p class="text-brand-600 dark:text-brand-400 font-bold text-sm mt-1">{posStore.formatRp((item.base_price + item.selectedModifiers.reduce((s:number,m)=>s+Number(m.additional_price),0)) * item.quantity)}</p>
             </div>
             <div class="flex items-center gap-1 bg-white dark:bg-surface-800 rounded-xl shadow-sm border border-surface-200 dark:border-surface-700 p-1">
-              <button class="w-[44px] h-[44px] flex items-center justify-center text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded-lg active:scale-95 transition-all" onclick={() => { vibrate(); posStore.updateQuantity(item.cartItemId, -1); }}>
+              <button class="w-11 h-11 flex items-center justify-center text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded-lg active:scale-95 transition-all" onclick={() => { vibrate(); posStore.updateQuantity(item.cartItemId, -1); }}>
                 {#if item.quantity === 1}
                   <svg class="w-5 h-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
                 {:else}
@@ -45,7 +45,7 @@
                 {/if}
               </button>
               <span class="w-8 text-center font-bold">{item.quantity}</span>
-              <button class="w-[44px] h-[44px] flex items-center justify-center text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded-lg active:scale-95 transition-all" onclick={() => { vibrate(); posStore.updateQuantity(item.cartItemId, 1); }}>
+              <button class="w-11 h-11 flex items-center justify-center text-brand-500 hover:bg-brand-50 dark:hover:bg-brand-900/30 rounded-lg active:scale-95 transition-all" onclick={() => { vibrate(); posStore.updateQuantity(item.cartItemId, 1); }}>
                 <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"></path></svg>
               </button>
             </div>
@@ -74,8 +74,8 @@
       <span class="text-surface-500 font-medium">Total Bayar</span>
       <span class="text-3xl font-black text-brand-600 dark:text-brand-400">{posStore.formatRp(posStore.cartTotal)}</span>
     </div>
-    <button 
-      class="w-full h-[60px] text-lg font-bold rounded-2xl {posStore.cart.length > 0 ? 'glass-button' : 'bg-surface-200 text-surface-400 cursor-not-allowed'}"
+    <button
+      class="w-full h-60 text-lg font-bold rounded-2xl {posStore.cart.length > 0 ? 'glass-button' : 'bg-surface-200 text-surface-400 cursor-not-allowed'}"
       disabled={posStore.cart.length === 0}
       onclick={() => posStore.showPaymentModal = true}
     >

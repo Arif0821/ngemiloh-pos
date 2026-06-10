@@ -341,7 +341,7 @@
 
 <!-- Modal Void Transaksi -->
 {#if showVoidModal}
-<div class="fixed inset-0 bg-slate-900/75 z-[60] flex items-center justify-center p-4">
+<div class="fixed inset-0 bg-slate-900/75 z-60 flex items-center justify-center p-4">
   <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden border-2 border-red-500">
     <div class="p-6 bg-red-50 border-b border-red-100">
       <h3 class="text-lg font-bold text-red-800 flex items-center gap-2">
