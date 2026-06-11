@@ -77,29 +77,42 @@ docker-compose down     → Stop all services
 
 ## AI Agent Skills
 
-This project uses the [agent-skills](https://github.com/addyosmani/agent-skills) library for engineering workflow best practices. See `SKILLS_SUMMARY.md` for the complete reference.
+This project uses the [agent-skills](https://github.com/addyosmani/agent-skills) library. All 23 skills are available in `.claude/commands/`.
 
-### Quick Skill Reference
+### Quick Reference
 
-| Task | Skill |
-|------|-------|
-| Unclear requirements | `interview-me` |
-| Vague idea | `idea-refine` |
-| New feature | `spec-driven-development` |
-| Planning tasks | `planning-and-task-breakdown` |
-| Building code | `incremental-implementation` |
-| Writing tests | `test-driven-development` |
-| UI work | `frontend-ui-engineering` |
-| API design | `api-and-interface-design` |
-| Debugging | `debugging-and-error-recovery` |
-| Code review | `code-review-and-quality` |
-| Simplifying code | `code-simplification` |
-| Security | `security-and-hardening` |
-| Performance | `performance-optimization` |
-| Git commits | `git-workflow-and-versioning` |
-| CI/CD | `ci-cd-and-automation` |
-| Documentation | `documentation-and-adrs` |
-| Deployment | `shipping-and-launch` |
+| Skill | Fungsi | Kapan Digunakan |
+|-------|--------|-----------------|
+| **META** | | |
+| `using-agent-skills` | Peta skills | Awal sesi, bingung pakai skill apa |
+| **DEFINE** | | |
+| `interview-me` | Tanya satu-satu | Requirement belum jelas |
+| `idea-refine` | Jernihkan ide | Konsep masih abstrak/nabrak |
+| `spec-driven-development` | Tulis PRD | Mulai fitur baru |
+| **PLAN** | | |
+| `planning-and-task-breakdown` | Pecah jadi task | Udah ada spec, mau implement |
+| **BUILD** | | |
+| `incremental-implementation` | Build tipis-tipis | Implementasi umum |
+| `test-driven-development` | Test duluan | Tambah logic / fix bug |
+| `context-engineering` | Atur konteks | Konteks hilang / output jelek |
+| `source-driven-development` | Cek docs | Pakai library baru |
+| `doubt-driven-development` | Review adversarial | High stakes (prod, security) |
+| `frontend-ui-engineering` | UI component | Bikin/modify UI |
+| `api-and-interface-design` | Design API | Bikin API baru |
+| **VERIFY** | | |
+| `browser-testing-with-devtools` | Chrome DevTools | Debug browser/frontend |
+| `debugging-and-error-recovery` | 5-step triage | Bug/error muncul |
+| **REVIEW** | | |
+| `code-review-and-quality` | Review 5-axis | Sebelum merge |
+| `code-simplification` | Sederhanakan | Kode berantakan |
+| `security-and-hardening` | OWASP audit | Input user, auth, payment |
+| `performance-optimization` | Core Web Vitals | Performa lambat |
+| **SHIP** | | |
+| `git-workflow-and-versioning` | Atomic commit | Setiap perubahan kode |
+| `ci-cd-and-automation` | Pipeline CI/CD | Setup/modify build pipeline |
+| `deprecation-and-migration` | Cleanup kode | Hapus fitur lama |
+| `documentation-and-adrs` | Dokumentasi ADR | Decision arsitektur |
+| `shipping-and-launch` | Launch checklist | Mau deploy |
 
 ### Skill Discovery Flow
 
