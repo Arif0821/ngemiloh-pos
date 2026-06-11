@@ -310,7 +310,7 @@ jobs:
           cache-to: type=gha,mode=max
 
       - name: Run Trivy vulnerability scanner
-        uses: aquasecurity/trivy-action@master
+        uses: aquasecurity/trivy-action@0.19.0
         with:
           image-ref: ${{ secrets.DOCKER_USERNAME }}/ngemiloh-api:${{ github.sha }}
           format: sarif
@@ -320,7 +320,7 @@ jobs:
           ignore-unfixed: true
 
       - name: Upload Trivy results to GitHub Security
-        if: always() && hashFiles('trivy-results.sarif') != '' && github.repository == 'Arif0821/ngemiloh-pos'
+        if: always() && hashFiles('trivy-results.sarif') != ''
         uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: trivy-results.sarif
@@ -334,6 +334,12 @@ jobs:
           tags: ${{ secrets.DOCKER_USERNAME }}/ngemiloh-api:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Build frontend
+        run: |
+          cd frontend
+          npm install --legacy-peer-deps
+          npm run build
 
       - name: Build and push Caddy (frontend)
         uses: docker/build-push-action@v5

@@ -1,4 +1,6 @@
 export class ApiClient {
+  private static recursionDepth = 0;
+
   private static getCookie(name: string) {
     if (typeof document === 'undefined') return undefined;
     const value = `; ${document.cookie}`;
@@ -7,6 +9,15 @@ export class ApiClient {
   }
 
   static async request(endpoint: string, options: RequestInit = {}): Promise<Response> {
+    // Prevent infinite recursion in token refresh loop
+    if (this.recursionDepth > 3) {
+      this.recursionDepth = 0;
+      if (typeof window !== 'undefined') {
+        window.location.href = '/login';
+      }
+      throw new Error('Token refresh loop detected - redirecting to login');
+    }
+
     // Automatically prepend /api/v1 if it's a relative path and doesn't already have it
     let url = endpoint;
     if (!url.startsWith('http')) {
@@ -14,10 +25,10 @@ export class ApiClient {
        const baseUrl = import.meta.env.VITE_API_URL || '';
        url = baseUrl ? `${baseUrl}${path}` : path;
     }
-    
+
     options.credentials = 'include'; // Always include credentials
     options.headers = options.headers || {};
-    
+
     // SECURITY: Make CSRF token mandatory for state-changing requests
     if (options.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method.toUpperCase())) {
       const csrfToken = this.getCookie('csrf_token');
@@ -39,6 +50,7 @@ export class ApiClient {
 
     // Global 401 handling
     if (response.status === 401 && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/refresh')) {
+      this.recursionDepth++;
       const refreshUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1/auth/refresh` : `/api/v1/auth/refresh`;
       const refreshRes = await fetch(refreshUrl, {
         method: 'POST',
@@ -47,8 +59,16 @@ export class ApiClient {
 
       if (refreshRes.ok) {
         // Retry the original request (re-fetch CSRF token for new request)
-        return this.request(endpoint, options);
+        try {
+          const retryResponse = await this.request(endpoint, options);
+          this.recursionDepth = 0;
+          return retryResponse;
+        } catch (e) {
+          this.recursionDepth = 0;
+          throw e;
+        }
       } else {
+        this.recursionDepth = 0;
         if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
           window.location.href = '/login';
         }

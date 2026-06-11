@@ -204,12 +204,14 @@ export class PosService {
   qrisTimer: ReturnType<typeof setInterval> | null = null;
   pollingInterval: ReturnType<typeof setInterval> | null = null;
   sseEventSource: EventSource | null = null;
+  private isOrderCompleted = false;
 
   startQrisWaiting(orderData: OrderResponse, onSuccess: () => void) {
     posStore.isWaitingQris = true;
     posStore.showPaymentModal = false;
     posStore.qrisOrderInfo = orderData;
     posStore.qrisCountdown = 900;
+    this.isOrderCompleted = false;
 
     if (this.qrisTimer) clearInterval(this.qrisTimer);
     this.qrisTimer = setInterval(() => {
@@ -222,19 +224,29 @@ export class PosService {
 
     this.sseEventSource = new EventSource(`/api/v1/orders/${orderData.id}/sse`, { withCredentials: true });
     this.sseEventSource.onmessage = (event) => {
-      const data = JSON.parse(event.data);
-      if (data.status === 'completed') {
-        onSuccess();
+      // HIGH: Prevent double execution from SSE + polling race condition
+      if (this.isOrderCompleted) return;
+      try {
+        const data = JSON.parse(event.data);
+        if (data.status === 'completed') {
+          this.isOrderCompleted = true;
+          onSuccess();
+        }
+      } catch (e) {
+        console.warn('Failed to parse SSE message:', e);
       }
     };
 
     if (this.pollingInterval) clearInterval(this.pollingInterval);
     this.pollingInterval = setInterval(async () => {
+      // HIGH: Prevent double execution from SSE + polling race condition
+      if (this.isOrderCompleted) return;
       try {
         const res = await api.get(`/orders/${orderData.id}/status`);
         if (res.ok) {
           const json = await res.json();
           if (json.data?.status === 'completed') {
+            this.isOrderCompleted = true;
             onSuccess();
           }
         }
@@ -246,6 +258,7 @@ export class PosService {
 
   cancelQrisWaiting() {
     posStore.isWaitingQris = false;
+    this.isOrderCompleted = false;
     if (this.qrisTimer) clearInterval(this.qrisTimer);
     if (this.pollingInterval) clearInterval(this.pollingInterval);
     if (this.sseEventSource) {

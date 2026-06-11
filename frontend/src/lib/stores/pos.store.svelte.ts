@@ -12,6 +12,7 @@ export class PosStore {
   // Products & Cart
   products: LocalProduct[] = $state([]);
   cart: CartItem[] = $state([]);
+  isCartLoaded: boolean = $state(false);
 
   // Modals & UI Toggles
   showPaymentModal: boolean = $state(false);

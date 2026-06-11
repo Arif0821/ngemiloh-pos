@@ -274,6 +274,12 @@ export class OrdersService {
         if (qrisResponse.actions && qrisResponse.actions.length > 0) {
           const qrString = qrisResponse.actions.find((a: any) => a.name === 'generate-qr-code')?.url;
 
+          // CRITICAL: Validate qrString exists before returning
+          if (!qrString) {
+            this.logger.warn('QRIS URL not found in response actions');
+            throw new Error('QRIS URL not found in response');
+          }
+
           await this.orderRepository.updateOrder(order.id, {
             payment_gateway_ref: qrisResponse.transaction_id,
             payment_raw_response: qrString,

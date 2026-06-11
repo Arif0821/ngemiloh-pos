@@ -11,6 +11,9 @@ ENV NODE_OPTIONS="--max-old-space-size=512"
 ENV PRISMA_SKIP_POSTINSTALL_GENERATE=1
 ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
 
+# CI/CD: Install curl for healthcheck (Alpine doesn't have it by default)
+RUN apk add --no-cache curl
+
 WORKDIR /app
 
 # Copy dependency manifest terlebih dahulu (untuk cache layer)

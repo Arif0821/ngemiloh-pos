@@ -1,20 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
-
-/**
- * Escape HTML special characters to prevent XSS
- * This sanitizes user-controlled content before inserting into HTML template
- */
-function escapeHtml(text: string): string {
-  if (!text) return '';
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;')
-    .replace(/\n/g, '<br>');
-}
+import { escapeHtml, escapeHtmlForEmail } from '../common/utils/html';
 
 @Injectable()
 export class EmailService {
@@ -52,7 +38,7 @@ export class EmailService {
       const fromEmail = process.env.EMAIL_USER || process.env.SMTP_USER;
 
       // SECURITY: Escape HTML to prevent XSS in email
-      const safeMessage = escapeHtml(message);
+      const safeMessage = escapeHtmlForEmail(message);
 
       await this.transporter.sendMail({
         from: `"Ngemiloh POS Alert" <${fromEmail}>`,
@@ -91,7 +77,7 @@ export class EmailService {
       const fromEmail = process.env.EMAIL_USER || process.env.SMTP_USER;
 
       // SECURITY: Escape HTML to prevent XSS in email
-      const safeMessage = escapeHtml(message);
+      const safeMessage = escapeHtmlForEmail(message);
 
       await this.transporter.sendMail({
         from: `"Ngemiloh POS Reminder" <${fromEmail}>`,

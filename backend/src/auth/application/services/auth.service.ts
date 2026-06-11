@@ -6,19 +6,7 @@ import { EmailService } from '../../../email/email.service';
 import { Role, User } from '@prisma/client';
 import { AUTH_REPOSITORY, type AuthRepositoryInterface } from '../../domain/interfaces/auth.repository.interface';
 import { LOCKOUT_DURATION_MS, LOCKOUT_THRESHOLD } from '../../../common/utils/constants';
-
-/**
- * Escape HTML special characters to prevent XSS in email content
- */
-function escapeHtml(text: string): string {
-  if (!text) return '';
-  return text
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
-}
+import { escapeHtml } from '../../../common/utils/html';
 
 @Injectable()
 export class AuthService {
