@@ -207,19 +207,22 @@ export class OrdersController {
 
     // SECURITY: Verify webhook signature from Midtrans
     const signatureKey = body.signature_key || body.signature;
-    const isProduction = process.env.MIDTRANS_ENV === 'production';
 
-    if (isProduction && !signatureKey) {
+    // Always verify signature if present, skip if sandbox without signature
+    if (!signatureKey && process.env.MIDTRANS_ENV === 'sandbox') {
+      this.logger.warn('Midtrans webhook without signature (sandbox mode - skipping verification)');
+    } else if (!signatureKey) {
       throw new ForbiddenException('Invalid webhook: missing signature');
     }
 
     try {
       await this.ordersService.handleMidtransWebhook(body);
       return { status: 'ok' };
-    } catch (error: any) {
+    } catch (error: unknown) {
       // SECURITY: Log internal error details server-side only, never expose to webhook caller
       // Return generic response to prevent order ID enumeration
-      this.logger.error(`Webhook processing error: ${error.message}`, error.stack);
+      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      this.logger.error(`Webhook processing error: ${errorMessage}`);
       return { status: 'ok' };  // Always return ok to prevent Midtrans retries on our errors
     }
   }

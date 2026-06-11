@@ -1,8 +1,10 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, Logger } from '@nestjs/common';
 import { INVENTORY_REPOSITORY, type IInventoryRepository } from '../../domain/interfaces/inventory.repository.interface';
 
 @Injectable()
 export class InventoryService {
+  private readonly logger = new Logger(InventoryService.name);
+
   constructor(
     @Inject(INVENTORY_REPOSITORY)
     private readonly inventoryRepository: IInventoryRepository
@@ -119,7 +121,11 @@ export class InventoryService {
         }
         if (remaining > 0) {
           const rm = await repo.findRawMaterialById(rawMaterialId);
-          totalCogs += remaining * Number(rm?.cost_per_unit || 0);
+          if (rm) {
+            totalCogs += remaining * Number(rm.cost_per_unit || 0);
+          } else {
+            this.logger.warn(`Raw material ${rawMaterialId} not found for COGS calculation`);
+          }
         }
         await repo.createInventoryTransaction({ raw_material_id: rawMaterialId, qty, transaction_type: 'OUT', reference_id: orderId, notes: `Auto-deduct for Order ${orderId}` });
         await repo.updateRawMaterialStock(rawMaterialId, qty, 'decrement');

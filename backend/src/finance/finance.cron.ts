@@ -46,7 +46,7 @@ export class FinanceCronService {
         `<p>Laporan bagi hasil untuk bulan ${month} tahun ${year} <strong>belum ditutup</strong>.</p>
          <p>Mohon segera tutup buku laporan bagi hasil sebelum tanggal 5 bulan ini.</p>
          <p>Jika laporan sudah ditutup, abaikan email ini.</p>`
-      ).catch(err => console.error('Failed to send profit share reminder:', err.message));
+      ).catch(err => this.logger.error(`Failed to send profit share reminder: ${err instanceof Error ? err.message : String(err)}`));
       return;
     }
 
@@ -57,7 +57,7 @@ export class FinanceCronService {
         `<p>Peringatan dari sistem. Anda <strong>belum membayar bagi hasil kasir</strong> untuk periode bulan ${month} tahun ${year}.</p>
          <p>Total yang harus dibayarkan: <strong>${amount}</strong>.</p>
          <p>Deadline penyelesaian adalah <strong>tanggal 5 bulan ini</strong>. Mohon segera melunasi dan memperbarui status di halaman laporan.</p>`
-      ).catch(err => console.error('Failed to send profit share reminder:', err.message));
+      ).catch(err => this.logger.error(`Failed to send profit share reminder: ${err instanceof Error ? err.message : String(err)}`));
     }
   }
 }

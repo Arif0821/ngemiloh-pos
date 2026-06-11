@@ -30,9 +30,13 @@ import { AuditInterceptor } from './audit/presentation/audit.interceptor';
         if (redisUrl) {
           try {
             const url = new URL(redisUrl);
-            return { host: url.hostname, port: Number(url.port) || 6379 };
-          } catch {
-            // Fallback jika URL tidak valid
+            const host = url.hostname;
+            const port = Number(url.port) || 6379;
+            if (!host) throw new Error('Invalid hostname in REDIS_URL');
+            return { host, port };
+          } catch (error) {
+            // Log warning but use fallback
+            console.warn(`Invalid REDIS_URL: ${redisUrl}, using fallback`);
           }
         }
         return {

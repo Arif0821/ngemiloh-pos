@@ -48,8 +48,8 @@ export class PrinterService {
       return true;
 
     } catch (e: unknown) {
-      console.error('Bluetooth printing error', e);
-      // alert('Gagal mencetak struk via Bluetooth: ' + e.message);
+      const errorMessage = e instanceof Error ? e.message : String(e);
+      console.error('Bluetooth printing error:', errorMessage);
       return false;
     }
   }

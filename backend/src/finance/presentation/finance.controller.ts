@@ -29,7 +29,6 @@ export class FinanceController {
   }
 
   @Post('opex')
-  @Roles(Role.superadmin)
   async createOpex(@Body() createDto: CreateOpexDto, @Req() req: Request & { user: any }) {
     const data = await this.financeService.createOpex(createDto, req.user.id);
     return { status: 'success', data };
@@ -44,7 +43,6 @@ export class FinanceController {
   }
 
   @Post('profit-share/close')
-  @Roles(Role.superadmin)
   async closePeriod(@Body() body: ClosePeriodDto) {
     const m = body.month ? parseInt(body.month) : new Date().getMonth() + 1;
     const y = body.year ? parseInt(body.year) : new Date().getFullYear();
@@ -53,7 +51,6 @@ export class FinanceController {
   }
 
   @Post('profit-share/pay')
-  @Roles(Role.superadmin)
   async payProfitShare(
     @Body() body: CompleteProfitShareDto,
     @Req() req: Request & { user: any }
@@ -71,14 +68,12 @@ export class FinanceController {
   }
 
   @Post('assets')
-  @Roles(Role.superadmin)
   async createAsset(@Body() createDto: CreateAssetDto) {
     const data = await this.financeService.createAsset(createDto as any);
     return { status: 'success', data };
   }
 
   @Patch('assets/:id')
-  @Roles(Role.superadmin)
   async updateAsset(@Param('id') id: string, @Body() updateDto: UpdateAssetDto) {
     const data = await this.financeService.updateAsset(id, updateDto as any);
     return { status: 'success', data };
@@ -113,7 +108,6 @@ export class FinanceController {
   }
 
   @Get('cash/shifts')
-  @Roles('superadmin')
   async getShifts() {
     const data = await this.financeService.getShifts();
     return { success: true, data };

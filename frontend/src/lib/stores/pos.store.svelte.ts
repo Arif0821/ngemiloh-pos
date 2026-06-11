@@ -38,7 +38,7 @@ export class PosStore {
   isAllRequiredModifiersSelected: boolean = $derived.by(() => {
     if (!this.selectedProductForModifier) return false;
     for (const g of this.selectedProductForModifier.modifier_groups) {
-      if (g.is_required && !this.selectedModifiers[g.id]) return false;
+      if (g.is_required === true && !this.selectedModifiers[g.id]) return false;
     }
     return true;
   });

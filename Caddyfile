@@ -3,6 +3,9 @@
 
 # Backend API (ganti domain ini dengan domain Anda nanti)
 :80 {
+    # Enable compression for better performance
+    encode gzip zstd
+
     # Health check endpoint
     handle /health {
         respond "OK" 200

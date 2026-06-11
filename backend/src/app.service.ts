@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from './prisma/prisma.service';
 
+// Application version - read from package.json at build time
+const APP_VERSION = process.env.npm_package_version || '1.0.0';
+
 @Injectable()
 export class AppService {
   constructor(private prisma: PrismaService) {}
@@ -18,7 +21,7 @@ export class AppService {
         status: 'ok',
         database: 'connected',
         latency_ms: dbLatency,
-        version: process.env.npm_package_version || '1.0.0',
+        version: APP_VERSION,
         timestamp: new Date().toISOString(),
       };
     } catch (error) {
