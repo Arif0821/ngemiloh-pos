@@ -85,7 +85,16 @@ export class OrdersService {
       let appliedDiscountId: string | null = null;
 
       for (const disc of activeDiscounts) {
-        const isApplicable = disc.scope === 'all_products' || 
+        // TINGGI-03: Check applicable_days before applying discount
+        if (disc.applicable_days && disc.applicable_days.length > 0) {
+          const now = new Date();
+          // JS getDay(): 0=Sunday, 1=Monday...6=Saturday
+          // PRD uses 1=Monday...7=Sunday (ISO), convert accordingly
+          const dayOfWeek = now.getDay() || 7;  // Convert Sunday (0) to 7
+          if (!disc.applicable_days.includes(dayOfWeek)) continue;
+        }
+
+        const isApplicable = disc.scope === 'all_products' ||
                              (disc.scope === 'specific_product' && disc.target_id === product.id) ||
                              (disc.scope === 'category' && disc.target_id === product.category_id);
         
@@ -125,6 +134,30 @@ export class OrdersService {
       calculatedSubtotal += rowTotal;
       totalDiscountAmount += (maxDiscountAmount * item.quantity);
 
+      // Capture modifier snapshots for audit trail
+      const modifierSnaps: Array<{
+        option_id: string;
+        group_name_snapshot: string;
+        option_name_snapshot: string;
+        additional_price_at_time: any;
+      }> = [];
+
+      if (item.modifiers?.length) {
+        for (const mod of item.modifiers) {
+          for (const group of product.modifier_groups) {
+            const option = group.options.find((o: any) => o.id === mod.option_id);
+            if (option) {
+              modifierSnaps.push({
+                option_id: option.id,
+                group_name_snapshot: group.name,
+                option_name_snapshot: option.name,
+                additional_price_at_time: option.additional_price,
+              });
+            }
+          }
+        }
+      }
+
       orderItemsPayload.push({
         product_id: product.id,
         product_name_snapshot: product.name,
@@ -135,7 +168,8 @@ export class OrdersService {
         notes: item.notes,
         discounted_base: basePrice - maxDiscountAmount,
         modifier_total: modifierTotal,
-        final_price: itemTotal
+        final_price: itemTotal,
+        modifierSnaps,
       });
     }
 
@@ -195,9 +229,13 @@ export class OrdersService {
           product_name_snapshot: i.product_name_snapshot,
           base_price: i.unit_price,
           discounted_base: i.discounted_base,
-          final_price: i.final_price, 
+          modifier_total: i.modifier_total,
+          final_price: i.final_price,
           quantity: i.quantity,
-          subtotal: i.subtotal
+          subtotal: i.subtotal,
+          modifiers: {
+            create: i.modifierSnaps || []
+          }
         }))
       }
     });
@@ -208,13 +246,19 @@ export class OrdersService {
       });
     }
 
-    if (data.payment_method === PaymentMethod.qris) {
+    // KRITIS-05: Create QRIS charge for both qris and split payment (when qrisAmount > 0)
+    if (data.payment_method === PaymentMethod.qris ||
+        (data.payment_method === PaymentMethod.split && qrisAmount > 0)) {
       try {
+        const chargeAmount = data.payment_method === PaymentMethod.split
+          ? Math.round(qrisAmount)
+          : Math.round(calculatedFinalPrice);
+
         const qrisParams = {
           payment_type: 'qris',
           transaction_details: {
             order_id: order.id,
-            gross_amount: Math.round(calculatedFinalPrice)
+            gross_amount: chargeAmount
           },
           qris: {
             acquirer: "gopay"
@@ -224,28 +268,28 @@ export class OrdersService {
             unit: "second"
           }
         };
-        
+
         const qrisResponse = await this.midtransCore.charge(qrisParams);
-        
+
         if (qrisResponse.actions && qrisResponse.actions.length > 0) {
           const qrString = qrisResponse.actions.find((a: any) => a.name === 'generate-qr-code')?.url;
-          
-          await this.orderRepository.updateOrder(order.id, { 
+
+          await this.orderRepository.updateOrder(order.id, {
             payment_gateway_ref: qrisResponse.transaction_id,
             payment_raw_response: qrString,
           });
-          
+
           return { ...order, qr_string: qrString, midtrans_transaction_id: qrisResponse.transaction_id };
         }
       } catch (err: any) {
-        this.logger.warn('Midtrans QRIS Generation Failed, falling back to MOCK QRIS for testing. Error: ' + err.message);
+        this.logger.warn('QRIS charge failed, falling back to mock: ' + err.message);
         const mockQrString = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=ngemiloh-mock-${order.id}`;
-        
-        await this.orderRepository.updateOrder(order.id, { 
+
+        await this.orderRepository.updateOrder(order.id, {
           payment_gateway_ref: `mock-txn-${order.id}`,
           payment_raw_response: mockQrString,
         });
-        
+
         return { ...order, qr_string: mockQrString, midtrans_transaction_id: `mock-txn-${order.id}` };
       }
     }
@@ -376,15 +420,27 @@ export class OrdersService {
 
       let itemTotal = Number(product.base_price);
       let modifierTotal = 0;
+      const modifierSnaps: Array<{
+        option_id: string;
+        group_name_snapshot: string;
+        option_name_snapshot: string;
+        additional_price_at_time: any;
+      }> = [];
 
       if (item.modifiers?.length) {
         for (const mod of item.modifiers) {
           for (const group of product.modifier_groups || []) {
-             const option = group.options?.find((o: any) => o.id === mod.option_id);
-             if (option) {
-               modifierTotal += Number(option.additional_price);
-               itemTotal += Number(option.additional_price);
-             }
+            const option = group.options?.find((o: any) => o.id === mod.option_id);
+            if (option) {
+              modifierTotal += Number(option.additional_price);
+              itemTotal += Number(option.additional_price);
+              modifierSnaps.push({
+                option_id: option.id,
+                group_name_snapshot: group.name,
+                option_name_snapshot: option.name,
+                additional_price_at_time: option.additional_price,
+              });
+            }
           }
         }
       }
@@ -395,9 +451,13 @@ export class OrdersService {
         discount_id: null,
         quantity: item.quantity,
         base_price: product.base_price,
-        discounted_base: itemTotal,
+        discounted_base: Number(product.base_price),
+        modifier_total: modifierTotal,
         final_price: itemTotal,
-        subtotal: itemTotal * item.quantity
+        subtotal: itemTotal * item.quantity,
+        modifiers: {
+          create: modifierSnaps
+        }
       });
     }
 

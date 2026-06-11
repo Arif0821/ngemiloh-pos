@@ -34,11 +34,14 @@ export class DiscountCronService {
         this.logger.log(`Deactivated ${expiredDiscounts.length} expired discounts`);
       }
 
-      // Get all inactive discounts that should be active
+      // TINGGI-02: Only activate discounts that are NOT manually disabled
+      // This prevents cron from re-activating discounts that admin intentionally turned off
+      const fiveMinutesAgo = new Date(now.getTime() - 5 * 60 * 1000);
       const activeDiscountsToStart = await this.prisma.discount.findMany({
         where: {
           is_active: false,
-          valid_from: { lte: now },
+          manually_disabled: false,  // Skip manually disabled discounts
+          valid_from: { lte: now, gte: fiveMinutesAgo },  // Only activate if valid_from is within last 5 minutes
           OR: [
             { valid_until: null },
             { valid_until: { gte: now } }

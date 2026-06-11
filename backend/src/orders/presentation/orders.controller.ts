@@ -1,4 +1,4 @@
-import { Controller, Post, Get, Body, UseGuards, Req, HttpCode, HttpStatus, Param, Sse, MessageEvent, Patch, Res, Query, Ip, ForbiddenException, Logger } from '@nestjs/common';
+import { Controller, Post, Get, Body, UseGuards, Req, HttpCode, HttpStatus, Param, Sse, MessageEvent, Patch, Res, Query, ForbiddenException, Logger } from '@nestjs/common';
 import { OrdersService } from '../application/services/orders.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
@@ -153,7 +153,15 @@ export class OrdersController {
 
   @Post('webhooks/midtrans')
   @HttpCode(HttpStatus.OK)
-  async midtransWebhook(@Body() body: any, @Ip() ip: string) {
+  async midtransWebhook(@Body() body: any, @Req() req: Request) {
+    // KRITIS-06: Get real client IP from X-Forwarded-For header (set by Caddy proxy)
+    const forwardedFor = req.headers['x-forwarded-for'];
+    const ip = Array.isArray(forwardedFor)
+      ? forwardedFor[0]
+      : typeof forwardedFor === 'string'
+        ? forwardedFor.split(',')[0].trim()
+        : req.socket.remoteAddress || 'unknown';
+
     // SECURITY: Verify request comes from Midtrans IPs
     // Midtrans official IP ranges (production)
     const midtransIps = (process.env.MIDTRANS_ALLOWED_IPS || '')

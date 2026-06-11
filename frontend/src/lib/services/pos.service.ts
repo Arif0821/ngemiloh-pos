@@ -170,7 +170,6 @@ export class PosService {
         orders: pending.map(order => ({
           client_uuid: order.client_uuid,
           payment_method: order.payment_method,
-          order_type: 'dine_in',
           client_final_price: order.final_price,
           items: order.items
         }))
@@ -263,7 +262,6 @@ export class PosService {
     const payload = {
       client_uuid: clientUuid,
       payment_method: posStore.paymentMethod,
-      order_type: 'dine_in',
       client_final_price: posStore.cartTotal,
       discount_total: posStore.discountTotal,
       discount_id: posStore.appliedDiscount?.id,

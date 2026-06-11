@@ -60,10 +60,9 @@ export class PosStore {
     this.cart.reduce((sum, item) => {
       const discount = this.getBestDiscountForProduct(item);
       if (!discount) return sum;
-      const itemBase = Number(item.base_price) * item.quantity;
-      const modifierTotal = item.selectedModifiers.reduce((s: number, m: ModifierOption) => s + Number(m.additional_price || 0), 0) * item.quantity;
-      const itemTotal = itemBase + modifierTotal;
-      return sum + (discount.type === 'percentage' ? itemTotal * (Number(discount.value) / 100) : Number(discount.value));
+      // TINGGI-04: Discount only applies to base_price, NOT modifier total (matching backend logic)
+      const baseTotal = Number(item.base_price) * item.quantity;
+      return sum + (discount.type === 'percentage' ? baseTotal * (Number(discount.value) / 100) : Number(discount.value) * item.quantity);
     }, 0)
   );
   
@@ -82,15 +81,16 @@ export class PosStore {
   
   getBestDiscountForProduct(product: LocalProduct) {
     if (!this.activeDiscounts || this.activeDiscounts.length === 0) return null;
-    
+
     const today = new Date().getDay() || 7;
     let bestDiscount = null;
     let maxAmount = 0;
-    
+
     for (const d of this.activeDiscounts) {
       if (!d.applicable_days || d.applicable_days.includes(today)) {
         if (d.scope === 'all_products' || (d.scope === 'category' && d.target_id === product.category_id) || (d.scope === 'specific_product' && d.target_id === product.id)) {
-          let amt = d.type === 'percentage' ? product.base_price * (Number(d.value) / 100) : Number(d.value);
+          // TINGGI-04: Discount only applies to base_price (matching backend logic)
+          let amt = d.type === 'percentage' ? Number(product.base_price) * (Number(d.value) / 100) : Number(d.value);
           if (amt > maxAmount) {
             maxAmount = amt;
             bestDiscount = { ...d, calculatedAmount: amt };

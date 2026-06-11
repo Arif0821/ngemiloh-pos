@@ -18,17 +18,21 @@ export class FinanceCronService {
     this.logger.log('Running monthly profit share reminder check...');
 
     // Get previous month
+    // JS Date.getMonth() is 0-indexed: January=0, December=11
+    // We want the profit share for the month that just ended.
+    // E.g., if today is June 1st (month=5), we want May (month=4)
     const now = new Date();
-    // we want the profit share for the month that just ended.
-    // E.g., if today is June 1st, we check May's profit share.
-    let month = now.getMonth(); // 0-11, so if June (5), we want May (5), wait JS month is 0-indexed.
+    let month = now.getMonth(); // Current month index (0-11)
     let year = now.getFullYear();
-    
-    if (month === 0) { // If Jan 1st
+
+    // Convert current month to previous month (index conversion for new Date())
+    // If month=0 (January), we want December of previous year
+    if (month === 0) {
       month = 12;
       year--;
     }
-
+    // month - 1 converts from current month to previous month index for new Date()
+    // e.g., June (5) -> May (4) because new Date(2026, 4, 1) = May 1, 2026
     const periodMonth = new Date(year, month - 1, 1);
 
     const log = await this.prisma.profitShareLog.findUnique({

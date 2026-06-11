@@ -155,11 +155,19 @@ export class FinanceService {
   }
 
   async createAsset(data: any) {
+    // SEDANG-02: Support both 'value'/'lifespan_months' (non-standard) and 'purchase_price'/'useful_life_months' (standard)
+    const purchasePrice = Number(data.purchase_price ?? data.value ?? 0);
+    const lifespanMonths = Number(data.useful_life_months ?? data.lifespan_months ?? 0);
+
+    if (!purchasePrice || !lifespanMonths) {
+      throw new BadRequestException('Invalid asset data: purchase_price and useful_life_months are required');
+    }
+
     return this.financeRepository.createAsset({
       name: data.name,
-      purchase_price: data.value,
-      useful_life_months: data.lifespan_months,
-      monthly_depreciation: Math.round(Number(data.value) / Number(data.lifespan_months)),
+      purchase_price: purchasePrice,
+      useful_life_months: lifespanMonths,
+      monthly_depreciation: Math.round(purchasePrice / lifespanMonths),
       purchase_date: new Date(data.purchase_date),
       created_at: new Date(),
       is_active: true
@@ -170,14 +178,21 @@ export class FinanceService {
     const asset = await this.financeRepository.findAssetById(id);
     if (!asset) throw new NotFoundException('Asset not found');
 
-    let newValue = data.value !== undefined ? data.value : Number(asset.purchase_price);
-    let newLifespan = data.lifespan_months !== undefined ? data.lifespan_months : asset.useful_life_months;
+    // SEDANG-02: Support both 'value' (non-standard) and 'purchase_price' (standard)
+    const newValue = data.purchase_price ?? data.value ?? undefined;
+    const newLifespan = data.useful_life_months ?? data.lifespan_months ?? undefined;
+
+    let parsedValue = newValue !== undefined ? Number(newValue) : Number(asset.purchase_price);
+    let parsedLifespan = newLifespan !== undefined ? Number(newLifespan) : asset.useful_life_months;
+
+    if (newValue !== undefined && isNaN(parsedValue)) parsedValue = Number(asset.purchase_price);
+    if (newLifespan !== undefined && isNaN(parsedLifespan)) parsedLifespan = asset.useful_life_months;
 
     return this.financeRepository.updateAsset(id, {
       name: data.name,
-      purchase_price: newValue,
-      useful_life_months: newLifespan,
-      monthly_depreciation: Math.round(Number(newValue) / Number(newLifespan)),
+      purchase_price: parsedValue,
+      useful_life_months: parsedLifespan,
+      monthly_depreciation: Math.round(parsedValue / parsedLifespan),
       purchase_date: data.purchase_date ? new Date(data.purchase_date) : asset.purchase_date,
       is_active: data.is_active !== undefined ? data.is_active : asset.is_active
     });
@@ -320,16 +335,27 @@ export class FinanceService {
       { cashier_id: cashierId, status: 'open' },
       { shift_start: 'desc' }
     );
-    
+
     if (!shift) throw new NotFoundException('Tidak ada shift aktif.');
 
-    const orders = await this.financeRepository.findOrders({
+    // TINGGI-01: Get all orders (cash + split) to calculate cash portion from split payment
+    const allOrders = await this.financeRepository.findOrders({
       cashier_id: cashierId,
-      payment_method: 'cash',
       status: 'completed',
       created_at: { gte: shift.shift_start }
     });
-    const totalCashSales = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
+
+    // Calculate total cash from both cash and split payment methods
+    const totalCashSales = allOrders.reduce((sum, o) => {
+      if (o.payment_method === 'cash') {
+        return sum + Number(o.total_amount);
+      }
+      if (o.payment_method === 'split') {
+        // Only count the cash portion from split payment
+        return sum + Number(o.cash_amount || 0);
+      }
+      return sum; // qris doesn't go into cash drawer
+    }, 0);
 
     const expectedBalance = Number(shift.opening_balance) + totalCashSales;
     const discrepancy = closingBalance - expectedBalance;

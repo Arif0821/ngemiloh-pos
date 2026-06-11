@@ -21,9 +21,12 @@ export class ApiClient {
     // SECURITY: Make CSRF token mandatory for state-changing requests
     if (options.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method.toUpperCase())) {
       const csrfToken = this.getCookie('csrf_token');
-      // Throw error if CSRF token is missing - never silently proceed without it
+      // SEDANG-05: Redirect to login when CSRF token is missing (session expired)
       if (!csrfToken) {
-        throw new Error('CSRF token missing - cannot perform state-changing request');
+        if (typeof window !== 'undefined') {
+          window.location.href = '/login';
+        }
+        throw new Error('Session expired - redirecting to login');
       }
       options.headers = {
         ...options.headers,

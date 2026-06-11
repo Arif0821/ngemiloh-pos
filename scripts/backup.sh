@@ -14,7 +14,13 @@ FILENAME="$BACKUP_DIR/db_backup_$DATE.sql"
 ZIPNAME="$FILENAME.gz"
 
 # Encrypt Configuration
-ENCRYPTION_KEY="your_super_secret_encryption_key_here" # Use env var in prod
+# SEDANG-08: Require env var - fail if not set
+if [ -z "$BACKUP_ENCRYPTION_KEY" ]; then
+  echo "ERROR: BACKUP_ENCRYPTION_KEY environment variable is not set"
+  echo "Please set it before running this script: export BACKUP_ENCRYPTION_KEY='your-secure-key'"
+  exit 1
+fi
+ENCRYPTION_KEY="$BACKUP_ENCRYPTION_KEY"
 
 # Create backup directory if it doesn't exist
 mkdir -p "$BACKUP_DIR"

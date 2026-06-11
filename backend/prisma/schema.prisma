@@ -1,5 +1,6 @@
 generator client {
-  provider = "prisma-client-js"
+  provider      = "prisma-client-js"
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -151,6 +152,7 @@ model Discount {
   valid_until     DateTime?     @db.Timestamptz
   applicable_days Int[]         @db.SmallInt
   is_active       Boolean       @default(true)
+  manually_disabled Boolean     @default(false)  // TINGGI-02: Prevent cron from re-activating admin-disabled discounts
   created_by      String?       @db.Uuid
 
   creator     User?       @relation(fields: [created_by], references: [id])

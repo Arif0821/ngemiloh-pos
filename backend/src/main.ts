@@ -8,6 +8,7 @@ import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import compression from 'compression';
 import { join } from 'path';
+import express from 'express';
 
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { SentryErrorInterceptor } from './common/interceptors/sentry-error.interceptor';
@@ -60,8 +61,9 @@ async function bootstrap() {
         formAction: ["'self'"],
         frameSrc: ["'self'", 'https://app.sandbox.midtrans.com'], // Midtrans sandbox
         connectSrc: ["'self'", 'https://api.sandbox.midtrans.com'], // Midtrans sandbox
-        scriptSrc: ["'self'", "'nonce'", 'https://cdn.tailwindcss.com'],
-        styleSrc: ["'self'", "'nonce'", 'https://cdn.tailwindcss.com'],
+        // TINGGI-07: Removed literal 'nonce' - use allowed domains instead
+        scriptSrc: ["'self'", 'https://cdn.tailwindcss.com'],
+        styleSrc: ["'self'", 'https://cdn.tailwindcss.com'],
         upgradeInsecureRequests: [],
       },
     },
@@ -121,14 +123,10 @@ async function bootstrap() {
   // ========================================
   // STATIC FILES
   // ========================================
-  app.useStaticAssets(join(__dirname, '..', '..', 'frontend', 'static'), {
-    prefix: '/static/',
-    maxAge: '1d',
-    etag: true,
-  });
-
-  // Serve uploaded files
-  app.use('/uploads', require('express').static(process.env.STORAGE_PATH || join(__dirname, '..', '..', 'frontend', 'static', 'uploads')));
+  // TINGGI-06: Only serve storage path if configured (frontend is served by Caddy)
+  if (process.env.STORAGE_PATH) {
+    app.use('/storage', express.static(process.env.STORAGE_PATH));
+  }
 
   // ========================================
   // EXCEPTION FILTER & INTERCEPTORS

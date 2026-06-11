@@ -7,6 +7,9 @@ FROM mirror.gcr.io/library/node:20-alpine AS builder
 # HARDCODE: Never let Coolify override this - devDependencies required for build
 ENV NODE_ENV=development
 ENV NODE_OPTIONS="--max-old-space-size=512"
+# FIX KRITIS-02: Skip binary checksum verification (binary not needed for TypeScript compilation)
+ENV PRISMA_SKIP_POSTINSTALL_GENERATE=1
+ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
 
 WORKDIR /app
 
@@ -25,14 +28,7 @@ COPY tsconfig.json tsconfig.build.json nest-cli.json ./
 COPY src ./src
 
 # Generate Prisma Client & Build NestJS
-RUN npx prisma generate && \
-    echo "=== Running nest build ===" && \
-    npm run build && \
-    echo "=== Checking dist output ===" && \
-    find /app/dist -name "*.js" | head -20 && \
-    echo "=== Checking for main.js locations ===" && \
-    (test -f /app/dist/main.js && echo "/app/dist/main.js EXISTS!" || echo "/app/dist/main.js NOT FOUND") && \
-    (test -f /app/dist/src/main.js && echo "/app/dist/src/main.js EXISTS!" || echo "/app/dist/src/main.js NOT FOUND")
+RUN npx prisma generate && npm run build
 
 # ============================================================
 # Stage 2: Production Runtime

@@ -1,4 +1,4 @@
-import { Injectable, Inject, NotFoundException } from '@nestjs/common';
+import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
 import { type IDiscountRepository, DISCOUNT_REPOSITORY } from '../../domain/interfaces/discount.repository.interface';
 import { Prisma } from '@prisma/client';
 
@@ -23,6 +23,10 @@ export class DiscountsService {
   }
 
   async update(id: string, data: Prisma.DiscountUncheckedUpdateInput) {
+    // TINGGI-02: Track manual activation/deactivation to prevent cron from overriding
+    if ('is_active' in data) {
+      data.manually_disabled = !data.is_active;
+    }
     return this.discountRepository.update(id, data);
   }
 
