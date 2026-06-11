@@ -74,18 +74,18 @@ import { AuditInterceptor } from './audit/presentation/audit.interceptor';
         name: 'long',
         ttl: 3600000, // 1 hour
         limit: 1000, // 1000 requests per hour
-      }
+      },
     ]),
     EventEmitterModule.forRoot(),
-    PrismaModule, 
-    AuthModule, 
-    ProductsModule, 
-    OrdersModule, 
+    PrismaModule,
+    AuthModule,
+    ProductsModule,
+    OrdersModule,
     InventoryModule,
     FinanceModule,
     DiscountsModule,
     EmailModule,
-    UsersModule
+    UsersModule,
   ],
   controllers: [AppController],
   providers: [
@@ -97,7 +97,7 @@ import { AuditInterceptor } from './audit/presentation/audit.interceptor';
     {
       provide: APP_INTERCEPTOR,
       useClass: AuditInterceptor, // Apply audit log globally for mutating requests
-    }
+    },
   ],
 })
 export class AppModule {

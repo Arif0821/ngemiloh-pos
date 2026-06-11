@@ -5,7 +5,13 @@ export const DISCOUNT_REPOSITORY = Symbol('DISCOUNT_REPOSITORY');
 export interface IDiscountRepository {
   findAll(): Promise<Discount[]>;
   findOne(id: string): Promise<Discount | null>;
-  create(data: Prisma.DiscountUncheckedCreateInput, adminId: string): Promise<Discount>;
-  update(id: string, data: Prisma.DiscountUncheckedUpdateInput): Promise<Discount>;
+  create(
+    data: Prisma.DiscountUncheckedCreateInput,
+    adminId: string,
+  ): Promise<Discount>;
+  update(
+    id: string,
+    data: Prisma.DiscountUncheckedUpdateInput,
+  ): Promise<Discount>;
   remove(id: string): Promise<Discount>;
 }

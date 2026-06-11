@@ -4,7 +4,8 @@ import { INestApplication } from '@nestjs/common';
 export function setupSwagger(app: INestApplication): void {
   const config = new DocumentBuilder()
     .setTitle('Ngemiloh POS API')
-    .setDescription(`
+    .setDescription(
+      `
 ## POS Nabil - Point of Sale API
 
 ### Authentication
@@ -29,7 +30,8 @@ All errors follow a consistent format:
 ### Rate Limiting
 - General: 100 requests/minute
 - Auth endpoints: 5 requests/10 minutes
-    `)
+    `,
+    )
     .setVersion('1.0.0')
     .addTag('Auth', 'Authentication endpoints')
     .addTag('Products', 'Product management')

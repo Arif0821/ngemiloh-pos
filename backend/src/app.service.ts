@@ -43,7 +43,7 @@ export class AppService {
       return this.prisma.setting.upsert({
         where: { key },
         update: { value, updated_by: userId, updated_at: new Date() },
-        create: { key, value, updated_by: userId, updated_at: new Date() }
+        create: { key, value, updated_by: userId, updated_at: new Date() },
       });
     });
     await Promise.all(promises);
@@ -57,7 +57,11 @@ export class AppService {
   async toggleFeatureFlag(id: string, isEnabled: boolean, userId: string) {
     return this.prisma.featureFlag.update({
       where: { id },
-      data: { is_enabled: isEnabled, updated_by: userId, updated_at: new Date() }
+      data: {
+        is_enabled: isEnabled,
+        updated_by: userId,
+        updated_at: new Date(),
+      },
     });
   }
 
@@ -65,7 +69,7 @@ export class AppService {
     return this.prisma.auditLog.findMany({
       orderBy: { created_at: 'desc' },
       take: 1000, // Increased for security audit investigation
-      include: { actor: { select: { name: true, role: true } } }
+      include: { actor: { select: { name: true, role: true } } },
     });
   }
 }

@@ -7,19 +7,30 @@ import { Prisma } from '@prisma/client';
 export class PrismaFinanceRepository implements IFinanceRepository {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findOrders(where: Prisma.OrderWhereInput, include?: Prisma.OrderInclude) {
+  async findOrders(
+    where: Prisma.OrderWhereInput,
+    include?: Prisma.OrderInclude,
+  ) {
     return this.prisma.order.findMany({ where, include });
   }
 
-  async findOperationalExpenses(where: Prisma.OperationalExpenseWhereInput, orderBy?: Prisma.OperationalExpenseOrderByWithRelationInput) {
+  async findOperationalExpenses(
+    where: Prisma.OperationalExpenseWhereInput,
+    orderBy?: Prisma.OperationalExpenseOrderByWithRelationInput,
+  ) {
     return this.prisma.operationalExpense.findMany({ where, orderBy });
   }
 
-  async createOperationalExpense(data: Prisma.OperationalExpenseUncheckedCreateInput) {
+  async createOperationalExpense(
+    data: Prisma.OperationalExpenseUncheckedCreateInput,
+  ) {
     return this.prisma.operationalExpense.create({ data });
   }
 
-  async findAssets(where?: Prisma.AssetWhereInput, orderBy?: Prisma.AssetOrderByWithRelationInput) {
+  async findAssets(
+    where?: Prisma.AssetWhereInput,
+    orderBy?: Prisma.AssetOrderByWithRelationInput,
+  ) {
     return this.prisma.asset.findMany({ where, orderBy });
   }
 
@@ -36,14 +47,19 @@ export class PrismaFinanceRepository implements IFinanceRepository {
   }
 
   async findProfitShareLogByPeriod(periodMonth: Date) {
-    return this.prisma.profitShareLog.findUnique({ where: { period_month: periodMonth } });
+    return this.prisma.profitShareLog.findUnique({
+      where: { period_month: periodMonth },
+    });
   }
 
   async createProfitShareLog(data: Prisma.ProfitShareLogUncheckedCreateInput) {
     return this.prisma.profitShareLog.create({ data });
   }
 
-  async updateProfitShareLog(id: string, data: Prisma.ProfitShareLogUncheckedUpdateInput) {
+  async updateProfitShareLog(
+    id: string,
+    data: Prisma.ProfitShareLogUncheckedUpdateInput,
+  ) {
     return this.prisma.profitShareLog.update({ where: { id }, data });
   }
 
@@ -51,7 +67,10 @@ export class PrismaFinanceRepository implements IFinanceRepository {
     return this.prisma.auditLog.create({ data });
   }
 
-  async findFirstCashRegister(where: Prisma.CashRegisterWhereInput, orderBy?: Prisma.CashRegisterOrderByWithRelationInput) {
+  async findFirstCashRegister(
+    where: Prisma.CashRegisterWhereInput,
+    orderBy?: Prisma.CashRegisterOrderByWithRelationInput,
+  ) {
     return this.prisma.cashRegister.findFirst({ where, orderBy });
   }
 
@@ -59,11 +78,17 @@ export class PrismaFinanceRepository implements IFinanceRepository {
     return this.prisma.cashRegister.create({ data });
   }
 
-  async updateCashRegister(id: string, data: Prisma.CashRegisterUncheckedUpdateInput) {
+  async updateCashRegister(
+    id: string,
+    data: Prisma.CashRegisterUncheckedUpdateInput,
+  ) {
     return this.prisma.cashRegister.update({ where: { id }, data });
   }
 
-  async findManyCashRegisters(orderBy?: Prisma.CashRegisterOrderByWithRelationInput, include?: Prisma.CashRegisterInclude) {
+  async findManyCashRegisters(
+    orderBy?: Prisma.CashRegisterOrderByWithRelationInput,
+    include?: Prisma.CashRegisterInclude,
+  ) {
     return this.prisma.cashRegister.findMany({ orderBy, include });
   }
 }

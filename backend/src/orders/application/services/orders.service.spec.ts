@@ -180,16 +180,24 @@ describe('OrdersService', () => {
     describe('Success cases', () => {
       it('should create order with cash payment successfully', async () => {
         mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
-        mockOrderRepository.findActiveDiscounts.mockResolvedValue([mockDiscount]);
-        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([mockProduct]);
+        mockOrderRepository.findActiveDiscounts.mockResolvedValue([
+          mockDiscount,
+        ]);
+        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([
+          mockProduct,
+        ]);
         mockOrderRepository.createOrder.mockResolvedValue(mockOrder);
 
         const result = await service.createOrder(baseOrderDto, 'kasir-001');
 
         expect(result).toEqual(mockOrder);
-        expect(mockOrderRepository.findOrderByClientUuid).toHaveBeenCalledWith('client-uuid-001');
+        expect(mockOrderRepository.findOrderByClientUuid).toHaveBeenCalledWith(
+          'client-uuid-001',
+        );
         expect(mockOrderRepository.createOrder).toHaveBeenCalled();
-        expect(mockInventoryService.reduceStockForOrder).toHaveBeenCalledWith('order-001');
+        expect(mockInventoryService.reduceStockForOrder).toHaveBeenCalledWith(
+          'order-001',
+        );
       });
 
       it('should create order with QRIS payment and call Midtrans', async () => {
@@ -249,7 +257,9 @@ describe('OrdersService', () => {
 
         mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
         mockOrderRepository.findActiveDiscounts.mockResolvedValue([]);
-        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([mockProduct]);
+        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([
+          mockProduct,
+        ]);
         mockOrderRepository.createOrder.mockResolvedValue({
           ...mockOrder,
           payment_method: PaymentMethod.split,
@@ -269,17 +279,35 @@ describe('OrdersService', () => {
       });
 
       it('should apply best discount correctly when multiple discounts exist', async () => {
-        const percentageDiscount = { ...mockDiscount, type: 'percentage', value: 10 };
-        const fixedDiscount = { ...mockDiscount, type: 'fixed_amount', value: 3000 };
+        const percentageDiscount = {
+          ...mockDiscount,
+          type: 'percentage',
+          value: 10,
+        };
+        const fixedDiscount = {
+          ...mockDiscount,
+          type: 'fixed_amount',
+          value: 3000,
+        };
 
         mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
-        mockOrderRepository.findActiveDiscounts.mockResolvedValue([percentageDiscount, fixedDiscount]);
-        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([mockProduct]);
-        mockOrderRepository.createOrder.mockImplementation(async (data: any) => {
-          // 25000 - 3000 (fixed, better than 2500) = 22000
-          expect(data.items.create[0].discount_id).toBe(fixedDiscount.id);
-          return { ...mockOrder, items: [{ ...mockOrder.items[0], discount_id: fixedDiscount.id }] };
-        });
+        mockOrderRepository.findActiveDiscounts.mockResolvedValue([
+          percentageDiscount,
+          fixedDiscount,
+        ]);
+        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([
+          mockProduct,
+        ]);
+        mockOrderRepository.createOrder.mockImplementation(
+          async (data: any) => {
+            // 25000 - 3000 (fixed, better than 2500) = 22000
+            expect(data.items.create[0].discount_id).toBe(fixedDiscount.id);
+            return {
+              ...mockOrder,
+              items: [{ ...mockOrder.items[0], discount_id: fixedDiscount.id }],
+            };
+          },
+        );
 
         await service.createOrder(baseOrderDto, 'kasir-001');
       });
@@ -291,19 +319,21 @@ describe('OrdersService', () => {
 
         mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
         mockOrderRepository.findActiveDiscounts.mockResolvedValue([]);
-        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([mockProduct]);
+        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([
+          mockProduct,
+        ]);
 
         const orderWithPriceDiscrepancy = {
           ...baseOrderDto,
           client_final_price: 10000, // Big discrepancy from calculated 22500
         };
 
-        await expect(service.createOrder(orderWithPriceDiscrepancy, 'kasir-001')).rejects.toThrow(
-          BadRequestException,
-        );
-        await expect(service.createOrder(orderWithPriceDiscrepancy, 'kasir-001')).rejects.toThrow(
-          'Price calculation discrepancy exceeds threshold',
-        );
+        await expect(
+          service.createOrder(orderWithPriceDiscrepancy, 'kasir-001'),
+        ).rejects.toThrow(BadRequestException);
+        await expect(
+          service.createOrder(orderWithPriceDiscrepancy, 'kasir-001'),
+        ).rejects.toThrow('Price calculation discrepancy exceeds threshold');
       });
 
       it('should throw BadRequestException when minimum QRIS amount not met', async () => {
@@ -320,12 +350,12 @@ describe('OrdersService', () => {
           items: [{ product_id: 'prod-001', quantity: 1, modifiers: [] }],
         };
 
-        await expect(service.createOrder(lowAmountQrisOrder, 'kasir-001')).rejects.toThrow(
-          BadRequestException,
-        );
-        await expect(service.createOrder(lowAmountQrisOrder, 'kasir-001')).rejects.toThrow(
-          'Minimum transaksi QRIS adalah Rp 1.000',
-        );
+        await expect(
+          service.createOrder(lowAmountQrisOrder, 'kasir-001'),
+        ).rejects.toThrow(BadRequestException);
+        await expect(
+          service.createOrder(lowAmountQrisOrder, 'kasir-001'),
+        ).rejects.toThrow('Minimum transaksi QRIS adalah Rp 1.000');
       });
 
       it('should throw BadRequestException when product not found', async () => {
@@ -335,15 +365,17 @@ describe('OrdersService', () => {
 
         const orderWithInvalidProduct = {
           ...baseOrderDto,
-          items: [{ product_id: 'non-existent-product', quantity: 1, modifiers: [] }],
+          items: [
+            { product_id: 'non-existent-product', quantity: 1, modifiers: [] },
+          ],
         };
 
-        await expect(service.createOrder(orderWithInvalidProduct, 'kasir-001')).rejects.toThrow(
-          BadRequestException,
-        );
-        await expect(service.createOrder(orderWithInvalidProduct, 'kasir-001')).rejects.toThrow(
-          'Product non-existent-product not found',
-        );
+        await expect(
+          service.createOrder(orderWithInvalidProduct, 'kasir-001'),
+        ).rejects.toThrow(BadRequestException);
+        await expect(
+          service.createOrder(orderWithInvalidProduct, 'kasir-001'),
+        ).rejects.toThrow('Product non-existent-product not found');
       });
     });
 
@@ -379,7 +411,7 @@ describe('OrdersService', () => {
       // Return BOTH products in one call (batched query)
       mockOrderRepository.findProductsWithModifiers.mockResolvedValue([
         { ...mockProduct, id: 'prod-001' },
-        { ...mockProduct, id: 'prod-002', base_price: 30000 }
+        { ...mockProduct, id: 'prod-002', base_price: 30000 },
       ]);
       mockOrderRepository.createOrder.mockImplementation(async (data: any) => ({
         id: `order-${data.client_uuid}`,
@@ -388,7 +420,7 @@ describe('OrdersService', () => {
       }));
       mockOrderRepository.updateOrder.mockResolvedValue({});
 
-      const results = await service.syncBatchOrders(batchOrders as any[], 'kasir-001');
+      const results = await service.syncBatchOrders(batchOrders, 'kasir-001');
 
       expect(results).toHaveLength(2);
       expect(results[0].status).toBe('success');
@@ -399,9 +431,14 @@ describe('OrdersService', () => {
     it('should handle sync errors gracefully', async () => {
       mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
       mockOrderRepository.findActiveDiscounts.mockResolvedValue([]);
-      mockOrderRepository.findProductsWithModifiers.mockRejectedValue(new Error('Database error'));
+      mockOrderRepository.findProductsWithModifiers.mockRejectedValue(
+        new Error('Database error'),
+      );
 
-      const results = await service.syncBatchOrders([batchOrders[0]] as any[], 'kasir-001');
+      const results = await service.syncBatchOrders(
+        [batchOrders[0]] as any[],
+        'kasir-001',
+      );
 
       expect(results).toHaveLength(1);
       expect(results[0].status).toBe('error');
@@ -416,7 +453,10 @@ describe('OrdersService', () => {
         items: [{ product_id: 'prod-001', quantity: 1, modifiers: [] }],
       };
 
-      const results = await service.syncBatchOrders([qrisOrder] as any[], 'kasir-001');
+      const results = await service.syncBatchOrders(
+        [qrisOrder] as any[],
+        'kasir-001',
+      );
 
       expect(results).toHaveLength(1);
       expect(results[0].status).toBe('error');
@@ -436,7 +476,7 @@ describe('OrdersService', () => {
         .mockResolvedValueOnce({ ...mockOrder, id: 'order-001' })
         .mockRejectedValueOnce(new Error('Database error'));
 
-      const results = await service.syncBatchOrders(batchOrders as any[], 'kasir-001');
+      const results = await service.syncBatchOrders(batchOrders, 'kasir-001');
 
       expect(results).toHaveLength(2);
       expect(results[0].status).toBe('success');
@@ -487,11 +527,14 @@ describe('OrdersService', () => {
       const result = await service.handleMidtransWebhook(validWebhookPayload);
 
       expect(result).toEqual({ status: 'success' });
-      expect(mockOrderRepository.updateOrder).toHaveBeenCalledWith('order-001', {
-        status: OrderStatus.completed,
-        payment_status: 'paid',
-        payment_settled_at: expect.any(Date),
-      });
+      expect(mockOrderRepository.updateOrder).toHaveBeenCalledWith(
+        'order-001',
+        {
+          status: OrderStatus.completed,
+          payment_status: 'paid',
+          payment_settled_at: expect.any(Date),
+        },
+      );
       expect(mockEventEmitter.emit).toHaveBeenCalledWith('order.paid', {
         orderId: 'order-001',
         status: OrderStatus.completed,
@@ -524,11 +567,14 @@ describe('OrdersService', () => {
       });
 
       expect(result).toEqual({ status: 'success' });
-      expect(mockOrderRepository.updateOrder).toHaveBeenCalledWith('order-001', {
-        status: OrderStatus.voided,
-        payment_status: 'expire',
-        payment_settled_at: null,
-      });
+      expect(mockOrderRepository.updateOrder).toHaveBeenCalledWith(
+        'order-001',
+        {
+          status: OrderStatus.voided,
+          payment_status: 'expire',
+          payment_settled_at: null,
+        },
+      );
     });
 
     it('should handle cancel webhook successfully', async () => {
@@ -557,11 +603,14 @@ describe('OrdersService', () => {
       });
 
       expect(result).toEqual({ status: 'success' });
-      expect(mockOrderRepository.updateOrder).toHaveBeenCalledWith('order-001', {
-        status: OrderStatus.voided,
-        payment_status: 'failed',
-        payment_settled_at: null,
-      });
+      expect(mockOrderRepository.updateOrder).toHaveBeenCalledWith(
+        'order-001',
+        {
+          status: OrderStatus.voided,
+          payment_status: 'failed',
+          payment_settled_at: null,
+        },
+      );
     });
 
     it('should ignore webhook with invalid signature', async () => {
@@ -610,11 +659,14 @@ describe('OrdersService', () => {
       });
 
       expect(result).toEqual({ status: 'success' });
-      expect(mockOrderRepository.updateOrder).toHaveBeenCalledWith('order-001', {
-        status: OrderStatus.pending_sync,
-        payment_status: 'unpaid',
-        payment_settled_at: null,
-      });
+      expect(mockOrderRepository.updateOrder).toHaveBeenCalledWith(
+        'order-001',
+        {
+          status: OrderStatus.pending_sync,
+          payment_status: 'unpaid',
+          payment_settled_at: null,
+        },
+      );
     });
 
     it('should handle deny webhook successfully', async () => {
@@ -643,11 +695,14 @@ describe('OrdersService', () => {
       });
 
       expect(result).toEqual({ status: 'success' });
-      expect(mockOrderRepository.updateOrder).toHaveBeenCalledWith('order-001', {
-        status: OrderStatus.voided,
-        payment_status: 'failed',
-        payment_settled_at: null,
-      });
+      expect(mockOrderRepository.updateOrder).toHaveBeenCalledWith(
+        'order-001',
+        {
+          status: OrderStatus.voided,
+          payment_status: 'failed',
+          payment_settled_at: null,
+        },
+      );
     });
 
     it('should ignore webhook with missing signature_key', async () => {
@@ -684,13 +739,17 @@ describe('OrdersService', () => {
       mockOrderRepository.findOrderById.mockResolvedValue(null);
 
       // Suppress error logging for this expected error case
-      const loggerSpy = jest.spyOn(service['logger'], 'error').mockImplementation(() => {});
+      const loggerSpy = jest
+        .spyOn(service['logger'], 'error')
+        .mockImplementation(() => {});
 
       try {
-        await expect(service.handleMidtransWebhook({
-          ...validWebhookPayload,
-          order_id: 'non-existent-order',
-        })).rejects.toThrow(NotFoundException);
+        await expect(
+          service.handleMidtransWebhook({
+            ...validWebhookPayload,
+            order_id: 'non-existent-order',
+          }),
+        ).rejects.toThrow(NotFoundException);
       } finally {
         loggerSpy.mockRestore();
       }
@@ -704,21 +763,34 @@ describe('OrdersService', () => {
         status: OrderStatus.completed,
         total_amount: 25000,
       });
-      mockOrderRepository.updateOrder.mockResolvedValue({ ...mockOrder, status: OrderStatus.voided });
+      mockOrderRepository.updateOrder.mockResolvedValue({
+        ...mockOrder,
+        status: OrderStatus.voided,
+      });
       mockOrderRepository.createOrderRefund.mockResolvedValue({});
       mockOrderRepository.createAuditLog.mockResolvedValue({});
       mockOrderRepository.countRecentVoids.mockResolvedValue(0);
 
-      const result = await service.voidOrder('order-001', 'Pelanggan meminta pembatalan', 'admin-001');
+      const result = await service.voidOrder(
+        'order-001',
+        'Pelanggan meminta pembatalan',
+        'admin-001',
+      );
 
-      expect(result).toEqual({ success: true, message: 'Order voided successfully' });
-      expect(mockOrderRepository.updateOrder).toHaveBeenCalledWith('order-001', {
-        status: OrderStatus.voided,
-        voided_by: 'admin-001',
-        voided_at: expect.any(Date),
-        void_reason: 'Pelanggan meminta pembatalan',
-        payment_status: 'failed',
+      expect(result).toEqual({
+        success: true,
+        message: 'Order voided successfully',
       });
+      expect(mockOrderRepository.updateOrder).toHaveBeenCalledWith(
+        'order-001',
+        {
+          status: OrderStatus.voided,
+          voided_by: 'admin-001',
+          voided_at: expect.any(Date),
+          void_reason: 'Pelanggan meminta pembatalan',
+          payment_status: 'failed',
+        },
+      );
       expect(mockOrderRepository.createOrderRefund).toHaveBeenCalledWith({
         order_id: 'order-001',
         amount: 25000,
@@ -732,14 +804,24 @@ describe('OrdersService', () => {
       mockOrderRepository.findOrderById.mockResolvedValue(null);
 
       // Suppress error logging for this expected error case
-      const loggerSpy = jest.spyOn(service['logger'], 'error').mockImplementation(() => {});
+      const loggerSpy = jest
+        .spyOn(service['logger'], 'error')
+        .mockImplementation(() => {});
 
       try {
         await expect(
-          service.voidOrder('non-existent-order', 'Pelanggan minta batal', 'admin-001'),
+          service.voidOrder(
+            'non-existent-order',
+            'Pelanggan minta batal',
+            'admin-001',
+          ),
         ).rejects.toThrow(NotFoundException);
         await expect(
-          service.voidOrder('non-existent-order', 'Pelanggan minta batal', 'admin-001'),
+          service.voidOrder(
+            'non-existent-order',
+            'Pelanggan minta batal',
+            'admin-001',
+          ),
         ).rejects.toThrow('Order not found');
       } finally {
         loggerSpy.mockRestore();
@@ -753,7 +835,9 @@ describe('OrdersService', () => {
       });
 
       // Suppress error logging for this expected error case
-      const loggerSpy = jest.spyOn(service['logger'], 'error').mockImplementation(() => {});
+      const loggerSpy = jest
+        .spyOn(service['logger'], 'error')
+        .mockImplementation(() => {});
 
       try {
         await expect(
@@ -769,7 +853,9 @@ describe('OrdersService', () => {
 
     it('should throw BadRequestException when reason too short', async () => {
       // Suppress error logging for this expected error case
-      const loggerSpy = jest.spyOn(service['logger'], 'error').mockImplementation(() => {});
+      const loggerSpy = jest
+        .spyOn(service['logger'], 'error')
+        .mockImplementation(() => {});
 
       try {
         await expect(
@@ -789,12 +875,19 @@ describe('OrdersService', () => {
         status: OrderStatus.completed,
         total_amount: 25000,
       });
-      mockOrderRepository.updateOrder.mockResolvedValue({ ...mockOrder, status: OrderStatus.voided });
+      mockOrderRepository.updateOrder.mockResolvedValue({
+        ...mockOrder,
+        status: OrderStatus.voided,
+      });
       mockOrderRepository.createOrderRefund.mockResolvedValue({});
       mockOrderRepository.createAuditLog.mockResolvedValue({});
       mockOrderRepository.countRecentVoids.mockResolvedValue(3);
 
-      await service.voidOrder('order-001', 'Pelanggan minta batal', 'admin-001');
+      await service.voidOrder(
+        'order-001',
+        'Pelanggan minta batal',
+        'admin-001',
+      );
 
       expect(mockEmailService.sendAlert).toHaveBeenCalledWith(
         'Indikasi Fraud - Banyak Void Transaksi',
@@ -809,9 +902,23 @@ describe('OrdersService', () => {
 
     it('should calculate correct totals for completed orders', async () => {
       const completedOrders = [
-        { ...mockOrder, payment_method: PaymentMethod.cash, total_amount: 25000 },
-        { ...mockOrder, id: 'order-002', payment_method: PaymentMethod.qris, total_amount: 35000 },
-        { ...mockOrder, id: 'order-003', payment_method: PaymentMethod.cash, total_amount: 15000 },
+        {
+          ...mockOrder,
+          payment_method: PaymentMethod.cash,
+          total_amount: 25000,
+        },
+        {
+          ...mockOrder,
+          id: 'order-002',
+          payment_method: PaymentMethod.qris,
+          total_amount: 35000,
+        },
+        {
+          ...mockOrder,
+          id: 'order-003',
+          payment_method: PaymentMethod.cash,
+          total_amount: 15000,
+        },
       ];
 
       mockOrderRepository.findOrders.mockResolvedValue(completedOrders);
@@ -881,7 +988,9 @@ describe('OrdersService', () => {
 
       const csv = await service.exportOrdersCsv('2024-01-01', '2024-01-31');
 
-      expect(csv).toContain('Tanggal,ID Pesanan,Kasir,Metode Pembayaran,Status,Item,Kuantitas,Harga Dasar,Nama Diskon,Nominal Diskon,Harga Akhir');
+      expect(csv).toContain(
+        'Tanggal,ID Pesanan,Kasir,Metode Pembayaran,Status,Item,Kuantitas,Harga Dasar,Nama Diskon,Nominal Diskon,Harga Akhir',
+      );
       expect(csv).toContain('Nasi Goreng');
       expect(csv).toContain('2'); // quantity
       expect(csv).toContain('25000'); // base price
@@ -920,17 +1029,23 @@ describe('OrdersService', () => {
       const result = await service.getOrder('order-001');
 
       expect(result).toEqual(mockOrder);
-      expect(mockOrderRepository.findOrderById).toHaveBeenCalledWith('order-001');
+      expect(mockOrderRepository.findOrderById).toHaveBeenCalledWith(
+        'order-001',
+      );
     });
 
     it('should throw NotFoundException when order not found', async () => {
       mockOrderRepository.findOrderById.mockResolvedValue(null);
 
       // Suppress error logging for this expected error case
-      const loggerSpy = jest.spyOn(service['logger'], 'error').mockImplementation(() => {});
+      const loggerSpy = jest
+        .spyOn(service['logger'], 'error')
+        .mockImplementation(() => {});
 
       try {
-        await expect(service.getOrder('non-existent-order')).rejects.toThrow(NotFoundException);
+        await expect(service.getOrder('non-existent-order')).rejects.toThrow(
+          NotFoundException,
+        );
       } finally {
         loggerSpy.mockRestore();
       }
@@ -948,8 +1063,8 @@ describe('OrdersService', () => {
         {},
         { created_at: 'desc' },
         { items: true, cashier: { select: { name: true, username: true } } },
-        50,  // default limit
-        0,   // default skip (page 1 -> skip 0)
+        50, // default limit
+        0, // default skip (page 1 -> skip 0)
       );
     });
 
@@ -965,8 +1080,8 @@ describe('OrdersService', () => {
         { cashier_id: 'kasir-001', created_at: { gte: today } },
         { created_at: 'desc' },
         { items: true, cashier: { select: { name: true, username: true } } },
-        50,  // default limit
-        0,   // default skip (page 1 -> skip 0)
+        50, // default limit
+        0, // default skip (page 1 -> skip 0)
       );
     });
 
@@ -980,14 +1095,18 @@ describe('OrdersService', () => {
         { created_at: 'desc' },
         { items: true, cashier: { select: { name: true, username: true } } },
         50,
-        50,  // page 2 with limit 50 -> skip 50
+        50, // page 2 with limit 50 -> skip 50
       );
     });
   });
 
   describe('startShift', () => {
     it('should return existing shift if already open', async () => {
-      const existingShift = { id: 'shift-001', cashier_id: 'kasir-001', status: 'open' };
+      const existingShift = {
+        id: 'shift-001',
+        cashier_id: 'kasir-001',
+        status: 'open',
+      };
       mockOrderRepository.findCurrentShift.mockResolvedValue(existingShift);
 
       const result = await service.startShift('kasir-001');
@@ -999,7 +1118,12 @@ describe('OrdersService', () => {
     it('should create new shift with default opening balance', async () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const newShift = { id: 'shift-002', cashier_id: 'kasir-001', status: 'open', opening_balance: 500000 };
+      const newShift = {
+        id: 'shift-002',
+        cashier_id: 'kasir-001',
+        status: 'open',
+        opening_balance: 500000,
+      };
 
       mockOrderRepository.findCurrentShift.mockResolvedValue(null);
       mockOrderRepository.getSetting.mockResolvedValue(null);
@@ -1019,7 +1143,12 @@ describe('OrdersService', () => {
     it('should create new shift with configured opening balance', async () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const newShift = { id: 'shift-002', cashier_id: 'kasir-001', status: 'open', opening_balance: 1000000 };
+      const newShift = {
+        id: 'shift-002',
+        cashier_id: 'kasir-001',
+        status: 'open',
+        opening_balance: 1000000,
+      };
 
       mockOrderRepository.findCurrentShift.mockResolvedValue(null);
       mockOrderRepository.getSetting.mockResolvedValue({ value: '1000000' });
@@ -1035,14 +1164,21 @@ describe('OrdersService', () => {
     it('should return current shift for kasir', async () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
-      const shift = { id: 'shift-001', cashier_id: 'kasir-001', status: 'open' };
+      const shift = {
+        id: 'shift-001',
+        cashier_id: 'kasir-001',
+        status: 'open',
+      };
 
       mockOrderRepository.findCurrentShift.mockResolvedValue(shift);
 
       const result = await service.getCurrentShift('kasir-001');
 
       expect(result).toEqual(shift);
-      expect(mockOrderRepository.findCurrentShift).toHaveBeenCalledWith('kasir-001', today);
+      expect(mockOrderRepository.findCurrentShift).toHaveBeenCalledWith(
+        'kasir-001',
+        today,
+      );
     });
   });
 
@@ -1055,7 +1191,11 @@ describe('OrdersService', () => {
       mockOrderRepository.updateOrder.mockResolvedValue(updatedOrder);
       mockOrderRepository.createAuditLog.mockResolvedValue({});
 
-      const result = await service.flagTransaction('order-001', 'verified', 'admin-001');
+      const result = await service.flagTransaction(
+        'order-001',
+        'verified',
+        'admin-001',
+      );
 
       expect(result).toEqual(updatedOrder);
       expect(mockOrderRepository.createAuditLog).toHaveBeenCalledWith({
@@ -1072,12 +1212,14 @@ describe('OrdersService', () => {
       mockOrderRepository.findOrderById.mockResolvedValue(null);
 
       // Suppress error logging for this expected error case
-      const loggerSpy = jest.spyOn(service['logger'], 'error').mockImplementation(() => {});
+      const loggerSpy = jest
+        .spyOn(service['logger'], 'error')
+        .mockImplementation(() => {});
 
       try {
-        await expect(service.flagTransaction('non-existent', 'verified', 'admin-001')).rejects.toThrow(
-          NotFoundException,
-        );
+        await expect(
+          service.flagTransaction('non-existent', 'verified', 'admin-001'),
+        ).rejects.toThrow(NotFoundException);
       } finally {
         loggerSpy.mockRestore();
       }

@@ -10,12 +10,12 @@ import { EmailModule } from '../email/email.module';
   imports: [EmailModule],
   controllers: [FinanceController],
   providers: [
-    FinanceService, 
+    FinanceService,
     FinanceCronService,
     {
       provide: FINANCE_REPOSITORY,
       useClass: PrismaFinanceRepository,
-    }
-  ]
+    },
+  ],
 })
 export class FinanceModule {}

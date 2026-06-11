@@ -11,7 +11,11 @@ export class PrismaFlagRepository implements IFlagRepository {
     return this.prisma.featureFlag.findUnique({ where: { name } });
   }
 
-  async create(data: { name: string; description: string; is_enabled: boolean }): Promise<FeatureFlag> {
+  async create(data: {
+    name: string;
+    description: string;
+    is_enabled: boolean;
+  }): Promise<FeatureFlag> {
     return this.prisma.featureFlag.create({ data });
   }
 
@@ -19,7 +23,10 @@ export class PrismaFlagRepository implements IFlagRepository {
     return this.prisma.featureFlag.findMany({ orderBy });
   }
 
-  async update(name: string, data: { is_enabled: boolean; updated_by: string; updated_at: Date }): Promise<FeatureFlag> {
+  async update(
+    name: string,
+    data: { is_enabled: boolean; updated_by: string; updated_at: Date },
+  ): Promise<FeatureFlag> {
     return this.prisma.featureFlag.update({
       where: { name },
       data,

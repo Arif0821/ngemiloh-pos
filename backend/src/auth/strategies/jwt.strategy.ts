@@ -13,7 +13,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
     // SECURITY FIX S-01: Throw error immediately if secret is missing
     // No fallback allowed - security depends on this being set
     if (!secret) {
-      throw new Error('FATAL: JWT_ACCESS_SECRET environment variable is required');
+      throw new Error(
+        'FATAL: JWT_ACCESS_SECRET environment variable is required',
+      );
     }
 
     super({

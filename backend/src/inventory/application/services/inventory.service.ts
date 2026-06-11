@@ -1,5 +1,8 @@
 import { Injectable, Inject, NotFoundException, Logger } from '@nestjs/common';
-import { INVENTORY_REPOSITORY, type IInventoryRepository } from '../../domain/interfaces/inventory.repository.interface';
+import {
+  INVENTORY_REPOSITORY,
+  type IInventoryRepository,
+} from '../../domain/interfaces/inventory.repository.interface';
 
 @Injectable()
 export class InventoryService {
@@ -7,7 +10,7 @@ export class InventoryService {
 
   constructor(
     @Inject(INVENTORY_REPOSITORY)
-    private readonly inventoryRepository: IInventoryRepository
+    private readonly inventoryRepository: IInventoryRepository,
   ) {}
 
   async getAllRawMaterials() {
@@ -32,10 +35,16 @@ export class InventoryService {
 
   async getLowStockMaterials() {
     const all = await this.inventoryRepository.findActiveRawMaterials();
-    return all.filter(m => Number(m.current_stock) <= Number(m.min_stock));
+    return all.filter((m) => Number(m.current_stock) <= Number(m.min_stock));
   }
 
-  async adjustStock(id: string, qty: number, type: 'IN' | 'OUT', notes: string, userId: string) {
+  async adjustStock(
+    id: string,
+    qty: number,
+    type: 'IN' | 'OUT',
+    notes: string,
+    userId: string,
+  ) {
     const material = await this.inventoryRepository.findRawMaterialById(id);
     if (!material) throw new NotFoundException('Raw material not found');
 
@@ -48,25 +57,28 @@ export class InventoryService {
         qty: amount,
         transaction_type: type,
         notes,
-        created_by: userId
+        created_by: userId,
       });
 
       return repo.updateRawMaterialStock(
-        id, 
-        amount, 
-        type === 'IN' ? 'increment' : 'decrement'
+        id,
+        amount,
+        type === 'IN' ? 'increment' : 'decrement',
       );
     });
   }
 
-  async submitOpname(items: { id: string, physical_stock: number }[], userId: string) {
+  async submitOpname(
+    items: { id: string; physical_stock: number }[],
+    userId: string,
+  ) {
     return this.inventoryRepository.executeInTransaction(async (repo) => {
       const results: any[] = [];
 
       // PERFORMANCE: Fetch all materials at once instead of N queries
-      const materialIds = items.map(i => i.id);
+      const materialIds = items.map((i) => i.id);
       const materials = await repo.findManyRawMaterialsByIds(materialIds);
-      const materialMap = new Map(materials.map(m => [m.id, m]));
+      const materialMap = new Map(materials.map((m) => [m.id, m]));
 
       for (const item of items) {
         const material = materialMap.get(item.id);
@@ -85,7 +97,7 @@ export class InventoryService {
             qty: absDiff,
             transaction_type: type,
             notes: `Stock Opname. System: ${sysStock}, Physical: ${physStock}, Diff: ${difference}`,
-            created_by: userId
+            created_by: userId,
           });
 
           await repo.updateRawMaterialStock(item.id, physStock, 'set');
@@ -98,7 +110,8 @@ export class InventoryService {
   }
 
   async reduceStockForOrder(orderId: string) {
-    const order = await this.inventoryRepository.findOrderWithIngredients(orderId);
+    const order =
+      await this.inventoryRepository.findOrderWithIngredients(orderId);
     if (!order) return;
     await this.inventoryRepository.executeInTransaction(async (repo) => {
       let totalCogs = 0;
@@ -106,8 +119,9 @@ export class InventoryService {
       for (const item of order.items) {
         if (!item.product.bom_recipes) continue;
         for (const ingredient of item.product.bom_recipes) {
-          deductions[ingredient.raw_material_id] = (deductions[ingredient.raw_material_id] || 0)
-            + Number(ingredient.quantity_per_serving) * item.quantity;
+          deductions[ingredient.raw_material_id] =
+            (deductions[ingredient.raw_material_id] || 0) +
+            Number(ingredient.quantity_per_serving) * item.quantity;
         }
       }
       for (const [rawMaterialId, qty] of Object.entries(deductions)) {
@@ -124,10 +138,18 @@ export class InventoryService {
           if (rm) {
             totalCogs += remaining * Number(rm.cost_per_unit || 0);
           } else {
-            this.logger.warn(`Raw material ${rawMaterialId} not found for COGS calculation`);
+            this.logger.warn(
+              `Raw material ${rawMaterialId} not found for COGS calculation`,
+            );
           }
         }
-        await repo.createInventoryTransaction({ raw_material_id: rawMaterialId, qty, transaction_type: 'OUT', reference_id: orderId, notes: `Auto-deduct for Order ${orderId}` });
+        await repo.createInventoryTransaction({
+          raw_material_id: rawMaterialId,
+          qty,
+          transaction_type: 'OUT',
+          reference_id: orderId,
+          notes: `Auto-deduct for Order ${orderId}`,
+        });
         await repo.updateRawMaterialStock(rawMaterialId, qty, 'decrement');
       }
       await repo.updateOrderCogs(orderId, totalCogs);

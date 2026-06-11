@@ -1,6 +1,10 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
-import { UnauthorizedException, HttpException, HttpStatus } from '@nestjs/common';
+import {
+  UnauthorizedException,
+  HttpException,
+  HttpStatus,
+} from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AUTH_REPOSITORY } from '../../domain/interfaces/auth.repository.interface';
 import { EmailService } from '../../../email/email.service';
@@ -84,7 +88,9 @@ describe('AuthService', () => {
       mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
       // Mock reset methods return successfully
       mockAuthRepository.resetUserFailedLogin.mockResolvedValue(mockUser);
-      mockAuthRepository.resetIpLockout.mockResolvedValue(createMockIpLockout());
+      mockAuthRepository.resetIpLockout.mockResolvedValue(
+        createMockIpLockout(),
+      );
 
       // Act: Perform login
       const result = await service.login('testuser', '123456', mockIpAddress);
@@ -101,10 +107,18 @@ describe('AuthService', () => {
       });
 
       // Verify repository calls
-      expect(mockAuthRepository.findIpLockout).toHaveBeenCalledWith(mockIpAddress);
-      expect(mockAuthRepository.findUserByUsernameOrEmail).toHaveBeenCalledWith('testuser');
-      expect(mockAuthRepository.resetUserFailedLogin).toHaveBeenCalledWith(mockUser.id);
-      expect(mockAuthRepository.resetIpLockout).toHaveBeenCalledWith(mockIpAddress);
+      expect(mockAuthRepository.findIpLockout).toHaveBeenCalledWith(
+        mockIpAddress,
+      );
+      expect(mockAuthRepository.findUserByUsernameOrEmail).toHaveBeenCalledWith(
+        'testuser',
+      );
+      expect(mockAuthRepository.resetUserFailedLogin).toHaveBeenCalledWith(
+        mockUser.id,
+      );
+      expect(mockAuthRepository.resetIpLockout).toHaveBeenCalledWith(
+        mockIpAddress,
+      );
     });
 
     it('should successfully login with valid superadmin credentials (password ≥16 chars)', async () => {
@@ -122,10 +136,16 @@ describe('AuthService', () => {
       mockAuthRepository.findIpLockout.mockResolvedValue(null);
       mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
       mockAuthRepository.resetUserFailedLogin.mockResolvedValue(mockUser);
-      mockAuthRepository.resetIpLockout.mockResolvedValue(createMockIpLockout());
+      mockAuthRepository.resetIpLockout.mockResolvedValue(
+        createMockIpLockout(),
+      );
 
       // Act: Perform login with VALID password (≥16 chars)
-      const result = await service.login('admin@example.com', validSuperadminPassword, mockIpAddress);
+      const result = await service.login(
+        'admin@example.com',
+        validSuperadminPassword,
+        mockIpAddress,
+      );
 
       // Assert: Verify successful login
       expect(result).toHaveProperty('accessToken');
@@ -144,7 +164,7 @@ describe('AuthService', () => {
 
       // Act & Assert: Password < 16 chars should fail
       await expect(
-        service.login('admin@example.com', 'weak', mockIpAddress)
+        service.login('admin@example.com', 'weak', mockIpAddress),
       ).rejects.toThrow('Password must be at least 16 characters');
     });
 
@@ -160,8 +180,10 @@ describe('AuthService', () => {
 
       // Act & Assert: Password without symbol should fail
       await expect(
-        service.login('admin@example.com', 'Password1234567890', mockIpAddress)
-      ).rejects.toThrow('Password must contain uppercase, lowercase, number, and symbol');
+        service.login('admin@example.com', 'Password1234567890', mockIpAddress),
+      ).rejects.toThrow(
+        'Password must contain uppercase, lowercase, number, and symbol',
+      );
     });
 
     it('should fail login with invalid credentials', async () => {
@@ -180,15 +202,17 @@ describe('AuthService', () => {
         ...mockUser,
         failed_login_count: 1,
       });
-      mockAuthRepository.incrementIpLockout.mockResolvedValue(createMockIpLockout({ failed_count: 1 }));
+      mockAuthRepository.incrementIpLockout.mockResolvedValue(
+        createMockIpLockout({ failed_count: 1 }),
+      );
 
       // Act& Assert: Login should fail with UnauthorizedException
-      await expect(service.login('testuser', 'wrong-pin', mockIpAddress)).rejects.toThrow(
-        UnauthorizedException
-      );
- await expect(service.login('testuser', 'wrong-pin', mockIpAddress)).rejects.toThrow(
-        'Invalid credentials'
-      );
+      await expect(
+        service.login('testuser', 'wrong-pin', mockIpAddress),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.login('testuser', 'wrong-pin', mockIpAddress),
+      ).rejects.toThrow('Invalid credentials');
     });
 
     it('should fail login when user does not exist', async () => {
@@ -197,12 +221,12 @@ describe('AuthService', () => {
       mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(null);
 
       // Act& Assert: Should throw UnauthorizedException
-      await expect(service.login('nonexistent', '123456', mockIpAddress)).rejects.toThrow(
-        UnauthorizedException
-      );
-      await expect(service.login('nonexistent', '123456', mockIpAddress)).rejects.toThrow(
-        'Invalid credentials'
-      );
+      await expect(
+        service.login('nonexistent', '123456', mockIpAddress),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.login('nonexistent', '123456', mockIpAddress),
+      ).rejects.toThrow('Invalid credentials');
     });
 
     it('should fail login with inactive user', async () => {
@@ -215,12 +239,12 @@ describe('AuthService', () => {
       mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
 
       // Act & Assert: Should throw UnauthorizedException with account inactive message
-      await expect(service.login('testuser', '123456', mockIpAddress)).rejects.toThrow(
-        UnauthorizedException
-      );
-      await expect(service.login('testuser', '123456', mockIpAddress)).rejects.toThrow(
-        'Account is inactive'
-      );
+      await expect(
+        service.login('testuser', '123456', mockIpAddress),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.login('testuser', '123456', mockIpAddress),
+      ).rejects.toThrow('Account is inactive');
     });
 
     it('should fail login with locked account (user.locked_until in future)', async () => {
@@ -234,8 +258,12 @@ describe('AuthService', () => {
       mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
 
       // Act & Assert: Should throw HttpException with TOO_MANY_REQUESTS
-      await expect(service.login('testuser', '123456', mockIpAddress)).rejects.toThrow(HttpException);
-      await expect(service.login('testuser', '123456', mockIpAddress)).rejects.toMatchObject({
+      await expect(
+        service.login('testuser', '123456', mockIpAddress),
+      ).rejects.toThrow(HttpException);
+      await expect(
+        service.login('testuser', '123456', mockIpAddress),
+      ).rejects.toMatchObject({
         status: HttpStatus.TOO_MANY_REQUESTS,
       });
     });
@@ -256,14 +284,22 @@ describe('AuthService', () => {
         ...mockUser,
         failed_login_count: 5,
       });
-      mockAuthRepository.incrementIpLockout.mockResolvedValue(createMockIpLockout({ failed_count: 5 }));
-      mockAuthRepository.lockIpAddress.mockResolvedValue(createMockIpLockout({
-        locked_until: new Date(Date.now() + 30 * 60 * 1000),
-      }));
+      mockAuthRepository.incrementIpLockout.mockResolvedValue(
+        createMockIpLockout({ failed_count: 5 }),
+      );
+      mockAuthRepository.lockIpAddress.mockResolvedValue(
+        createMockIpLockout({
+          locked_until: new Date(Date.now() + 30 * 60 * 1000),
+        }),
+      );
 
       // Act& Assert: Should throw HttpException indicating IP is locked
-      await expect(service.login('testuser', 'wrong-pin', mockIpAddress)).rejects.toThrow(HttpException);
-      await expect(service.login('testuser', 'wrong-pin', mockIpAddress)).rejects.toMatchObject({
+      await expect(
+        service.login('testuser', 'wrong-pin', mockIpAddress),
+      ).rejects.toThrow(HttpException);
+      await expect(
+        service.login('testuser', 'wrong-pin', mockIpAddress),
+      ).rejects.toMatchObject({
         status: HttpStatus.TOO_MANY_REQUESTS,
       });
 
@@ -291,19 +327,21 @@ describe('AuthService', () => {
         ...mockUser,
         locked_until: new Date(Date.now() + 30 * 60 * 1000),
       });
-      mockAuthRepository.incrementIpLockout.mockResolvedValue(createMockIpLockout({ failed_count: 1 }));
+      mockAuthRepository.incrementIpLockout.mockResolvedValue(
+        createMockIpLockout({ failed_count: 1 }),
+      );
 
       // Act: Perform5th failed login attempt
-      await expect(service.login('testuser', 'wrong-pin', mockIpAddress)).rejects.toThrow(
-        UnauthorizedException
-      );
+      await expect(
+        service.login('testuser', 'wrong-pin', mockIpAddress),
+      ).rejects.toThrow(UnauthorizedException);
 
       // Assert: lockUser should have been called
       expect(mockAuthRepository.lockUser).toHaveBeenCalled();
       // Assert: Email alert should have been sent
       expect(mockEmailService.sendAlert).toHaveBeenCalledWith(
         'Akun Terkunci - Gagal Login',
-        expect.stringContaining(mockUser.username)
+        expect.stringContaining(mockUser.username),
       );
     });
 
@@ -315,19 +353,29 @@ describe('AuthService', () => {
       mockAuthRepository.findIpLockout.mockResolvedValue(mockIpLockout);
 
       // Act & Assert: Should throw HttpException immediately without checking user
-      await expect(service.login('testuser', '123456', mockIpAddress)).rejects.toThrow(HttpException);
-      await expect(service.login('testuser', '123456', mockIpAddress)).rejects.toMatchObject({
+      await expect(
+        service.login('testuser', '123456', mockIpAddress),
+      ).rejects.toThrow(HttpException);
+      await expect(
+        service.login('testuser', '123456', mockIpAddress),
+      ).rejects.toMatchObject({
         status: HttpStatus.TOO_MANY_REQUESTS,
       });
 
       // Verify findUserByUsernameOrEmail was NOT called
-      expect(mockAuthRepository.findUserByUsernameOrEmail).not.toHaveBeenCalled();
+      expect(
+        mockAuthRepository.findUserByUsernameOrEmail,
+      ).not.toHaveBeenCalled();
     });
   });
 
   describe('refreshToken', () => {
     const validToken = 'valid-refresh-token';
-    const tokenPayload = { sub: 'user-123', role: Role.kasir, exp: Math.floor(Date.now() / 1000) + 3600 };
+    const tokenPayload = {
+      sub: 'user-123',
+      role: Role.kasir,
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    };
 
     it('should successfully refresh token with valid token', async () => {
       // Arrange: Valid token that is not revoked
@@ -347,7 +395,9 @@ describe('AuthService', () => {
 
       // Verify repository calls
       expect(mockAuthRepository.findRevokedToken).toHaveBeenCalled();
-      expect(mockAuthRepository.findUserById).toHaveBeenCalledWith(tokenPayload.sub);
+      expect(mockAuthRepository.findUserById).toHaveBeenCalledWith(
+        tokenPayload.sub,
+      );
     });
 
     it('should fail refresh with invalid token', async () => {
@@ -357,18 +407,28 @@ describe('AuthService', () => {
       });
 
       // Act & Assert: Should throw UnauthorizedException
-      await expect(service.refreshToken('invalid-token')).rejects.toThrow(UnauthorizedException);
-      await expect(service.refreshToken('invalid-token')).rejects.toThrow('Invalid token');
+      await expect(service.refreshToken('invalid-token')).rejects.toThrow(
+        UnauthorizedException,
+      );
+      await expect(service.refreshToken('invalid-token')).rejects.toThrow(
+        'Invalid token',
+      );
     });
 
     it('should fail refresh with revoked token', async () => {
       // Arrange: Token is valid but has been revoked
       mockJwtService.verify.mockReturnValue(tokenPayload);
-      mockAuthRepository.findRevokedToken.mockResolvedValue({ token_hash: 'some-hash' });
+      mockAuthRepository.findRevokedToken.mockResolvedValue({
+        token_hash: 'some-hash',
+      });
 
       // Act & Assert: Should throw UnauthorizedException with token revoked message
-      await expect(service.refreshToken(validToken)).rejects.toThrow(UnauthorizedException);
-      await expect(service.refreshToken(validToken)).rejects.toThrow('Token revoked');
+      await expect(service.refreshToken(validToken)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      await expect(service.refreshToken(validToken)).rejects.toThrow(
+        'Token revoked',
+      );
     });
 
     it('should fail refresh when user is not found', async () => {
@@ -378,8 +438,12 @@ describe('AuthService', () => {
       mockAuthRepository.findUserById.mockResolvedValue(null);
 
       // Act & Assert: Should throw UnauthorizedException
-      await expect(service.refreshToken(validToken)).rejects.toThrow(UnauthorizedException);
-      await expect(service.refreshToken(validToken)).rejects.toThrow('Invalid or inactive user');
+      await expect(service.refreshToken(validToken)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      await expect(service.refreshToken(validToken)).rejects.toThrow(
+        'Invalid or inactive user',
+      );
     });
 
     it('should fail refresh when user is inactive', async () => {
@@ -391,14 +455,22 @@ describe('AuthService', () => {
       mockAuthRepository.findUserById.mockResolvedValue(inactiveUser);
 
       // Act & Assert: Should throw UnauthorizedException
-      await expect(service.refreshToken(validToken)).rejects.toThrow(UnauthorizedException);
-      await expect(service.refreshToken(validToken)).rejects.toThrow('Invalid or inactive user');
+      await expect(service.refreshToken(validToken)).rejects.toThrow(
+        UnauthorizedException,
+      );
+      await expect(service.refreshToken(validToken)).rejects.toThrow(
+        'Invalid or inactive user',
+      );
     });
   });
 
   describe('logout', () => {
     const validRefreshToken = 'valid-refresh-token';
-    const tokenPayload = { sub: 'user-123', role: Role.kasir, exp: Math.floor(Date.now() / 1000) + 3600 };
+    const tokenPayload = {
+      sub: 'user-123',
+      role: Role.kasir,
+      exp: Math.floor(Date.now() / 1000) + 3600,
+    };
 
     it('should successfully logout with valid refresh token', async () => {
       // Arrange: Valid refresh token
@@ -448,8 +520,8 @@ describe('AuthService', () => {
       // Assert: Verify revokeToken was called with correct parameters
       expect(mockAuthRepository.revokeToken).toHaveBeenCalledWith(
         expect.any(String), // token hash
-        tokenPayload.sub,   // user id
-        expect.any(Date)    // expires at
+        tokenPayload.sub, // user id
+        expect.any(Date), // expires at
       );
     });
   });

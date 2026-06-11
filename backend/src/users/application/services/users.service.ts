@@ -1,11 +1,19 @@
-import { Injectable, NotFoundException, BadRequestException, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  BadRequestException,
+  Inject,
+} from '@nestjs/common';
 import * as bcrypt from 'bcrypt';
-import { USER_REPOSITORY, type IUserRepository } from '../../domain/interfaces/user.repository.interface';
+import {
+  USER_REPOSITORY,
+  type IUserRepository,
+} from '../../domain/interfaces/user.repository.interface';
 
 @Injectable()
 export class UsersService {
   constructor(
-    @Inject(USER_REPOSITORY) private userRepository: IUserRepository
+    @Inject(USER_REPOSITORY) private userRepository: IUserRepository,
   ) {}
 
   private getPepper(): string {
@@ -13,7 +21,9 @@ export class UsersService {
     // No fallback allowed - security depends on this being set
     const pepper = process.env.PIN_PEPPER_SECRET;
     if (!pepper) {
-      throw new Error('FATAL: PIN_PEPPER_SECRET environment variable is required');
+      throw new Error(
+        'FATAL: PIN_PEPPER_SECRET environment variable is required',
+      );
     }
     return pepper;
   }
@@ -23,7 +33,9 @@ export class UsersService {
   }
 
   async createCashier(data: any) {
-    const exists = await this.userRepository.findByUsername(data.username.toLowerCase());
+    const exists = await this.userRepository.findByUsername(
+      data.username.toLowerCase(),
+    );
     if (exists) throw new BadRequestException('Username already taken');
 
     const pinHash = await bcrypt.hash(data.pin + this.getPepper(), 12);
@@ -41,7 +53,8 @@ export class UsersService {
 
   async resetCashierPin(id: string, newPin: string) {
     const user = await this.userRepository.findById(id);
-    if (!user || user.role !== 'kasir') throw new NotFoundException('Cashier not found');
+    if (!user || user.role !== 'kasir')
+      throw new NotFoundException('Cashier not found');
 
     const pinHash = await bcrypt.hash(newPin + this.getPepper(), 12);
 

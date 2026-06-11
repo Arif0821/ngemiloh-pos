@@ -1,4 +1,11 @@
-import { IsString, IsOptional, Validate, ValidatorConstraint, ValidatorConstraintInterface, ValidationArguments } from 'class-validator';
+import {
+  IsString,
+  IsOptional,
+  Validate,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+  ValidationArguments,
+} from 'class-validator';
 
 @ValidatorConstraint()
 export class IsCredentialPair implements ValidatorConstraintInterface {

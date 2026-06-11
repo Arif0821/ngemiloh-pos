@@ -16,16 +16,18 @@ export class PrismaProductRepository implements IProductRepository {
       orderBy: { sort_order: 'asc' },
       include: {
         category: true,
-        modifier_groups: includeModifiers ? {
-          where: { is_active: true },
-          orderBy: { sort_order: 'asc' },
-          include: {
-            options: {
+        modifier_groups: includeModifiers
+          ? {
               where: { is_active: true },
               orderBy: { sort_order: 'asc' },
-            },
-          },
-        } : false,
+              include: {
+                options: {
+                  where: { is_active: true },
+                  orderBy: { sort_order: 'asc' },
+                },
+              },
+            }
+          : false,
       },
     });
   }
@@ -36,9 +38,9 @@ export class PrismaProductRepository implements IProductRepository {
       include: {
         category: true,
         modifier_groups: {
-          include: { options: true }
-        }
-      }
+          include: { options: true },
+        },
+      },
     });
   }
 
@@ -72,11 +74,18 @@ export class PrismaProductRepository implements IProductRepository {
   }
 
   async hasOrderItems(id: string): Promise<boolean> {
-    const count = await this.prisma.orderItem.count({ where: { product_id: id } });
+    const count = await this.prisma.orderItem.count({
+      where: { product_id: id },
+    });
     return count > 0;
   }
 
-  async logPriceUpdate(adminId: string, id: string, oldPrice: number, newPrice: number) {
+  async logPriceUpdate(
+    adminId: string,
+    id: string,
+    oldPrice: number,
+    newPrice: number,
+  ) {
     await this.prisma.auditLog.create({
       data: {
         actor_id: adminId,
@@ -84,37 +93,43 @@ export class PrismaProductRepository implements IProductRepository {
         entity_type: 'Product',
         entity_id: id,
         old_value: { base_price: oldPrice },
-        new_value: { base_price: newPrice }
-      }
+        new_value: { base_price: newPrice },
+      },
     });
   }
 
-  async createModifierGroup(productId: string, data: Prisma.ProductModifierGroupUncheckedCreateInput) {
+  async createModifierGroup(
+    productId: string,
+    data: Prisma.ProductModifierGroupUncheckedCreateInput,
+  ) {
     return this.prisma.productModifierGroup.create({
       data: {
         product_id: productId,
         name: data.name,
         is_required: data.is_required,
         max_selections: data.max_selections,
-      }
+      },
     });
   }
 
-  async createModifierOption(groupId: string, data: Prisma.ProductModifierOptionUncheckedCreateInput) {
+  async createModifierOption(
+    groupId: string,
+    data: Prisma.ProductModifierOptionUncheckedCreateInput,
+  ) {
     return this.prisma.productModifierOption.create({
       data: {
         group_id: groupId,
         name: data.name,
         additional_price: data.additional_price,
         sort_order: data.sort_order,
-      }
+      },
     });
   }
 
   async getCategories() {
     return this.prisma.category.findMany({
       where: { is_active: true },
-      orderBy: { sort_order: 'asc' }
+      orderBy: { sort_order: 'asc' },
     });
   }
 
@@ -126,7 +141,10 @@ export class PrismaProductRepository implements IProductRepository {
     return this.prisma.productModifierOption.findUnique({ where: { id } });
   }
 
-  async updateModifierGroup(id: string, data: Prisma.ProductModifierGroupUncheckedUpdateInput) {
+  async updateModifierGroup(
+    id: string,
+    data: Prisma.ProductModifierGroupUncheckedUpdateInput,
+  ) {
     return this.prisma.productModifierGroup.update({
       where: { id },
       data: {
@@ -134,11 +152,14 @@ export class PrismaProductRepository implements IProductRepository {
         is_required: data.is_required,
         is_active: data.is_active,
         max_selections: data.max_selections,
-      }
+      },
     });
   }
 
-  async updateModifierOption(id: string, data: Prisma.ProductModifierOptionUncheckedUpdateInput) {
+  async updateModifierOption(
+    id: string,
+    data: Prisma.ProductModifierOptionUncheckedUpdateInput,
+  ) {
     return this.prisma.productModifierOption.update({
       where: { id },
       data: {
@@ -146,7 +167,7 @@ export class PrismaProductRepository implements IProductRepository {
         additional_price: data.additional_price,
         is_active: data.is_active,
         sort_order: data.sort_order,
-      }
+      },
     });
   }
 }

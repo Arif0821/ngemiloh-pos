@@ -27,7 +27,7 @@ export interface LocalProduct {
 export interface LocalOrderItem {
   product_id: string;
   quantity: number;
-  price: number;
+  price?: number;
   modifiers?: any[];
 }
 

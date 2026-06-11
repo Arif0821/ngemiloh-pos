@@ -41,7 +41,7 @@ export class GlobalExceptionFilter implements ExceptionFilter {
       status = HttpStatus.BAD_REQUEST;
       message = 'Validation error';
       code = 'VALIDATION_ERROR';
-      details = exception.errors.map(e => ({
+      details = exception.errors.map((e) => ({
         path: e.path.join('.'),
         message: e.message,
       }));
@@ -59,9 +59,10 @@ export class GlobalExceptionFilter implements ExceptionFilter {
           method: request.method,
         },
       );
-      message = process.env.NODE_ENV === 'production'
-        ? 'An unexpected error occurred'
-        : exception.message;
+      message =
+        process.env.NODE_ENV === 'production'
+          ? 'An unexpected error occurred'
+          : exception.message;
     }
 
     const errorData: { code: string; message: string; details?: unknown } = {
@@ -97,7 +98,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     return statusCodeMap[status] || 'UNKNOWN_ERROR';
   }
 
-  private handlePrismaError(exception: Prisma.PrismaClientKnownRequestError): number {
+  private handlePrismaError(
+    exception: Prisma.PrismaClientKnownRequestError,
+  ): number {
     // P2002 = Unique constraint violation
     if (exception.code === 'P2002') return HttpStatus.CONFLICT;
     // P2025 = Record not found
@@ -105,7 +108,9 @@ export class GlobalExceptionFilter implements ExceptionFilter {
     return HttpStatus.BAD_REQUEST;
   }
 
-  private getPrismaMessage(exception: Prisma.PrismaClientKnownRequestError): string {
+  private getPrismaMessage(
+    exception: Prisma.PrismaClientKnownRequestError,
+  ): string {
     if (exception.code === 'P2002') {
       return 'A record with this value already exists';
     }

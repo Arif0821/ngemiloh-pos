@@ -1,4 +1,10 @@
-import { User, IpLockout, RevokedToken, AuditLog, Prisma } from '@prisma/client';
+import {
+  User,
+  IpLockout,
+  RevokedToken,
+  AuditLog,
+  Prisma,
+} from '@prisma/client';
 
 export const AUTH_REPOSITORY = Symbol('AUTH_REPOSITORY');
 
@@ -16,8 +22,18 @@ export interface AuthRepositoryInterface {
   lockUser(userId: string, lockedUntil: Date): Promise<User>;
   resetUserFailedLogin(userId: string): Promise<User>;
 
-  createAuditLog(actorId: string, action: string, entityType: string, entityId: string, newValue: Prisma.InputJsonValue): Promise<AuditLog>;
+  createAuditLog(
+    actorId: string,
+    action: string,
+    entityType: string,
+    entityId: string,
+    newValue: Prisma.InputJsonValue,
+  ): Promise<AuditLog>;
 
   findRevokedToken(token: string): Promise<RevokedToken | null>;
-  revokeToken(token: string, userId: string, expiresAt: Date): Promise<RevokedToken>;
+  revokeToken(
+    token: string,
+    userId: string,
+    expiresAt: Date,
+  ): Promise<RevokedToken>;
 }

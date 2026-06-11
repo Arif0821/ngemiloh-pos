@@ -3,15 +3,21 @@ import { RawMaterial, Order, StockMovement } from '@prisma/client';
 export const INVENTORY_REPOSITORY = 'INVENTORY_REPOSITORY';
 
 export interface IInventoryRepository {
-  executeInTransaction<T>(fn: (repo: IInventoryRepository) => Promise<T>): Promise<T>;
+  executeInTransaction<T>(
+    fn: (repo: IInventoryRepository) => Promise<T>,
+  ): Promise<T>;
 
   findAllRawMaterials(): Promise<RawMaterial[]>;
   findActiveRawMaterials(): Promise<RawMaterial[]>;
   findRawMaterialById(id: string): Promise<RawMaterial | null>;
   findManyRawMaterialsByIds(ids: string[]): Promise<RawMaterial[]>;
-  
-  updateRawMaterialStock(id: string, amount: number, type: 'increment' | 'decrement' | 'set'): Promise<RawMaterial>;
-  
+
+  updateRawMaterialStock(
+    id: string,
+    amount: number,
+    type: 'increment' | 'decrement' | 'set',
+  ): Promise<RawMaterial>;
+
   createInventoryTransaction(data: {
     raw_material_id: string;
     qty: number;

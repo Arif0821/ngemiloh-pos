@@ -1,11 +1,20 @@
-import { Injectable, Inject, NotFoundException, BadRequestException } from '@nestjs/common';
-import { type IDiscountRepository, DISCOUNT_REPOSITORY } from '../../domain/interfaces/discount.repository.interface';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
+import {
+  type IDiscountRepository,
+  DISCOUNT_REPOSITORY,
+} from '../../domain/interfaces/discount.repository.interface';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class DiscountsService {
   constructor(
-    @Inject(DISCOUNT_REPOSITORY) private readonly discountRepository: IDiscountRepository,
+    @Inject(DISCOUNT_REPOSITORY)
+    private readonly discountRepository: IDiscountRepository,
   ) {}
 
   async findAll() {

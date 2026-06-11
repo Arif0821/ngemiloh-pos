@@ -1,4 +1,14 @@
-import { IsString, IsNumber, IsOptional, IsArray, ValidateNested, IsUUID, Min, MaxLength, IsIn } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+  IsUUID,
+  Min,
+  MaxLength,
+  IsIn,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class AdjustStockDto {

@@ -10,8 +10,8 @@ import { USER_REPOSITORY } from './domain/interfaces/user.repository.interface';
     UsersService,
     {
       provide: USER_REPOSITORY,
-      useClass: PrismaUserRepository
-    }
-  ]
+      useClass: PrismaUserRepository,
+    },
+  ],
 })
 export class UsersModule {}

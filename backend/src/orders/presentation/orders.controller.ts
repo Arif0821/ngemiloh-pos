@@ -1,4 +1,22 @@
-import { Controller, Post, Get, Body, UseGuards, Req, HttpCode, HttpStatus, Param, Sse, MessageEvent, Patch, Res, Query, ForbiddenException, Logger } from '@nestjs/common';
+import {
+  Controller,
+  Post,
+  Get,
+  Body,
+  UseGuards,
+  Req,
+  HttpCode,
+  HttpStatus,
+  Param,
+  Sse,
+  MessageEvent,
+  Patch,
+  Res,
+  Query,
+  ForbiddenException,
+  Logger,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import { OrdersService } from '../application/services/orders.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
@@ -17,36 +35,49 @@ export class OrdersController {
 
   constructor(
     private readonly ordersService: OrdersService,
-    private readonly eventEmitter: EventEmitter2
+    private readonly eventEmitter: EventEmitter2,
   ) {}
 
   @Post('orders')
   @UseGuards(JwtAuthGuard)
-  async createOrder(@Body() body: CreateOrderDto, @Req() req: Request & { user: any }) {
+  async createOrder(
+    @Body() body: CreateOrderDto,
+    @Req() req: Request & { user: any },
+  ) {
     const order = await this.ordersService.createOrder(body, req.user.id);
     return { success: true, data: order };
   }
 
   @Post('orders/sync-batch')
   @UseGuards(JwtAuthGuard)
-  async syncBatchOrders(@Body() body: SyncBatchDto, @Req() req: Request & { user: any }) {
+  async syncBatchOrders(
+    @Body() body: SyncBatchDto,
+    @Req() req: Request & { user: any },
+  ) {
     const { orders } = body;
-    const result = await this.ordersService.syncBatchOrders(orders, req.user.id);
+    const result = await this.ordersService.syncBatchOrders(
+      orders,
+      req.user.id,
+    );
     return { success: true, data: result };
   }
 
   @Get('orders')
   @UseGuards(JwtAuthGuard)
   async getHistory(
-    @Req() req: Request& { user: any },
+    @Req() req: Request & { user: any },
     @Query('page') page: string = '1',
-    @Query('limit') limit: string = '50'
+    @Query('limit') limit: string = '50',
   ) {
     const filterKasir = req.user.role === 'kasir' ? req.user.id : undefined;
     const pageNum = Math.max(1, parseInt(page, 10) || 1);
     const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 50));
 
-    const result = await this.ordersService.getHistory(filterKasir, pageNum, limitNum);
+    const result = await this.ordersService.getHistory(
+      filterKasir,
+      pageNum,
+      limitNum,
+    );
     return { success: true, data: result };
   }
 
@@ -54,9 +85,14 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard, RolesGuard, ThrottlerGuard)
   @Roles(Role.superadmin)
   @Throttle({ default: { limit: 5, ttl: 3600000 } })
-  async exportCsv(@Query('startDate') startDate: string, @Query('endDate') endDate: string, @Res() res: Response) {
+  async exportCsv(
+    @Query('startDate') startDate: string,
+    @Query('endDate') endDate: string,
+    @Res() res: Response,
+  ) {
     // SECURITY: Sanitize filename parameters to prevent CRLF injection
-    const sanitizeFilename = (str: string) => str.replace(/[^a-zA-Z0-9_-]/g, '_');
+    const sanitizeFilename = (str: string) =>
+      str.replace(/[^a-zA-Z0-9_-]/g, '_');
     const safeStartDate = sanitizeFilename(startDate || 'start');
     const safeEndDate = sanitizeFilename(endDate || 'end');
 
@@ -69,9 +105,13 @@ export class OrdersController {
   @Get('orders/shift')
   @UseGuards(JwtAuthGuard)
   async getShiftSummary(@Req() req: Request & { user: any }) {
-    const filterKasir = req.user.role === 'kasir' ? req.user.id : req.query.kasir_id;
+    const filterKasir =
+      req.user.role === 'kasir' ? req.user.id : req.query.kasir_id;
     if (!filterKasir) {
-      return { success: false, message: 'Kasir ID required for superadmin shift check' };
+      return {
+        success: false,
+        message: 'Kasir ID required for superadmin shift check',
+      };
     }
     const summary = await this.ordersService.getShiftSummary(filterKasir);
     return { success: true, data: summary };
@@ -80,7 +120,17 @@ export class OrdersController {
   @Get('admin/shifts')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
-  async getAllShifts(@Query('kasir_id') kasirId: string, @Query('date') date: string) {
+  async getAllShifts(
+    @Query(
+      'kasir_id',
+      new ParseUUIDPipe({
+        exceptionFactory: () =>
+          new ForbiddenException('Invalid kasir_id format - must be UUID'),
+      }),
+    )
+    kasirId: string,
+    @Query('date') date: string,
+  ) {
     const shifts = await this.ordersService.getAllShifts(kasirId, date);
     return { success: true, data: shifts };
   }
@@ -101,7 +151,11 @@ export class OrdersController {
 
   @Post('admin/transactions/:id/void')
   @UseGuards(JwtAuthGuard)
-  async voidTransaction(@Param('id') id: string, @Body('reason') reason: string, @Req() req: Request & { user: any }) {
+  async voidTransaction(
+    @Param('id') id: string,
+    @Body('reason') reason: string,
+    @Req() req: Request & { user: any },
+  ) {
     // SECURITY: Check role in controller, not via Roles decorator for detailed control
     // @Roles decorator is still applied at class level, this is additional check
     if (req.user.role !== 'superadmin') {
@@ -113,12 +167,20 @@ export class OrdersController {
 
   @Patch('admin/transactions/:id/flag')
   @UseGuards(JwtAuthGuard)
-  async flagTransaction(@Param('id') id: string, @Body('status') status: string, @Req() req: Request & { user: any }) {
+  async flagTransaction(
+    @Param('id') id: string,
+    @Body('status') status: string,
+    @Req() req: Request & { user: any },
+  ) {
     // SECURITY: Check role in controller for proper 403 response
     if (req.user.role !== 'superadmin') {
       throw new ForbiddenException('Only superadmin can flag transactions');
     }
-    const order = await this.ordersService.flagTransaction(id, status, req.user.id);
+    const order = await this.ordersService.flagTransaction(
+      id,
+      status,
+      req.user.id,
+    );
     return { success: true, data: order };
   }
 
@@ -127,7 +189,10 @@ export class OrdersController {
   async getOrderStatus(@Param('id') id: string, @Req() req: Request) {
     // SECURITY: Require authentication via guard for proper 401 response
     const order = await this.ordersService.getOrder(id);
-    return { success: true, data: { status: order.status, payment_status: order.payment_status } };
+    return {
+      success: true,
+      data: { status: order.status, payment_status: order.payment_status },
+    };
   }
 
   @Sse('orders/:id/sse')
@@ -138,14 +203,14 @@ export class OrdersController {
       filter((payload: any) => payload.orderId === id),
       map((payload: any) => ({
         data: payload,
-      } as MessageEvent)),
+      })),
     );
 
     const heartbeat = interval(30000).pipe(
       map(() => ({
         type: 'ping',
-        data: { message: 'heartbeat' }
-      } as MessageEvent))
+        data: { message: 'heartbeat' },
+      })),
     );
 
     return merge(orderEvents, heartbeat);
@@ -166,18 +231,19 @@ export class OrdersController {
     // Midtrans official IP ranges (production)
     const midtransIps = (process.env.MIDTRANS_ALLOWED_IPS || '')
       .split(',')
-      .map(s => s.trim())
+      .map((s) => s.trim())
       .filter(Boolean);
 
     // Add default Midtrans production IPs if not configured
     const defaultMidtransIps = [
-      '13.229.87.0/24',   // Singapore
-      '54.255.192.0/24',  // Singapore
-      '103.211.86.0/24',  // Indonesia
+      '13.229.87.0/24', // Singapore
+      '54.255.192.0/24', // Singapore
+      '103.211.86.0/24', // Indonesia
     ];
 
-    const allowedIps = midtransIps.length > 0 ? midtransIps : defaultMidtransIps;
-    const isAllowed = allowedIps.some(allowedIp => {
+    const allowedIps =
+      midtransIps.length > 0 ? midtransIps : defaultMidtransIps;
+    const isAllowed = allowedIps.some((allowedIp) => {
       // Support /32 (single IP), /24, and /16 CIDR blocks
       if (allowedIp.includes('/')) {
         const [baseIp, prefix] = allowedIp.split('/');
@@ -189,17 +255,22 @@ export class OrdersController {
           return ip.startsWith(baseIp.substring(0, baseIp.lastIndexOf('.')));
         }
         if (prefixNum === 16) {
-          return ip.startsWith(baseIp.substring(0, baseIp.indexOf('.', baseIp.indexOf('.') + 1)));
+          return ip.startsWith(
+            baseIp.substring(0, baseIp.indexOf('.', baseIp.indexOf('.') + 1)),
+          );
         }
         // SECURITY: Log warning for unsupported CIDR notation
-        this.logger.warn(`Unsupported CIDR notation: ${allowedIp} in MIDTRANS_ALLOWED_IPS`);
+        this.logger.warn(
+          `Unsupported CIDR notation: ${allowedIp} in MIDTRANS_ALLOWED_IPS`,
+        );
         return false;
       }
       return ip === allowedIp;
     });
 
     // SECURITY: Only bypass IP validation in known test environments
-    const isDevOrTest = process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
+    const isDevOrTest =
+      process.env.NODE_ENV === 'development' || process.env.NODE_ENV === 'test';
     if (!isAllowed && !isDevOrTest) {
       this.logger.warn(`Midtrans webhook blocked - untrusted IP: ${ip}`);
       throw new ForbiddenException('Webhook request from untrusted IP');
@@ -208,22 +279,34 @@ export class OrdersController {
     // SECURITY: Verify webhook signature from Midtrans
     const signatureKey = body.signature_key || body.signature;
 
-    // Always verify signature if present, skip if sandbox without signature
-    if (!signatureKey && process.env.MIDTRANS_ENV === 'sandbox') {
-      this.logger.warn('Midtrans webhook without signature (sandbox mode - skipping verification)');
-    } else if (!signatureKey) {
+    // P1-SECURITY: Always require signature in production, skip only in sandbox for development
+    if (!signatureKey && process.env.MIDTRANS_ENV === 'production') {
       throw new ForbiddenException('Invalid webhook: missing signature');
     }
 
+    if (!signatureKey) {
+      this.logger.warn(
+        'Midtrans webhook without signature (sandbox mode - this should be fixed before production)',
+      );
+      // In sandbox, we still try to process but log warning
+    }
+
     try {
-      await this.ordersService.handleMidtransWebhook(body);
-      return { status: 'ok' };
+      const result = await this.ordersService.handleMidtransWebhook(body);
+      return result;
     } catch (error: unknown) {
-      // SECURITY: Log internal error details server-side only, never expose to webhook caller
-      // Return generic response to prevent order ID enumeration
-      const errorMessage = error instanceof Error ? error.message : 'Unknown error';
+      // P0-API: Return distinct status instead of hiding failures
+      const errorMessage =
+        error instanceof Error ? error.message : 'Unknown error';
       this.logger.error(`Webhook processing error: ${errorMessage}`);
-      return { status: 'ok' };  // Always return ok to prevent Midtrans retries on our errors
+
+      // Return processed with error status (not 'ok') so it's distinguishable
+      // This still prevents Midtrans retries but makes debugging easier
+      return {
+        status: 'processed',
+        result: 'error',
+        error: 'Internal processing failed',
+      };
     }
   }
 }

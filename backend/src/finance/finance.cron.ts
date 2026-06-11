@@ -9,7 +9,7 @@ export class FinanceCronService {
 
   constructor(
     private prisma: PrismaService,
-    private emailService: EmailService
+    private emailService: EmailService,
   ) {}
 
   // 0 8 1 * * => 08:00 on day 1 of every month
@@ -36,28 +36,45 @@ export class FinanceCronService {
     const periodMonth = new Date(year, month - 1, 1);
 
     const log = await this.prisma.profitShareLog.findUnique({
-      where: { period_month: periodMonth }
+      where: { period_month: periodMonth },
     });
 
     if (!log) {
-      this.logger.warn(`Laporan bagi hasil untuk bulan ${month}/${year} belum ditutup. Sending reminder...`);
-      await this.emailService.sendAlert(
-        `Peringatan: Laporan Bagi Hasil Belum Ditutup - ${month}/${year}`,
-        `<p>Laporan bagi hasil untuk bulan ${month} tahun ${year} <strong>belum ditutup</strong>.</p>
+      this.logger.warn(
+        `Laporan bagi hasil untuk bulan ${month}/${year} belum ditutup. Sending reminder...`,
+      );
+      await this.emailService
+        .sendAlert(
+          `Peringatan: Laporan Bagi Hasil Belum Ditutup - ${month}/${year}`,
+          `<p>Laporan bagi hasil untuk bulan ${month} tahun ${year} <strong>belum ditutup</strong>.</p>
          <p>Mohon segera tutup buku laporan bagi hasil sebelum tanggal 5 bulan ini.</p>
-         <p>Jika laporan sudah ditutup, abaikan email ini.</p>`
-      ).catch(err => this.logger.error(`Failed to send profit share reminder: ${err instanceof Error ? err.message : String(err)}`));
+         <p>Jika laporan sudah ditutup, abaikan email ini.</p>`,
+        )
+        .catch((err) =>
+          this.logger.error(
+            `Failed to send profit share reminder: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
       return;
     }
 
     if (!log.is_paid) {
-      const amount = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR' }).format(Number(log.cashier_share));
-      await this.emailService.sendAlert(
-        `Reminder: Tunggakan Bagi Hasil Bulan ${month}/${year}`,
-        `<p>Peringatan dari sistem. Anda <strong>belum membayar bagi hasil kasir</strong> untuk periode bulan ${month} tahun ${year}.</p>
+      const amount = new Intl.NumberFormat('id-ID', {
+        style: 'currency',
+        currency: 'IDR',
+      }).format(Number(log.cashier_share));
+      await this.emailService
+        .sendAlert(
+          `Reminder: Tunggakan Bagi Hasil Bulan ${month}/${year}`,
+          `<p>Peringatan dari sistem. Anda <strong>belum membayar bagi hasil kasir</strong> untuk periode bulan ${month} tahun ${year}.</p>
          <p>Total yang harus dibayarkan: <strong>${amount}</strong>.</p>
-         <p>Deadline penyelesaian adalah <strong>tanggal 5 bulan ini</strong>. Mohon segera melunasi dan memperbarui status di halaman laporan.</p>`
-      ).catch(err => this.logger.error(`Failed to send profit share reminder: ${err instanceof Error ? err.message : String(err)}`));
+         <p>Deadline penyelesaian adalah <strong>tanggal 5 bulan ini</strong>. Mohon segera melunasi dan memperbarui status di halaman laporan.</p>`,
+        )
+        .catch((err) =>
+          this.logger.error(
+            `Failed to send profit share reminder: ${err instanceof Error ? err.message : String(err)}`,
+          ),
+        );
     }
   }
 }

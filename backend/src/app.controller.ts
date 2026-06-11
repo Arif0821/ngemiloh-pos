@@ -1,4 +1,14 @@
-import { Controller, Get, Patch, Body, UseGuards, Req, Param, Res, HttpStatus } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Patch,
+  Body,
+  UseGuards,
+  Req,
+  Param,
+  Res,
+  HttpStatus,
+} from '@nestjs/common';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
@@ -25,7 +35,8 @@ export class AppController {
   @Get('health')
   async healthCheck(@Res() res: Response) {
     const health = await this.appService.healthCheck();
-    const statusCode = health.status === 'ok' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE;
+    const statusCode =
+      health.status === 'ok' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE;
     return res.status(statusCode).json(health);
   }
 
@@ -40,7 +51,10 @@ export class AppController {
   @Patch('api/v1/admin/settings')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
-  async updateSettings(@Body() body: Record<string, string>, @Req() req: AuthenticatedRequest) {
+  async updateSettings(
+    @Body() body: Record<string, string>,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const data = await this.appService.updateSettings(body, req.user.id);
     return { success: true, data };
   }
@@ -56,8 +70,16 @@ export class AppController {
   @Patch('api/v1/admin/feature-flags/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
-  async toggleFeatureFlag(@Param('id') id: string, @Body('is_enabled') isEnabled: boolean, @Req() req: AuthenticatedRequest) {
-    const data = await this.appService.toggleFeatureFlag(id, isEnabled, req.user.id);
+  async toggleFeatureFlag(
+    @Param('id') id: string,
+    @Body('is_enabled') isEnabled: boolean,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const data = await this.appService.toggleFeatureFlag(
+      id,
+      isEnabled,
+      req.user.id,
+    );
     return { success: true, data };
   }
 

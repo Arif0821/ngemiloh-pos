@@ -25,14 +25,18 @@ export class EmailService {
     try {
       const smtpPass = process.env.EMAIL_APP_PASSWORD || process.env.SMTP_PASS;
       if (smtpPass === 'GANTI_DENGAN_APP_PASSWORD_GMAIL' || !smtpPass) {
-        this.logger.warn(`Email alert skipped (App password not configured): ${subject}`);
+        this.logger.warn(
+          `Email alert skipped (App password not configured): ${subject}`,
+        );
         return;
       }
 
       // SECURITY: Require admin email to be configured in production
       const adminEmail = process.env.EMAIL_ALERT_TO || process.env.SMTP_USER;
       if (!adminEmail) {
-        this.logger.warn(`Email alert skipped (no admin email configured): ${subject}`);
+        this.logger.warn(
+          `Email alert skipped (no admin email configured): ${subject}`,
+        );
         return;
       }
       const fromEmail = process.env.EMAIL_USER || process.env.SMTP_USER;
@@ -64,14 +68,18 @@ export class EmailService {
     try {
       const smtpPass = process.env.EMAIL_APP_PASSWORD || process.env.SMTP_PASS;
       if (smtpPass === 'GANTI_DENGAN_APP_PASSWORD_GMAIL' || !smtpPass) {
-        this.logger.warn(`Reminder email skipped (App password not configured): ${subject}`);
+        this.logger.warn(
+          `Reminder email skipped (App password not configured): ${subject}`,
+        );
         return;
       }
 
       // SECURITY: Require admin email to be configured in production
       const adminEmail = process.env.EMAIL_ALERT_TO || process.env.SMTP_USER;
       if (!adminEmail) {
-        this.logger.warn(`Email alert skipped (no admin email configured): ${subject}`);
+        this.logger.warn(
+          `Email alert skipped (no admin email configured): ${subject}`,
+        );
         return;
       }
       const fromEmail = process.env.EMAIL_USER || process.env.SMTP_USER;

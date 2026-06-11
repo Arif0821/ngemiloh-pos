@@ -1,4 +1,12 @@
-import { Controller, Get, Query, UseGuards, Post, Req, ForbiddenException } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Query,
+  UseGuards,
+  Post,
+  Req,
+  ForbiddenException,
+} from '@nestjs/common';
 import { AuditService } from '../application/services/audit.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
@@ -18,7 +26,7 @@ export class AuditController {
     @Query('action') action?: string,
     @Query('date_from') date_from?: string,
     @Query('date_to') date_to?: string,
-    @Query('page') page: string = '1'
+    @Query('page') page: string = '1',
   ) {
     const filters = { actor_id, action, date_from, date_to };
     const pageNum = parseInt(page, 10) || 1;

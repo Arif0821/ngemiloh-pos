@@ -1,4 +1,14 @@
-import { IsString, IsUUID, IsNumber, IsOptional, IsArray, ValidateNested, IsEnum, Min } from 'class-validator';
+import {
+  IsString,
+  IsUUID,
+  IsNumber,
+  IsOptional,
+  IsArray,
+  ValidateNested,
+  IsEnum,
+  Min,
+  Max,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { PaymentMethod } from '@prisma/client';
 
@@ -54,7 +64,9 @@ export class CreateOrderDto {
 }
 
 export class SyncBatchDto {
+  // P1-API: Limit batch size to prevent memory issues
   @IsArray()
+  @Max(100, { message: 'Maximum 100 orders per batch' })
   @ValidateNested({ each: true })
   @Type(() => CreateOrderDto)
   orders: CreateOrderDto[];

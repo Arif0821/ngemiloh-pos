@@ -1,4 +1,11 @@
-import { IsString, IsNumber, IsOptional, IsDateString, MaxLength, Min } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsDateString,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 
 export class CreateOpexDto {

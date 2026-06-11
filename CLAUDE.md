@@ -6,48 +6,83 @@ POS Nabil is a Point of Sale system built with modern web technologies. This gui
 
 ## Tech Stack
 
-- **Frontend:** React19, TypeScript, Vite, Tailwind CSS
-- **Backend:** Node.js, Express, TypeScript
-- **Database:** PostgreSQL with Prisma ORM
-- **Container:** Docker, Docker Compose
-- **Analytics:** Umami (privacy-focused web analytics)
+- **Frontend:** SvelteKit 2 (Svelte 5 with runes), TypeScript, Tailwind CSS, Dexie (IndexedDB)
+- **Backend:** NestJS, TypeScript, Prisma ORM
+- **Database:** PostgreSQL 16
+- **Cache/Queue:** Redis 7 with BullMQ
+- **Container:** Docker, Docker Compose, Caddy (reverse proxy)
+- **Payments:** Midtrans (QRIS, Cash, Split)
+- **Monitoring:** Sentry (error tracking)
+- **Analytics:** Umami (privacy-focused, optional)
 
 ## Project Structure
 
 ```
 POS_Nabil/
-├── backend/           → Express API, Prisma ORM
-├── frontend/ → React SPA
-├── docs/              → Documentation
-├── agent-skills/     → AI agent skills (agent-skills library)
-│   ├── skills/        → 23 skill workflows
-│   ├── agents/        → Specialist personas
-│   └── references/    → Checklists
-├── SKILLS_SUMMARY.md  → Skills reference guide
-└── docker-compose.yml  → Container orchestration
+├── backend/              → NestJS API (Clean Architecture)
+│   └── src/
+│       ├── auth/         → Authentication (JWT, PIN, Password)
+│       ├── orders/       → Order processing & QRIS payments
+│       ├── products/     → Product & modifier management
+│       ├── inventory/   → Stock & raw materials (FEFO)
+│       ├── finance/      → KPIs, OPEX, profit share
+│       ├── discounts/    → Discount rules & scheduling
+│       ├── users/        → User management
+│       ├── flags/        → Feature flags
+│       ├── audit/        → Audit logging
+│       └── common/       → Shared utilities, filters, interceptors
+├── frontend/             → SvelteKit 2 SPA
+│   └── src/
+│       ├── lib/
+│       │   ├── services/ → API client, POS service, printer
+│       │   ├── stores/   → Svelte 5 runes stores
+│       │   ├── components/ → UI components
+│       │   └── db.ts     → Dexie IndexedDB schema
+│       └── routes/       → SvelteKit pages
+├── docs/                 → Documentation
+│   ├── api/              → API endpoint documentation
+│   └── decisions/         → Architecture Decision Records (ADRs)
+├── agent-skills/         → AI agent skills (23 skill workflows)
+├── tests/                → Shared test utilities
+├── scripts/              → Build & deployment scripts
+├── Caddyfile             → Reverse proxy configuration
+├── docker-compose.yml     → Container orchestration
+└── SKILLS_SUMMARY.md      → Skills reference guide
 ```
 
 ## Commands
 
 ```bash
-# Development
-npm run dev              → Start development server
-npm run dev:backend → Start backend only
-npm run dev:frontend     → Start frontend only
+# Backend Development
+cd backend
+npm run start:dev          → Start NestJS dev server (port 3000)
+npm run build → Build for production
+npm run lint → Run ESLint
+npx tsc --noEmit           → Type check
+npm test → Run unit tests
+npm run test:e2e           → Run E2E tests
+npx prisma migrate dev → Run migrations (dev)
+npx prisma migrate deploy   → Run migrations (prod)
+npx prisma studio → Open Prisma Studio
 
-# Build & Test
-npm run build            → Production build
-npm test                 → Run tests
-npm run lint             → Lint code
-npx tsc --noEmit         → Type check
-
-# Database
-npx prisma migrate       → Run migrations
-npx prisma studio        → Open Prisma Studio
+# Frontend Development
+cd frontend
+npm run dev                → Start SvelteKit dev server (port 5173)
+npm run build              → Build for production
+npm run check              → Run Svelte type check
+npm run lint                → Run ESLint
+npm run format              → Format with Prettier
+npm test                    → Run Vitest tests
 
 # Docker
-docker-compose up        → Start all services
-docker-compose down     → Stop all services
+docker-compose up -d        → Start all services
+docker-compose down → Stop all services
+docker-compose logs -f      → View logs
+docker-compose exec nestjs-api sh → Shell into backend container
+
+# Full Stack (from root)
+npm run dev:backend         → Start backend only
+npm run dev:frontend → Start frontend only
 ```
 
 ## Code Conventions
@@ -58,17 +93,24 @@ docker-compose down     → Stop all services
 - Use explicit types for function parameters and return values
 - Use `interface` for object shapes, `type` for unions/intersections
 
-### React Components
-- Functional components with hooks (no class components)
-- Colocate tests next to source: `Component.tsx` → `Component.test.tsx`
-- Use `cn()` utility for conditional classNames
-- Error boundaries at route level
+### Svelte Components (Frontend)
+- Use Svelte 5 runes (`$state`, `$derived`, `$effect`) for reactivity
+- Colocate tests next to source: `Component.svelte` → `Component.test.ts`
+- Use `class` directive for conditional classes
+- Error boundaries at route level (`+error.svelte`)
+
+### Backend Services (NestJS)
+- Follow Clean Architecture: `domain/application/infrastructure/presentation` layers
+- Use dependency injection with `@Inject()` and tokens
+- Repository pattern with interfaces in domain layer
+- Service methods should be focused and small (ideally < 100 lines)
 
 ### API Design
-- RESTful endpoints with consistent naming
-- Error responses follow format: `{ error: { code: string, message: string, details?: unknown } }`
-- Validate input at route handlers using Zod schemas
-- Return appropriate HTTP status codes
+- RESTful endpoints with `/api/v1` prefix
+- Error responses follow format: `{ success: false, error: { code: string, message: string, details?: unknown } }`
+- Success responses: `{ success: true, data: T, meta?: PaginationMeta }`
+- Validate input at route handlers using class-validator DTOs
+- Return appropriate HTTP status codes (201 for create, 200 for success, 4xx for errors)
 
 ### Git Workflow
 - Atomic commits (one logical change per commit)

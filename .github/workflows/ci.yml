@@ -40,7 +40,6 @@ jobs:
 
       - name: Run ESLint
         run: npm run lint
-        continue-on-error: true
 
   # ============================================
   # JOB 2: TYPE CHECK
@@ -151,7 +150,7 @@ jobs:
           files: ./backend/coverage/lcov.info
           flags: unittests
           name: backend-coverage
-          fail_ci_if_error: false
+          fail_ci_if_error: true
 
       - name: Upload test results
         if: always()
@@ -184,8 +183,7 @@ jobs:
         run: npm install --legacy-peer-deps
 
       - name: Run npm audit
-        run: npm audit --audit-level=high
-        continue-on-error: true
+        run: npm audit --audit-level=moderate
 
       - name: Check for secrets in code
         run: |
@@ -218,11 +216,9 @@ jobs:
 
       - name: Run Prettier
         run: npm run format -- --check
-        continue-on-error: true
 
       - name: Run ESLint
         run: npm run lint
-        continue-on-error: true
 
   # ============================================
   # JOB 6: FRONTEND TYPE CHECK
@@ -252,7 +248,6 @@ jobs:
 
       - name: Run Svelte-Check
         run: npm run check
-        continue-on-error: true
 
   # ============================================
   # JOB 7: FRONTEND TEST
@@ -279,7 +274,6 @@ jobs:
 
       - name: Run tests
         run: npm test -- --run --coverage
-        continue-on-error: true
 
   # ============================================
   # JOB 8: BUILD
@@ -316,8 +310,7 @@ jobs:
           format: sarif
           output: trivy-results.sarif
           severity: HIGH,CRITICAL
-          exit-code: '0'
-          ignore-unfixed: true
+          exit-code: '1'
 
       - name: Upload Trivy results to GitHub Security
         if: always() && hashFiles('trivy-results.sarif') != ''

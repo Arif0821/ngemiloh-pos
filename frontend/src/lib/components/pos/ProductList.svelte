@@ -1,5 +1,6 @@
 <script lang="ts">
   import { posStore } from '$lib/stores/pos.store.svelte';
+  import { toast } from '$lib/stores/toast.store.svelte';
   import type { LocalProduct } from '$lib/db';
 
   // SECURITY: Validate image URL to prevent XSS attacks
@@ -17,7 +18,7 @@
   function selectProduct(product: LocalProduct) {
     if (product.is_out_of_stock) {
       if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
-      alert('Stok habis');
+      toast.warning('Stok habis');
       return;
     }
     if (navigator.vibrate) navigator.vibrate(50);

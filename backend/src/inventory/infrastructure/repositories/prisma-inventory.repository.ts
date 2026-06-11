@@ -7,14 +7,16 @@ import { RawMaterial, Order, StockMovement } from '@prisma/client';
 export class PrismaInventoryRepository implements IInventoryRepository {
   constructor(
     private readonly prisma: PrismaService,
-    @Optional() private readonly tx?: any
+    @Optional() private readonly tx?: any,
   ) {}
 
   private get client() {
     return this.tx || this.prisma;
   }
 
-  async executeInTransaction<T>(fn: (repo: IInventoryRepository) => Promise<T>): Promise<T> {
+  async executeInTransaction<T>(
+    fn: (repo: IInventoryRepository) => Promise<T>,
+  ): Promise<T> {
     if (this.tx) {
       // Already in transaction
       return fn(this);
@@ -49,7 +51,11 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     });
   }
 
-  async updateRawMaterialStock(id: string, amount: number, type: 'increment' | 'decrement' | 'set'): Promise<RawMaterial> {
+  async updateRawMaterialStock(
+    id: string,
+    amount: number,
+    type: 'increment' | 'decrement' | 'set',
+  ): Promise<RawMaterial> {
     let data: any = {};
     if (type === 'increment') {
       data = { current_stock: { increment: amount } };
@@ -80,8 +86,8 @@ export class PrismaInventoryRepository implements IInventoryRepository {
         type: data.transaction_type,
         notes: data.notes,
         created_by: data.created_by,
-        reference_order_id: data.reference_id
-      }
+        reference_order_id: data.reference_id,
+      },
     });
   }
 
@@ -140,12 +146,14 @@ export class PrismaInventoryRepository implements IInventoryRepository {
       }
     }
 
-    return batches.filter(b => b.qty_remaining > 0);
+    return batches.filter((b) => b.qty_remaining > 0);
   }
 
   async decrementBatchStock(batchId: string, amount: number): Promise<any> {
     // Decrement stock by creating OUT movement
-    const movement = await this.client.stockMovement.findUnique({ where: { id: batchId } });
+    const movement = await this.client.stockMovement.findUnique({
+      where: { id: batchId },
+    });
     if (!movement) {
       return null;
     }
@@ -167,7 +175,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
   async updateRawMaterial(id: string, data: any): Promise<RawMaterial> {
     return this.client.rawMaterial.update({
       where: { id },
-      data
+      data,
     });
   }
 
@@ -177,7 +185,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
 
   async deleteBomRecipe(id: string): Promise<any> {
     return this.client.bomRecipe.delete({
-      where: { id }
+      where: { id },
     });
   }
 }

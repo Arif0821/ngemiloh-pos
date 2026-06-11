@@ -32,7 +32,11 @@ export class SentryErrorInterceptor implements NestInterceptor {
     if (!body || typeof body !== 'object') return body;
     const sanitized: any = Array.isArray(body) ? [] : {};
     for (const [key, value] of Object.entries(body)) {
-      if (this.sensitiveFields.some(f => key.toLowerCase().includes(f.toLowerCase()))) {
+      if (
+        this.sensitiveFields.some((f) =>
+          key.toLowerCase().includes(f.toLowerCase()),
+        )
+      ) {
         sanitized[key] = '[REDACTED]';
       } else if (typeof value === 'object' && value !== null) {
         sanitized[key] = this.sanitizeBody(value);
@@ -47,7 +51,9 @@ export class SentryErrorInterceptor implements NestInterceptor {
     return next.handle().pipe(
       catchError((error) => {
         const request = context.switchToHttp().getRequest();
-        const status = error.getStatus ? error.getStatus() : (error.status || 500);
+        const status = error.getStatus
+          ? error.getStatus()
+          : error.status || 500;
         const isExpectedError = status >= 400 && status < 500;
 
         if (!isExpectedError && status !== 404) {

@@ -1,5 +1,14 @@
-import { Injectable, Inject, NotFoundException, BadRequestException, Logger } from '@nestjs/common';
-import { type IFinanceRepository, FINANCE_REPOSITORY } from '../../domain/interfaces/finance.repository.interface';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
+import {
+  type IFinanceRepository,
+  FINANCE_REPOSITORY,
+} from '../../domain/interfaces/finance.repository.interface';
 import { EmailService } from '../../../email/email.service';
 import { Prisma, Order } from '@prisma/client';
 
@@ -8,8 +17,9 @@ export class FinanceService {
   private readonly logger = new Logger(FinanceService.name);
 
   constructor(
-    @Inject(FINANCE_REPOSITORY) private readonly financeRepository: IFinanceRepository,
-    private emailService: EmailService
+    @Inject(FINANCE_REPOSITORY)
+    private readonly financeRepository: IFinanceRepository,
+    private emailService: EmailService,
   ) {}
 
   async getDashboardKpi(date: string) {
@@ -20,11 +30,15 @@ export class FinanceService {
 
     const orders = await this.financeRepository.findOrders(
       { created_at: { gte: start, lte: end }, status: { not: 'voided' } },
-      { items: true }
+      { items: true },
     );
 
     const revenue = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
-    const hpp = orders.reduce((sum, o) => sum + Number((o as Order & { cogs_total?: number }).cogs_total || 0), 0);
+    const hpp = orders.reduce(
+      (sum, o) =>
+        sum + Number((o as Order & { cogs_total?: number }).cogs_total || 0),
+      0,
+    );
     const laba = revenue - hpp;
     const targetProgress = Math.min(100, Math.round((revenue / 5000000) * 100));
 
@@ -32,37 +46,50 @@ export class FinanceService {
     const avg = transactions > 0 ? revenue / transactions : 0;
 
     const paymentDistribution = {
-      cash: orders.filter(o => o.payment_method === 'cash').length,
-      qris: orders.filter(o => o.payment_method === 'qris').length,
-      split: orders.filter(o => o.payment_method === 'split').length,
+      cash: orders.filter((o) => o.payment_method === 'cash').length,
+      qris: orders.filter((o) => o.payment_method === 'qris').length,
+      split: orders.filter((o) => o.payment_method === 'split').length,
     };
 
-    return { revenue, hpp, laba, targetProgress, transactions, avg, paymentDistribution };
+    return {
+      revenue,
+      hpp,
+      laba,
+      targetProgress,
+      transactions,
+      avg,
+      paymentDistribution,
+    };
   }
 
   async getOpex(month: number, year: number) {
     const start = new Date(year, month - 1, 1);
     const end = new Date(year, month, 0, 23, 59, 59, 999);
-    
+
     return this.financeRepository.findOperationalExpenses(
       { expense_date: { gte: start, lte: end } },
-      { expense_date: 'desc' }
+      { expense_date: 'desc' },
     );
   }
 
-  async createOpex(data: Prisma.OperationalExpenseUncheckedCreateInput, userId: string) {
+  async createOpex(
+    data: Prisma.OperationalExpenseUncheckedCreateInput,
+    userId: string,
+  ) {
     return this.financeRepository.createOperationalExpense({
       category: data.category,
       description: data.description,
       amount: data.amount,
       expense_date: new Date(data.expense_date),
-      created_by: userId
+      created_by: userId,
     });
   }
 
   async getProfitShare(month: number, year: number) {
     if (month < 1 || month > 12) {
-      throw new BadRequestException('Invalid month. Month must be between 1 and 12.');
+      throw new BadRequestException(
+        'Invalid month. Month must be between 1 and 12.',
+      );
     }
 
     const start = new Date(year, month - 1, 1);
@@ -70,7 +97,7 @@ export class FinanceService {
 
     const orders = await this.financeRepository.findOrders({
       created_at: { gte: start, lte: end },
-      status: { not: 'voided' }
+      status: { not: 'voided' },
     });
 
     if (!orders || orders.length === 0) {
@@ -80,17 +107,27 @@ export class FinanceService {
     const revenue = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
 
     const opexList = await this.financeRepository.findOperationalExpenses({
-      expense_date: { gte: start, lte: end }
+      expense_date: { gte: start, lte: end },
     });
-    const totalOpex = opexList.reduce((sum, exp) => sum + Number(exp.amount), 0);
+    const totalOpex = opexList.reduce(
+      (sum, exp) => sum + Number(exp.amount),
+      0,
+    );
 
     const assets = await this.financeRepository.findAssets({ is_active: true });
-    const totalDepreciation = assets.reduce((sum, a) => sum + Number(a.monthly_depreciation), 0);
+    const totalDepreciation = assets.reduce(
+      (sum, a) => sum + Number(a.monthly_depreciation),
+      0,
+    );
 
-    const totalHpp = orders.reduce((sum, o) => sum + Number((o as Order & { cogs_total?: number }).cogs_total || 0), 0); 
+    const totalHpp = orders.reduce(
+      (sum, o) =>
+        sum + Number((o as Order & { cogs_total?: number }).cogs_total || 0),
+      0,
+    );
 
     const netProfit = revenue - totalHpp - totalOpex - totalDepreciation;
-    
+
     const ownerShare = netProfit > 0 ? netProfit * 0.6 : 0;
     const cashierShare = netProfit > 0 ? netProfit * 0.4 : 0;
 
@@ -102,16 +139,17 @@ export class FinanceService {
       totalDepreciation,
       netProfit,
       ownerShare,
-      cashierShare
+      cashierShare,
     };
   }
 
   async closePeriod(month: number, year: number) {
     const share = await this.getProfitShare(month, year);
-    
+
     const periodMonth = new Date(year, month - 1, 1);
-    
-    const existing = await this.financeRepository.findProfitShareLogByPeriod(periodMonth);
+
+    const existing =
+      await this.financeRepository.findProfitShareLogByPeriod(periodMonth);
 
     if (existing) {
       throw new Error('Periode ini sudah ditutup sebelumnya.');
@@ -126,22 +164,22 @@ export class FinanceService {
       net_profit: share.netProfit,
       owner_share: share.ownerShare,
       cashier_share: share.cashierShare,
-      is_hpp_actual: true
+      is_hpp_actual: true,
     });
 
     if (share.netProfit <= 0) {
       this.logger.warn(
-        `[NOTIF-RUGI] Laba bersih bulan ${month}/${year} minus...`
+        `[NOTIF-RUGI] Laba bersih bulan ${month}/${year} minus...`,
       );
       try {
         await this.emailService.sendAlert(
           'Laporan Rugi Bulanan',
-          `<p>Total penjualan bulan ini tidak menghasilkan laba.</p><p>Mohon periksa laporan keuangan untuk detail.</p>`
+          `<p>Total penjualan bulan ini tidak menghasilkan laba.</p><p>Mohon periksa laporan keuangan untuk detail.</p>`,
         );
       } catch (emailError) {
         this.logger.error(
           `Failed to send loss notification email: ${emailError.message}`,
-          emailError.stack
+          emailError.stack,
         );
         // Don't throw - this is a non-critical operation
       }
@@ -157,10 +195,14 @@ export class FinanceService {
   async createAsset(data: any) {
     // SEDANG-02: Support both 'value'/'lifespan_months' (non-standard) and 'purchase_price'/'useful_life_months' (standard)
     const purchasePrice = Number(data.purchase_price ?? data.value ?? 0);
-    const lifespanMonths = Number(data.useful_life_months ?? data.lifespan_months ?? 0);
+    const lifespanMonths = Number(
+      data.useful_life_months ?? data.lifespan_months ?? 0,
+    );
 
     if (!purchasePrice || !lifespanMonths) {
-      throw new BadRequestException('Invalid asset data: purchase_price and useful_life_months are required');
+      throw new BadRequestException(
+        'Invalid asset data: purchase_price and useful_life_months are required',
+      );
     }
 
     return this.financeRepository.createAsset({
@@ -170,7 +212,7 @@ export class FinanceService {
       monthly_depreciation: Math.round(purchasePrice / lifespanMonths),
       purchase_date: new Date(data.purchase_date),
       created_at: new Date(),
-      is_active: true
+      is_active: true,
     });
   }
 
@@ -180,58 +222,88 @@ export class FinanceService {
 
     // SEDANG-02: Support both 'value' (non-standard) and 'purchase_price' (standard)
     const newValue = data.purchase_price ?? data.value ?? undefined;
-    const newLifespan = data.useful_life_months ?? data.lifespan_months ?? undefined;
+    const newLifespan =
+      data.useful_life_months ?? data.lifespan_months ?? undefined;
 
-    let parsedValue = newValue !== undefined ? Number(newValue) : Number(asset.purchase_price);
-    let parsedLifespan = newLifespan !== undefined ? Number(newLifespan) : asset.useful_life_months;
+    let parsedValue =
+      newValue !== undefined ? Number(newValue) : Number(asset.purchase_price);
+    let parsedLifespan =
+      newLifespan !== undefined
+        ? Number(newLifespan)
+        : asset.useful_life_months;
 
-    if (newValue !== undefined && isNaN(parsedValue)) parsedValue = Number(asset.purchase_price);
-    if (newLifespan !== undefined && isNaN(parsedLifespan)) parsedLifespan = asset.useful_life_months;
+    if (newValue !== undefined && isNaN(parsedValue))
+      parsedValue = Number(asset.purchase_price);
+    if (newLifespan !== undefined && isNaN(parsedLifespan))
+      parsedLifespan = asset.useful_life_months;
 
     return this.financeRepository.updateAsset(id, {
       name: data.name,
       purchase_price: parsedValue,
       useful_life_months: parsedLifespan,
       monthly_depreciation: Math.round(parsedValue / parsedLifespan),
-      purchase_date: data.purchase_date ? new Date(data.purchase_date) : asset.purchase_date,
-      is_active: data.is_active !== undefined ? data.is_active : asset.is_active
+      purchase_date: data.purchase_date
+        ? new Date(data.purchase_date)
+        : asset.purchase_date,
+      is_active:
+        data.is_active !== undefined ? data.is_active : asset.is_active,
     });
   }
 
-  async payProfitShare(month: number, year: number, proof: string, notes: string, adminId: string) {
+  async payProfitShare(
+    month: number,
+    year: number,
+    proof: string,
+    notes: string,
+    adminId: string,
+  ) {
     const periodMonth = new Date(year, month - 1, 1);
-    
-    const profitShare = await this.financeRepository.findProfitShareLogByPeriod(periodMonth);
+
+    const profitShare =
+      await this.financeRepository.findProfitShareLogByPeriod(periodMonth);
 
     if (!profitShare) {
-      throw new NotFoundException('Data bagi hasil untuk bulan tersebut tidak ditemukan. Silakan tutup buku terlebih dahulu.');
+      throw new NotFoundException(
+        'Data bagi hasil untuk bulan tersebut tidak ditemukan. Silakan tutup buku terlebih dahulu.',
+      );
     }
 
     if (profitShare.is_paid) {
-      throw new BadRequestException('Bagi hasil untuk bulan ini sudah dibayarkan.');
+      throw new BadRequestException(
+        'Bagi hasil untuk bulan ini sudah dibayarkan.',
+      );
     }
 
-    const updated = await this.financeRepository.updateProfitShareLog(profitShare.id, {
-      is_paid: true,
-      payment_proof: proof,
-      notes: notes,
-      cashier_paid_at: new Date(),
-      cashier_paid_by: adminId,
-      cashier_paid_amount: profitShare.cashier_share
-    });
+    const updated = await this.financeRepository.updateProfitShareLog(
+      profitShare.id,
+      {
+        is_paid: true,
+        payment_proof: proof,
+        notes: notes,
+        cashier_paid_at: new Date(),
+        cashier_paid_by: adminId,
+        cashier_paid_amount: profitShare.cashier_share,
+      },
+    );
 
     await this.financeRepository.createAuditLog({
       actor_id: adminId,
       action: 'PROFIT_SHARE_PAID',
       entity_type: 'ProfitShareLog',
       entity_id: updated.id,
-      new_value: { cashier_paid_amount: Number(updated.cashier_paid_amount), is_paid: true }
+      new_value: {
+        cashier_paid_amount: Number(updated.cashier_paid_amount),
+        is_paid: true,
+      },
     });
 
     return updated;
   }
 
-  private buildTrend(orders: any[], period: 'daily' | 'weekly' | 'monthly'): { label: string; value: number }[] {
+  private buildTrend(
+    orders: any[],
+    period: 'daily' | 'weekly' | 'monthly',
+  ): { label: string; value: number }[] {
     const map = new Map<string, number>();
     for (const o of orders) {
       const d = o.created_at;
@@ -245,12 +317,15 @@ export class FinanceService {
       }
       map.set(key, (map.get(key) || 0) + Number(o.total_amount));
     }
-    return Array.from(map.entries()).map(([label, value]) => ({ label, value }));
+    return Array.from(map.entries()).map(([label, value]) => ({
+      label,
+      value,
+    }));
   }
 
   async getAnalytics(period: 'daily' | 'weekly' | 'monthly') {
     const now = new Date();
-    let startDate = new Date();
+    const startDate = new Date();
     if (period === 'daily') {
       startDate.setDate(now.getDate() - 30);
     } else if (period === 'weekly') {
@@ -261,36 +336,60 @@ export class FinanceService {
 
     const orders = await this.financeRepository.findOrders(
       { created_at: { gte: startDate }, status: { not: 'voided' } },
-      { items: true }
+      { items: true },
     );
 
     const trend = this.buildTrend(orders, period);
 
-    const productMap = new Map<string, { name: string, qty: number, revenue: number }>();
+    const productMap = new Map<
+      string,
+      { name: string; qty: number; revenue: number }
+    >();
     for (const o of orders) {
       for (const item of o.items) {
         const pId = item.product_id;
-        const current = productMap.get(pId) || { name: item.product_name_snapshot, qty: 0, revenue: 0 };
+        const current = productMap.get(pId) || {
+          name: item.product_name_snapshot,
+          qty: 0,
+          revenue: 0,
+        };
         current.qty += item.quantity;
         current.revenue += Number(item.subtotal);
         productMap.set(pId, current);
       }
     }
     const productStats = Array.from(productMap.values());
-    const topByQty = [...productStats].sort((a, b) => b.qty - a.qty).slice(0, 5);
-    const topByRevenue = [...productStats].sort((a, b) => b.revenue - a.revenue).slice(0, 5);
+    const topByQty = [...productStats]
+      .sort((a, b) => b.qty - a.qty)
+      .slice(0, 5);
+    const topByRevenue = [...productStats]
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5);
 
-    let cash = 0, qris = 0, split = 0;
-    let cashVal = 0, qrisVal = 0, splitVal = 0;
+    let cash = 0,
+      qris = 0,
+      split = 0;
+    let cashVal = 0,
+      qrisVal = 0,
+      splitVal = 0;
     for (const o of orders) {
-      if (o.payment_method === 'cash') { cash++; cashVal += Number(o.total_amount); }
-      else if (o.payment_method === 'qris') { qris++; qrisVal += Number(o.total_amount); }
-      else if (o.payment_method === 'split') { split++; splitVal += Number(o.total_amount); }
+      if (o.payment_method === 'cash') {
+        cash++;
+        cashVal += Number(o.total_amount);
+      } else if (o.payment_method === 'qris') {
+        qris++;
+        qrisVal += Number(o.total_amount);
+      } else if (o.payment_method === 'split') {
+        split++;
+        splitVal += Number(o.total_amount);
+      }
     }
 
     const hoursCount = new Array(24).fill(0);
     for (const o of orders) {
-      const h = o.client_created_at ? new Date(o.client_created_at).getHours() : o.created_at.getHours();
+      const h = o.client_created_at
+        ? new Date(o.client_created_at).getHours()
+        : o.created_at.getHours();
       hoursCount[h]++;
     }
 
@@ -298,42 +397,44 @@ export class FinanceService {
       trend,
       topProducts: {
         byQty: topByQty,
-        byRevenue: topByRevenue
+        byRevenue: topByRevenue,
       },
       paymentDistribution: {
         counts: { cash, qris, split },
-        values: { cash: cashVal, qris: qrisVal, split: splitVal }
+        values: { cash: cashVal, qris: qrisVal, split: splitVal },
       },
-      peakHours: hoursCount.map((count, hour) => ({ hour, count }))
+      peakHours: hoursCount.map((count, hour) => ({ hour, count })),
     };
   }
 
   async getCurrentShift(cashierId: string) {
     const shift = await this.financeRepository.findFirstCashRegister(
       { cashier_id: cashierId, status: 'open' },
-      { shift_start: 'desc' }
+      { shift_start: 'desc' },
     );
     return shift;
   }
 
   async openShift(cashierId: string, openingBalance: number) {
-    const existing = await this.financeRepository.findFirstCashRegister(
-      { cashier_id: cashierId, status: 'open' }
-    );
-    if (existing) throw new BadRequestException('Kasir masih memiliki shift aktif.');
+    const existing = await this.financeRepository.findFirstCashRegister({
+      cashier_id: cashierId,
+      status: 'open',
+    });
+    if (existing)
+      throw new BadRequestException('Kasir masih memiliki shift aktif.');
 
     return this.financeRepository.createCashRegister({
       cashier_id: cashierId,
       shift_date: new Date(),
       opening_balance: openingBalance,
-      status: 'open'
+      status: 'open',
     });
   }
 
   async closeShift(cashierId: string, closingBalance: number) {
     const shift = await this.financeRepository.findFirstCashRegister(
       { cashier_id: cashierId, status: 'open' },
-      { shift_start: 'desc' }
+      { shift_start: 'desc' },
     );
 
     if (!shift) throw new NotFoundException('Tidak ada shift aktif.');
@@ -342,7 +443,7 @@ export class FinanceService {
     const allOrders = await this.financeRepository.findOrders({
       cashier_id: cashierId,
       status: 'completed',
-      created_at: { gte: shift.shift_start }
+      created_at: { gte: shift.shift_start },
     });
 
     // Calculate total cash from both cash and split payment methods
@@ -365,16 +466,20 @@ export class FinanceService {
       closing_balance: closingBalance,
       system_cash_total: expectedBalance,
       discrepancy: discrepancy,
-      status: 'closed'
+      status: 'closed',
     });
 
     const threshold = Number(process.env.DISCREPANCY_THRESHOLD || 5000);
     if (Math.abs(discrepancy) > threshold) {
-      await this.emailService.sendAlert(
-        'Peringatan Selisih Laci Kasir',
-        `<p>Shift kasir dengan ID <strong>${cashierId}</strong> telah ditutup dengan <strong>selisih (discrepancy) Rp ${discrepancy}</strong>.</p>
-         <p>Batas toleransi sistem adalah Rp ${threshold}. Mohon segera verifikasi laci kas.</p>`
-      ).catch(err => this.logger.error('Failed to send discrepancy alert:', err.message));
+      await this.emailService
+        .sendAlert(
+          'Peringatan Selisih Laci Kasir',
+          `<p>Shift kasir dengan ID <strong>${cashierId}</strong> telah ditutup dengan <strong>selisih (discrepancy) Rp ${discrepancy}</strong>.</p>
+         <p>Batas toleransi sistem adalah Rp ${threshold}. Mohon segera verifikasi laci kas.</p>`,
+        )
+        .catch((err) =>
+          this.logger.error('Failed to send discrepancy alert:', err.message),
+        );
     }
 
     await this.financeRepository.createAuditLog({
@@ -382,7 +487,11 @@ export class FinanceService {
       action: 'CASH_REGISTER_CLOSE',
       entity_type: 'CashRegister',
       entity_id: shift.id,
-      new_value: { closing_balance: closingBalance, discrepancy: discrepancy, system_cash_total: expectedBalance }
+      new_value: {
+        closing_balance: closingBalance,
+        discrepancy: discrepancy,
+        system_cash_total: expectedBalance,
+      },
     });
 
     return closed;
@@ -391,7 +500,7 @@ export class FinanceService {
   async getShifts() {
     return this.financeRepository.findManyCashRegisters(
       { shift_date: 'desc' },
-      { cashier: { select: { name: true } } }
+      { cashier: { select: { name: true } } },
     );
   }
 }

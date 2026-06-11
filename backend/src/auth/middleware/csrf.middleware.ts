@@ -4,17 +4,20 @@ import { Request, Response, NextFunction } from 'express';
 @Injectable()
 export class CsrfMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
-    const isMutatingRequest = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(req.method.toUpperCase());
-    
+    const isMutatingRequest = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(
+      req.method.toUpperCase(),
+    );
+
     if (isMutatingRequest) {
       // Exclude login, refresh, and webhooks from CSRF
       const excludedRoutes = [
         '/api/v1/auth/login',
         '/api/v1/auth/refresh',
-        '/api/v1/webhooks/midtrans'
+        '/api/v1/webhooks/midtrans',
       ];
-      const isExcluded = excludedRoutes.some(route => 
-        req.originalUrl === route || req.originalUrl.startsWith(route + '?')
+      const isExcluded = excludedRoutes.some(
+        (route) =>
+          req.originalUrl === route || req.originalUrl.startsWith(route + '?'),
       );
       if (isExcluded) {
         return next();
@@ -27,7 +30,7 @@ export class CsrfMiddleware implements NestMiddleware {
         throw new ForbiddenException('Invalid CSRF Token');
       }
     }
-    
+
     next();
   }
 }

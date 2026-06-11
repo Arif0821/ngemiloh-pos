@@ -19,7 +19,7 @@ export class PrismaUserRepository implements IUserRepository {
         last_login_at: true,
         created_at: true,
       },
-      orderBy: { created_at: 'desc' }
+      orderBy: { created_at: 'desc' },
     });
   }
 
@@ -38,13 +38,13 @@ export class PrismaUserRepository implements IUserRepository {
   async update(id: string, data: any) {
     return this.prisma.user.update({
       where: { id },
-      data
+      data,
     });
   }
 
   async findCustomers(): Promise<any[]> {
     return this.prisma.customer.findMany({
-      orderBy: { created_at: 'desc' }
+      orderBy: { created_at: 'desc' },
     });
   }
 
@@ -55,7 +55,7 @@ export class PrismaUserRepository implements IUserRepository {
   async updateCustomerLoyalty(id: string, points: number): Promise<any> {
     return this.prisma.customer.update({
       where: { id },
-      data: { loyalty_points: { increment: points } }
+      data: { loyalty_points: { increment: points } },
     });
   }
 }

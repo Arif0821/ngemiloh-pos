@@ -1,18 +1,33 @@
-import { Injectable, OnModuleInit, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleInit,
+  OnModuleDestroy,
+  Logger,
+} from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 
 @Injectable()
-export class PrismaService extends PrismaClient implements OnModuleInit, OnModuleDestroy {
+export class PrismaService
+  extends PrismaClient
+  implements OnModuleInit, OnModuleDestroy
+{
   private readonly logger = new Logger(PrismaService.name);
 
   constructor() {
     super({
-      log: [
-        { emit: 'event', level: 'query' },
-        { emit: 'event', level: 'error' },
-        { emit: 'event', level: 'info' },
-        { emit: 'event', level: 'warn' },
-      ],
+      // P1-PERF: Only log errors and warnings in production to reduce log volume
+      log:
+        process.env.NODE_ENV === 'production'
+          ? [
+              { emit: 'event', level: 'error' },
+              { emit: 'event', level: 'warn' },
+            ]
+          : [
+              { emit: 'event', level: 'query' },
+              { emit: 'event', level: 'error' },
+              { emit: 'event', level: 'info' },
+              { emit: 'event', level: 'warn' },
+            ],
     });
   }
 
@@ -27,6 +42,15 @@ export class PrismaService extends PrismaClient implements OnModuleInit, OnModul
     (this as any).$on('warn', (e: any) => {
       this.logger.warn(`Prisma Warning: ${e.message}`);
     });
+
+    // Log slow queries in development
+    if (process.env.NODE_ENV !== 'production') {
+      (this as any).$on('query', (e: any) => {
+        if (e.duration > 100) {
+          this.logger.debug(`Slow query (${e.duration}ms): ${e.query}`);
+        }
+      });
+    }
   }
 
   async onModuleDestroy() {

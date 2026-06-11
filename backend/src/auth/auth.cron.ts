@@ -16,8 +16,8 @@ export class AuthCronService {
     try {
       const result = await this.prisma.revokedToken.deleteMany({
         where: {
-          expires_at: { lt: new Date() }
-        }
+          expires_at: { lt: new Date() },
+        },
       });
 
       if (result.count > 0) {
@@ -26,7 +26,8 @@ export class AuthCronService {
         this.logger.debug('No expired tokens to clean up');
       }
     } catch (error) {
-      const errorMessage = error instanceof Error ? error.message : String(error);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error(`Failed to cleanup expired tokens: ${errorMessage}`);
     }
   }

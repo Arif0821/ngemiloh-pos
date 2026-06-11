@@ -1,4 +1,15 @@
-import { IsString, IsNumber, IsOptional, IsArray, IsEnum, IsUUID, IsDateString, IsBoolean, MaxLength, Min } from 'class-validator';
+import {
+  IsString,
+  IsNumber,
+  IsOptional,
+  IsArray,
+  IsEnum,
+  IsUUID,
+  IsDateString,
+  IsBoolean,
+  MaxLength,
+  Min,
+} from 'class-validator';
 import { Type } from 'class-transformer';
 import { DiscountType, DiscountScope } from '@prisma/client';
 

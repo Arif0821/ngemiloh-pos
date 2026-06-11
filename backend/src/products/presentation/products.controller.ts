@@ -1,4 +1,17 @@
-import { Controller, Get, Post, Patch, Delete, Param, Body, Query, UseGuards, Req, UseInterceptors, UploadedFile } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Patch,
+  Delete,
+  Param,
+  Body,
+  Query,
+  UseGuards,
+  Req,
+  UseInterceptors,
+  UploadedFile,
+} from '@nestjs/common';
 import { ProductsService } from '../application/services/products.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
@@ -10,7 +23,14 @@ import sharp from 'sharp';
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import * as fs from 'fs';
-import { CreateProductDto, UpdateProductDto, CreateModifierGroupDto, UpdateModifierGroupDto, CreateModifierOptionDto, UpdateModifierOptionDto } from './dto/products.dto';
+import {
+  CreateProductDto,
+  UpdateProductDto,
+  CreateModifierGroupDto,
+  UpdateModifierGroupDto,
+  CreateModifierOptionDto,
+  UpdateModifierOptionDto,
+} from './dto/products.dto';
 
 @Controller('api/v1')
 export class ProductsController {
@@ -20,9 +40,12 @@ export class ProductsController {
   @UseGuards(JwtAuthGuard)
   async getProducts(
     @Query('category_id') categoryId?: string,
-    @Query('include_modifiers') includeModifiers?: string
+    @Query('include_modifiers') includeModifiers?: string,
   ) {
-    const products = await this.productsService.findAll(categoryId, includeModifiers === 'true');
+    const products = await this.productsService.findAll(
+      categoryId,
+      includeModifiers === 'true',
+    );
     return { success: true, data: products };
   }
 
@@ -36,33 +59,62 @@ export class ProductsController {
   private sanitizeImageUrl(imageUrl: string | undefined): string | undefined {
     if (!imageUrl) return undefined;
     // SECURITY: Only allow relative paths under /uploads/ or HTTPS URLs from approved CDNs
-    const isRelativeUpload = /^\/uploads\/[a-zA-Z0-9_-]+\.(webp|png|jpg|jpeg|gif|svg)$/.test(imageUrl);
-    const isApprovedCdn = /^https:\/\/(cdn\.|img\.|static\.)?[a-zA-Z0-9][a-zA-Z0-9-]*\.[a-zA-Z]{2,}(\/.*)?$/.test(imageUrl);
+    const isRelativeUpload =
+      /^\/uploads\/[a-zA-Z0-9_-]+\.(webp|png|jpg|jpeg|gif|svg)$/.test(imageUrl);
+    const isApprovedCdn =
+      /^https:\/\/(cdn\.|img\.|static\.)?[a-zA-Z0-9][a-zA-Z0-9-]*\.[a-zA-Z]{2,}(\/.*)?$/.test(
+        imageUrl,
+      );
     if (isRelativeUpload || isApprovedCdn) {
       return imageUrl;
     }
     // SECURITY: Reject any path traversal attempts or invalid URLs
-    if (imageUrl.includes('..') || imageUrl.includes('://') || imageUrl.startsWith('/') && !imageUrl.startsWith('/uploads/')) {
+    if (
+      imageUrl.includes('..') ||
+      imageUrl.includes('://') ||
+      (imageUrl.startsWith('/') && !imageUrl.startsWith('/uploads/'))
+    ) {
       return undefined;
     }
     return imageUrl;
   }
 
-  private async processImageUpload(file: Express.Multer.File | undefined): Promise<string | undefined> {
+  private async processImageUpload(
+    file: Express.Multer.File | undefined,
+  ): Promise<string | undefined> {
     if (!file) return undefined;
-    const uploadDir = process.env.STORAGE_PATH || join(__dirname, '..', '..', '..', '..', 'frontend', 'static', 'uploads');
+    const uploadDir =
+      process.env.STORAGE_PATH ||
+      join(__dirname, '..', '..', '..', '..', 'frontend', 'static', 'uploads');
     if (!fs.existsSync(uploadDir)) fs.mkdirSync(uploadDir, { recursive: true });
     const filepath = join(uploadDir, `${uuidv4()}.webp`);
-    await sharp(file.buffer).resize({ width: 800, withoutEnlargement: true }).webp({ quality: 80 }).toFile(filepath);
+    await sharp(file.buffer)
+      .resize({ width: 800, withoutEnlargement: true })
+      .webp({ quality: 80 })
+      .toFile(filepath);
     return `/uploads/${filepath.split('/').pop()}`;
   }
 
   @Post('admin/products')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
-  @UseInterceptors(FileInterceptor('image', { limits: { fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 5) * 1024 * 1024 } }))
-  async createProduct(@Body() body: CreateProductDto, @Req() req: Request & { user: any }, @UploadedFile() file: Express.Multer.File) {
-    const payload = { ...body, base_price: Number(body.base_price), image_url: await this.processImageUpload(file) };
+  @UseInterceptors(
+    FileInterceptor('image', {
+      limits: {
+        fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 5) * 1024 * 1024,
+      },
+    }),
+  )
+  async createProduct(
+    @Body() body: CreateProductDto,
+    @Req() req: Request & { user: any },
+    @UploadedFile() file: Express.Multer.File,
+  ) {
+    const payload = {
+      ...body,
+      base_price: Number(body.base_price),
+      image_url: await this.processImageUpload(file),
+    };
     const product = await this.productsService.create(payload, req.user.id);
     return { success: true, data: product };
   }
@@ -70,11 +122,23 @@ export class ProductsController {
   @Patch('admin/products/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
-  @UseInterceptors(FileInterceptor('image', { limits: { fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 5) * 1024 * 1024 } }))
-  async updateProduct(@Param('id') id: string, @Body() body: UpdateProductDto, @Req() req: Request & { user: any }, @UploadedFile() file: Express.Multer.File) {
+  @UseInterceptors(
+    FileInterceptor('image', {
+      limits: {
+        fileSize: (Number(process.env.MAX_FILE_SIZE_MB) || 5) * 1024 * 1024,
+      },
+    }),
+  )
+  async updateProduct(
+    @Param('id') id: string,
+    @Body() body: UpdateProductDto,
+    @Req() req: Request & { user: any },
+    @UploadedFile() file: Express.Multer.File,
+  ) {
     const uploadedUrl = await this.processImageUpload(file);
     // SECURITY: Sanitize image_url to prevent path traversal and XSS
-    const sanitizedImageUrl = uploadedUrl || this.sanitizeImageUrl(body.image_url);
+    const sanitizedImageUrl =
+      uploadedUrl || this.sanitizeImageUrl(body.image_url);
     const payload: any = { ...body };
     if (body.base_price) payload.base_price = Number(body.base_price);
     if (sanitizedImageUrl) payload.image_url = sanitizedImageUrl;
@@ -93,7 +157,10 @@ export class ProductsController {
   @Post('admin/products/:id/modifier-groups')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
-  async createModifierGroup(@Param('id') id: string, @Body() body: CreateModifierGroupDto) {
+  async createModifierGroup(
+    @Param('id') id: string,
+    @Body() body: CreateModifierGroupDto,
+  ) {
     const payload: any = { ...body, product_id: id };
     const group = await this.productsService.createModifierGroup(id, payload);
     return { success: true, data: group };
@@ -102,7 +169,10 @@ export class ProductsController {
   @Post('admin/modifier-groups/:id/options')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
-  async createModifierOption(@Param('id') id: string, @Body() body: CreateModifierOptionDto) {
+  async createModifierOption(
+    @Param('id') id: string,
+    @Body() body: CreateModifierOptionDto,
+  ) {
     const payload: any = { ...body, group_id: id };
     const option = await this.productsService.createModifierOption(id, payload);
     return { success: true, data: option };
@@ -111,7 +181,10 @@ export class ProductsController {
   @Patch('admin/modifier-groups/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
-  async updateModifierGroup(@Param('id') id: string, @Body() body: UpdateModifierGroupDto) {
+  async updateModifierGroup(
+    @Param('id') id: string,
+    @Body() body: UpdateModifierGroupDto,
+  ) {
     const group = await this.productsService.updateModifierGroup(id, body);
     return { success: true, data: group };
   }
@@ -119,7 +192,10 @@ export class ProductsController {
   @Patch('admin/modifier-options/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
-  async updateModifierOption(@Param('id') id: string, @Body() body: UpdateModifierOptionDto) {
+  async updateModifierOption(
+    @Param('id') id: string,
+    @Body() body: UpdateModifierOptionDto,
+  ) {
     const option = await this.productsService.updateModifierOption(id, body);
     return { success: true, data: option };
   }

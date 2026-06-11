@@ -1,7 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuthRepositoryInterface } from '../../domain/interfaces/auth.repository.interface';
-import { User, IpLockout, RevokedToken, AuditLog, Prisma } from '@prisma/client';
+import {
+  User,
+  IpLockout,
+  RevokedToken,
+  AuditLog,
+  Prisma,
+} from '@prisma/client';
 
 @Injectable()
 export class PrismaAuthRepository implements AuthRepositoryInterface {
@@ -21,7 +27,10 @@ export class PrismaAuthRepository implements AuthRepositoryInterface {
     });
   }
 
-  async lockIpAddress(ipAddress: string, lockedUntil: Date): Promise<IpLockout> {
+  async lockIpAddress(
+    ipAddress: string,
+    lockedUntil: Date,
+  ): Promise<IpLockout> {
     return this.prisma.ipLockout.update({
       where: { ip_address: ipAddress },
       data: { locked_until: lockedUntil },
@@ -72,11 +81,21 @@ export class PrismaAuthRepository implements AuthRepositoryInterface {
   async resetUserFailedLogin(userId: string): Promise<User> {
     return this.prisma.user.update({
       where: { id: userId },
-      data: { failed_login_count: 0, locked_until: null, last_login_at: new Date() },
+      data: {
+        failed_login_count: 0,
+        locked_until: null,
+        last_login_at: new Date(),
+      },
     });
   }
 
-  async createAuditLog(actorId: string, action: string, entityType: string, entityId: string, newValue: Prisma.InputJsonValue): Promise<AuditLog> {
+  async createAuditLog(
+    actorId: string,
+    action: string,
+    entityType: string,
+    entityId: string,
+    newValue: Prisma.InputJsonValue,
+  ): Promise<AuditLog> {
     return this.prisma.auditLog.create({
       data: {
         actor_id: actorId,
@@ -92,7 +111,11 @@ export class PrismaAuthRepository implements AuthRepositoryInterface {
     return this.prisma.revokedToken.findUnique({ where: { jti: token } });
   }
 
-  async revokeToken(token: string, userId: string, expiresAt: Date): Promise<RevokedToken> {
+  async revokeToken(
+    token: string,
+    userId: string,
+    expiresAt: Date,
+  ): Promise<RevokedToken> {
     return this.prisma.revokedToken.upsert({
       where: { jti: token },
       update: {},

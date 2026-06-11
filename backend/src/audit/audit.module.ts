@@ -15,6 +15,6 @@ import { PrismaAuditRepository } from './infrastructure/repositories/prisma-audi
       useClass: PrismaAuditRepository,
     },
   ],
-  exports: [AuditService, AUDIT_REPOSITORY]
+  exports: [AuditService, AUDIT_REPOSITORY],
 })
 export class AuditModule {}

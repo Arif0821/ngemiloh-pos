@@ -16,15 +16,19 @@ import { setupSwagger } from './common/swagger/swagger.setup';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
-  const requiredEnvVars = ['JWT_ACCESS_SECRET', 'JWT_REFRESH_SECRET', 'PIN_PEPPER_SECRET'];
-  const missingVars = requiredEnvVars.filter(envVar => !process.env[envVar]);
+  const requiredEnvVars = [
+    'JWT_ACCESS_SECRET',
+    'JWT_REFRESH_SECRET',
+    'PIN_PEPPER_SECRET',
+  ];
+  const missingVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
 
   if (missingVars.length > 0) {
-      const errorMsg = `\n\n==========================================================\nFATAL ERROR: Missing Required Environment Variables!\n\nThe following variables MUST be set in Coolify / .env:\n${missingVars.map(v => `- ${v}`).join('\n')}\n\nThe server cannot start without these security secrets.\n==========================================================\n`;
-      console.error(errorMsg);
-      // Wait a moment so the log is flushed to stdout before crashing
-      await new Promise(resolve => setTimeout(resolve, 100));
-      process.exit(1);
+    const errorMsg = `\n\n==========================================================\nFATAL ERROR: Missing Required Environment Variables!\n\nThe following variables MUST be set in Coolify / .env:\n${missingVars.map((v) => `- ${v}`).join('\n')}\n\nThe server cannot start without these security secrets.\n==========================================================\n`;
+    console.error(errorMsg);
+    // Wait a moment so the log is flushed to stdout before crashing
+    await new Promise((resolve) => setTimeout(resolve, 100));
+    process.exit(1);
   }
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -42,35 +46,37 @@ async function bootstrap() {
     'http://localhost:5173',
     'http://localhost:4173',
     process.env.FRONTEND_URL,
-  ].filter(Boolean) as string[];
+  ].filter(Boolean);
 
   // ========================================
   // SECURITY HEADERS (Helmet)
   // ========================================
-  app.use(helmet({
-    contentSecurityPolicy: {
-      // Enable CSP in production
-      directives: {
-        defaultSrc: ["'self'"],
-        baseUri: ["'self'"],
-        blockAllMixedContent: [],
-        childSrc: ["'self'", 'blob:'],
-        frameAncestors: ["'self'"],
-        imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
-        fontSrc: ["'self'", 'data:'],
-        formAction: ["'self'"],
-        frameSrc: ["'self'", 'https://app.sandbox.midtrans.com'], // Midtrans sandbox
-        connectSrc: ["'self'", 'https://api.sandbox.midtrans.com'], // Midtrans sandbox
-        // HIGH FIX S-04: Removed Tailwind CDN - CSS is bundled at build time
-        scriptSrc: ["'self'"],
-        styleSrc: ["'self'"],
-        upgradeInsecureRequests: [],
+  app.use(
+    helmet({
+      contentSecurityPolicy: {
+        // Enable CSP in production
+        directives: {
+          defaultSrc: ["'self'"],
+          baseUri: ["'self'"],
+          blockAllMixedContent: [],
+          childSrc: ["'self'", 'blob:'],
+          frameAncestors: ["'self'"],
+          imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
+          fontSrc: ["'self'", 'data:'],
+          formAction: ["'self'"],
+          frameSrc: ["'self'", 'https://app.sandbox.midtrans.com'], // Midtrans sandbox
+          connectSrc: ["'self'", 'https://api.sandbox.midtrans.com'], // Midtrans sandbox
+          // HIGH FIX S-04: Removed Tailwind CDN - CSS is bundled at build time
+          scriptSrc: ["'self'"],
+          styleSrc: ["'self'"],
+          upgradeInsecureRequests: [],
+        },
       },
-    },
-    crossOriginEmbedderPolicy: false, // Disable for SvelteKit compatibility
-    crossOriginResourcePolicy: { policy: 'cross-origin' },
-    frameguard: { action: 'deny' },
-  }));
+      crossOriginEmbedderPolicy: false, // Disable for SvelteKit compatibility
+      crossOriginResourcePolicy: { policy: 'cross-origin' },
+      frameguard: { action: 'deny' },
+    }),
+  );
 
   // ========================================
   // CORS Configuration
@@ -79,7 +85,12 @@ async function bootstrap() {
     origin: allowedOrigins,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-    allowedHeaders: ['Content-Type', 'Authorization', 'X-CSRF-Token', 'X-Requested-With'],
+    allowedHeaders: [
+      'Content-Type',
+      'Authorization',
+      'X-CSRF-Token',
+      'X-Requested-With',
+    ],
     exposedHeaders: ['Content-Range', 'X-Content-Length'],
     maxAge: 86400, // 24 hours
   });

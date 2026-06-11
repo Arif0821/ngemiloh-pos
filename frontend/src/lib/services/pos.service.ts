@@ -1,20 +1,8 @@
 import { db, type LocalProduct } from '$lib/db';
 import { posStore } from '../stores/pos.store.svelte';
 import { api } from '$lib/services/api.client';
+import { toast } from '$lib/stores/toast.store.svelte';
 import type { ApiResponse, Discount, OrderResponse, CreateOrderPayload, ShiftInfo } from '../domain/models/types';
-
-// Toast notification system (simple implementation)
-const showToast = (message: string, type: 'success' | 'error' | 'warning' = 'error') => {
-  // You can replace this with a proper toast library like svelte-sonner
-  if (typeof window !== 'undefined') {
-    // For now, use alert for errors, could be replaced with toast
-    if (type === 'error') {
-      console.error(message);
-    } else {
-      console.log(message);
-    }
-  }
-};
 
 export class PosService {
   async fetchFlags() {
@@ -61,15 +49,15 @@ export class PosService {
       if (res.ok) {
         posStore.hasOpenShift = true;
         posStore.showOpenShiftModal = false;
-        showToast('Shift berhasil dibuka', 'success');
+        toast.success('Shift berhasil dibuka');
         return true;
       } else {
         const json = await res.json();
-        showToast('Gagal buka shift: ' + (json.message || 'Unknown error'), 'error');
+        toast.error('Gagal buka shift: ' + (json.message || 'Unknown error'));
         return false;
       }
     } catch (e) {
-      showToast('Error: Tidak dapat terhubung ke server', 'error');
+      toast.error('Error: Tidak dapat terhubung ke server');
       return false;
     }
   }
@@ -80,15 +68,15 @@ export class PosService {
       if (res.ok) {
         posStore.hasOpenShift = false;
         posStore.showCloseShiftModal = false;
-        showToast('Shift berhasil ditutup', 'success');
+        toast.success('Shift berhasil ditutup');
         return true;
       } else {
         const json = await res.json();
-        showToast('Gagal tutup shift: ' + (json.message || 'Unknown error'), 'error');
+        toast.error('Gagal tutup shift: ' + (json.message || 'Unknown error'));
         return false;
       }
     } catch (e) {
-      showToast('Error: Tidak dapat terhubung ke server', 'error');
+      toast.error('Error: Tidak dapat terhubung ke server');
       return false;
     }
   }
@@ -98,7 +86,7 @@ export class PosService {
       posStore.products = await db.products.toArray();
     } catch (e) {
       console.error('Failed to load products from local DB:', e);
-      showToast('Gagal memuat data produk lokal', 'error');
+      toast.error('Gagal memuat data produk lokal');
     }
   }
 
@@ -116,7 +104,7 @@ export class PosService {
         window.location.href = '/login';
       } else {
         console.warn('Failed to fetch products:', res.status);
-        showToast('Gagal memuat produk dari server', 'warning');
+        toast.warning('Gagal memuat produk dari server');
       }
     } catch (e) {
       console.warn('Failed to fetch products (offline or network error)');
@@ -153,11 +141,11 @@ export class PosService {
         window.location.href = '/login';
       } else {
         console.warn('Failed to fetch history:', res.status);
-        showToast('Gagal memuat riwayat transaksi', 'warning');
+        toast.warning('Gagal memuat riwayat transaksi');
       }
     } catch (e) {
       console.warn('Failed to fetch history (offline or network error)');
-      showToast('Tidak dapat memuat riwayat (mode offline)', 'warning');
+      toast.warning('Tidak dapat memuat riwayat (mode offline)');
     }
   }
 
@@ -187,16 +175,16 @@ export class PosService {
           }
           const syncedCount = json.data.filter((r: any) => r.status === 'success').length;
           if (syncedCount > 0) {
-            showToast(`${syncedCount} pesanan berhasil di-sync`, 'success');
+            toast.success(`${syncedCount} pesanan berhasil di-sync`);
           }
         }
       } else {
         console.warn('Batch sync failed:', res.status);
-        showToast('Gagal sync pesanan offline', 'error');
+        toast.error('Gagal sync pesanan offline');
       }
     } catch (e) {
       console.warn('Batch sync failed (network error)');
-      showToast('Gagal sync pesanan offline', 'error');
+      toast.error('Gagal sync pesanan offline');
     }
   }
 
@@ -205,26 +193,32 @@ export class PosService {
   pollingInterval: ReturnType<typeof setInterval> | null = null;
   sseEventSource: EventSource | null = null;
   private isOrderCompleted = false;
+  private qrisStartTime: number = 0;
+  private qrisTotalSeconds: number = 900;
 
   startQrisWaiting(orderData: OrderResponse, onSuccess: () => void) {
     posStore.isWaitingQris = true;
     posStore.showPaymentModal = false;
     posStore.qrisOrderInfo = orderData;
-    posStore.qrisCountdown = 900;
+    this.qrisStartTime = Date.now();
+    this.qrisTotalSeconds = 900;
+    posStore.qrisCountdown = this.qrisTotalSeconds;
     this.isOrderCompleted = false;
 
     if (this.qrisTimer) clearInterval(this.qrisTimer);
+    // P2-PERF: Use timestamp-based countdown that doesn't pause when tab is hidden
     this.qrisTimer = setInterval(() => {
-      posStore.qrisCountdown--;
+      const elapsed = Math.floor((Date.now() - this.qrisStartTime) / 1000);
+      posStore.qrisCountdown = Math.max(0, this.qrisTotalSeconds - elapsed);
       if (posStore.qrisCountdown <= 0) {
         this.cancelQrisWaiting();
-        showToast('Waktu pembayaran QRIS habis', 'warning');
+        toast.warning('Waktu pembayaran QRIS habis');
       }
     }, 1000);
 
     this.sseEventSource = new EventSource(`/api/v1/orders/${orderData.id}/sse`, { withCredentials: true });
     this.sseEventSource.onmessage = (event) => {
-      // HIGH: Prevent double execution from SSE + polling race condition
+      // P2-PERF: Prevent double execution from SSE + polling race condition
       if (this.isOrderCompleted) return;
       try {
         const data = JSON.parse(event.data);
@@ -235,6 +229,14 @@ export class PosService {
       } catch (e) {
         console.warn('Failed to parse SSE message:', e);
       }
+    };
+
+    // P2-PERF: Handle SSE errors - close and rely on polling
+    this.sseEventSource.onerror = () => {
+      console.warn('SSE connection error, relying on polling');
+      this.sseEventSource?.close();
+      this.sseEventSource = null;
+      // Don't call cancelQrisWaiting - let polling continue
     };
 
     if (this.pollingInterval) clearInterval(this.pollingInterval);
@@ -290,7 +292,7 @@ export class PosService {
     try {
       if (posStore.isOffline) {
         if (posStore.paymentMethod === 'qris' || posStore.paymentMethod === 'split') {
-          showToast('QRIS tidak dapat diproses saat offline. Gunakan pembayaran tunai.', 'error');
+          toast.error('QRIS tidak dapat diproses saat offline. Gunakan pembayaran tunai.');
           posStore.isProcessing = false;
           return;
         }
@@ -307,7 +309,7 @@ export class PosService {
           sync_status: 'pending',
           created_at: Date.now()
         });
-        showToast('Offline: Pesanan disimpan dan akan di-sync nanti', 'success');
+        toast.success('Offline: Pesanan disimpan dan akan di-sync nanti');
         posStore.resetCart();
       } else {
         const res = await api.post(`/orders`, payload);
@@ -323,12 +325,12 @@ export class PosService {
           window.location.href = '/login';
         } else {
           const errData = await res.json();
-          showToast('Gagal: ' + (errData.message || 'Server Error'), 'error');
+          toast.error('Gagal: ' + (errData.message || 'Server Error'));
         }
       }
     } catch (err) {
       console.error('Payment error:', err);
-      showToast('Gagal memproses transaksi. Cek koneksi Anda.', 'error');
+      toast.error('Gagal memproses transaksi. Cek koneksi Anda.');
     } finally {
       posStore.isProcessing = false;
     }

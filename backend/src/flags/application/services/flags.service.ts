@@ -1,5 +1,8 @@
 import { Injectable, Inject, OnModuleInit } from '@nestjs/common';
-import { type IFlagRepository, FLAG_REPOSITORY } from '../../domain/interfaces/flag.repository.interface';
+import {
+  type IFlagRepository,
+  FLAG_REPOSITORY,
+} from '../../domain/interfaces/flag.repository.interface';
 
 @Injectable()
 export class FlagsService implements OnModuleInit {
@@ -7,7 +10,7 @@ export class FlagsService implements OnModuleInit {
   private cacheExpiresAt: number = 0;
 
   constructor(
-    @Inject(FLAG_REPOSITORY) private readonly flagRepository: IFlagRepository
+    @Inject(FLAG_REPOSITORY) private readonly flagRepository: IFlagRepository,
   ) {}
 
   async onModuleInit() {
@@ -16,14 +19,26 @@ export class FlagsService implements OnModuleInit {
 
   private async seedFlags() {
     const defaultFlags = [
-      { name: 'QRIS_PAYMENT', description: 'Enable/disable QRIS payment method' },
-      { name: 'SPLIT_PAYMENT', description: 'Enable/disable split payment method' },
-      { name: 'DISCOUNT_SYSTEM', description: 'Enable/disable global discount system' },
-      { name: 'MODIFIER_SYSTEM', description: 'Enable/disable product variants/modifiers' },
+      {
+        name: 'QRIS_PAYMENT',
+        description: 'Enable/disable QRIS payment method',
+      },
+      {
+        name: 'SPLIT_PAYMENT',
+        description: 'Enable/disable split payment method',
+      },
+      {
+        name: 'DISCOUNT_SYSTEM',
+        description: 'Enable/disable global discount system',
+      },
+      {
+        name: 'MODIFIER_SYSTEM',
+        description: 'Enable/disable product variants/modifiers',
+      },
       { name: 'INVENTORY_CHECK', description: 'Block sales if stock is zero' },
       { name: 'PRINT_RECEIPT', description: 'Enable thermal receipt printing' },
       { name: 'EMAIL_RECEIPT', description: 'Enable email receipt sending' },
-      { name: 'PROFIT_SHARE', description: 'Enable profit sharing module' }
+      { name: 'PROFIT_SHARE', description: 'Enable profit sharing module' },
     ];
 
     for (const flag of defaultFlags) {
@@ -32,7 +47,7 @@ export class FlagsService implements OnModuleInit {
         await this.flagRepository.create({
           name: flag.name,
           description: flag.description,
-          is_enabled: false
+          is_enabled: false,
         });
       }
     }
@@ -65,7 +80,7 @@ export class FlagsService implements OnModuleInit {
     const res = await this.flagRepository.update(name, {
       is_enabled: isEnabled,
       updated_by: adminId,
-      updated_at: new Date()
+      updated_at: new Date(),
     });
 
     // Invalidate cache immediately on update

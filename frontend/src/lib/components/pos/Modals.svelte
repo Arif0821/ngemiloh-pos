@@ -2,6 +2,7 @@
   import { posStore } from '$lib/stores/pos.store.svelte';
   import { posService } from '$lib/services/pos.service';
   import { printerService } from '$lib/services/printer.service';
+  import { toast } from '$lib/stores/toast.store.svelte';
   import type { OrderResponse } from '$lib/domain/models/types';
 
   function formatTime(seconds: number) {
@@ -10,15 +11,49 @@
     return `${m}:${s}`;
   }
 
+  // P1-ACCESSIBILITY: Focus trap action for modals
+  function focusTrap(node: HTMLElement) {
+    const focusableElements = node.querySelectorAll<HTMLElement>(
+      'button, [href], input, select, textarea, [tabindex]:not([tabindex="-1"])'
+    );
+    const firstElement = focusableElements[0];
+    const lastElement = focusableElements[focusableElements.length - 1];
+
+    function handleKeydown(e: KeyboardEvent) {
+      if (e.key === 'Tab') {
+        if (e.shiftKey && document.activeElement === firstElement) {
+          e.preventDefault();
+          lastElement?.focus();
+        } else if (!e.shiftKey && document.activeElement === lastElement) {
+          e.preventDefault();
+          firstElement?.focus();
+        }
+      }
+      if (e.key === 'Escape') {
+        const closeButton = node.querySelector<HTMLElement>('[data-modal-close]');
+        closeButton?.click();
+      }
+    }
+
+    node.addEventListener('keydown', handleKeydown);
+    firstElement?.focus();
+
+    return {
+      destroy() {
+        node.removeEventListener('keydown', handleKeydown);
+      }
+    };
+  }
+
   async function printReceipt(order: OrderResponse) {
     try {
       const receiptText = printerService.formatReceipt(order, 'NGEMILOH POS', 'Terima Kasih Telah Berbelanja');
       const success = await printerService.connectAndPrint(receiptText);
       if (!success) {
-        alert('Cetak struk gagal, mungkin perangkat tidak didukung atau Anda belum memberikan izin Bluetooth. Anda masih bisa melihat struk dari riwayat pesanan.');
+        toast.warning('Cetak struk gagal, mungkin perangkat tidak didukung atau Anda belum memberikan izin Bluetooth. Anda masih bisa melihat struk dari riwayat pesanan.');
       }
     } catch (e) {
-      alert('Fitur Bluetooth Web tidak tersedia di browser ini.');
+      toast.warning('Fitur Bluetooth Web tidak tersedia di browser ini.');
     }
   }
 
@@ -26,7 +61,7 @@
     if (!posStore.selectedProductForModifier) return;
     for (const g of posStore.selectedProductForModifier.modifier_groups) {
       if (g.is_required && !posStore.selectedModifiers[g.id]) {
-        alert(`Pilihan ${g.name} wajib diisi!`);
+        toast.warning(`Pilihan ${g.name} wajib diisi!`);
         return;
       }
     }
@@ -35,10 +70,10 @@
 </script>
 
 {#if !posStore.hasOpenShift && !posStore.isCheckingShift}
-  <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-surface-800 w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+  <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-40 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="open-shift-title">
+    <div class="bg-white dark:bg-surface-800 w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200" use:focusTrap>
       <div class="p-6 bg-amber-50 dark:bg-amber-900/20 border-b border-amber-100 dark:border-amber-900/30">
-        <h2 class="text-xl font-bold text-amber-800 dark:text-amber-500">Mulai Shift</h2>
+        <h2 id="open-shift-title" class="text-xl font-bold text-amber-800 dark:text-amber-500">Mulai Shift</h2>
         <p class="text-sm text-amber-700/80 dark:text-amber-400/80 mt-1">Anda belum memulai shift hari ini. Silakan masukkan uang modal laci (Kas Awal).</p>
       </div>
       <form onsubmit={(e) => { e.preventDefault(); posService.handleOpenShift(posStore.openingBalance); }} class="p-6">
@@ -57,11 +92,11 @@
 {/if}
 
 {#if posStore.showCloseShiftModal}
-  <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-surface-800 w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200">
+  <div class="fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true" aria-labelledby="close-shift-title">
+    <div class="bg-white dark:bg-surface-800 w-full max-w-md rounded-2xl shadow-xl overflow-hidden animate-in fade-in zoom-in duration-200" use:focusTrap>
       <div class="p-6 border-b border-slate-100 dark:border-surface-700 flex justify-between items-center">
-        <h2 class="text-xl font-bold text-slate-800 dark:text-slate-100">Tutup Shift</h2>
-        <button onclick={() => posStore.showCloseShiftModal = false} class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
+        <h2 id="close-shift-title" class="text-xl font-bold text-slate-800 dark:text-slate-100">Tutup Shift</h2>
+        <button type="button" onclick={() => posStore.showCloseShiftModal = false} data-modal-close class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300">
           <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
       </div>
@@ -81,11 +116,11 @@
 {/if}
 
 {#if posStore.showModifierModal && posStore.selectedProductForModifier}
-  <div class="fixed inset-0 bg-surface-900/80 backdrop-blur-sm flex items-center justify-center z-[60] p-4">
-    <div class="bg-white dark:bg-surface-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+  <div class="fixed inset-0 bg-surface-900/80 backdrop-blur-sm flex items-center justify-center z-60 p-4" role="dialog" aria-modal="true" aria-labelledby="modifier-title">
+    <div class="bg-white dark:bg-surface-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200" use:focusTrap>
       <div class="p-5 border-b border-surface-200 dark:border-surface-700 flex justify-between items-center bg-surface-50 dark:bg-surface-900/50">
-        <h2 class="text-xl font-bold">{posStore.selectedProductForModifier.name}</h2>
-        <button class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-200 dark:bg-surface-700 text-surface-500 hover:text-surface-700" onclick={() => posStore.showModifierModal = false}>
+        <h2 id="modifier-title" class="text-xl font-bold">{posStore.selectedProductForModifier.name}</h2>
+        <button type="button" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-200 dark:bg-surface-700 text-surface-500 hover:text-surface-700" onclick={() => posStore.showModifierModal = false} data-modal-close>
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
       </div>
@@ -139,11 +174,11 @@
 {/if}
 
 {#if posStore.showPaymentModal}
-  <div class="fixed inset-0 bg-surface-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4">
-    <div class="bg-white dark:bg-surface-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200">
+  <div class="fixed inset-0 bg-surface-900/80 backdrop-blur-sm flex items-center justify-center z-50 p-4" role="dialog" aria-modal="true" aria-labelledby="payment-title">
+    <div class="bg-white dark:bg-surface-800 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden flex flex-col max-h-[90vh] animate-in zoom-in-95 duration-200" use:focusTrap>
       <div class="p-5 border-b border-surface-200 dark:border-surface-700 flex justify-between items-center bg-surface-50 dark:bg-surface-900/50">
-        <h2 class="text-xl font-bold">Pembayaran</h2>
-        <button class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-200 dark:bg-surface-700 text-surface-500 hover:text-surface-700 transition-colors" onclick={() => posStore.showPaymentModal = false}>
+        <h2 id="payment-title" class="text-xl font-bold">Pembayaran</h2>
+        <button type="button" class="w-10 h-10 flex items-center justify-center rounded-full bg-surface-200 dark:bg-surface-700 text-surface-500 hover:text-surface-700 transition-colors" onclick={() => posStore.showPaymentModal = false} data-modal-close>
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
       </div>
@@ -242,7 +277,7 @@
 
       <div class="p-5 border-t border-surface-200 bg-surface-50">
         <button 
-          class="w-full h-[60px] text-lg font-bold rounded-2xl flex items-center justify-center gap-2 {posStore.paymentMethod === 'cash' && posStore.cashChange < 0 || posStore.paymentMethod === 'split' && posStore.splitCashAmount >= posStore.cartTotal || posStore.isProcessing ? 'bg-surface-200 text-surface-400 cursor-not-allowed' : 'glass-button'}"
+          class="w-full h-15 text-lg font-bold rounded-2xl flex items-center justify-center gap-2 {posStore.paymentMethod === 'cash' && posStore.cashChange < 0 || posStore.paymentMethod === 'split' && posStore.splitCashAmount >= posStore.cartTotal || posStore.isProcessing ? 'bg-surface-200 text-surface-400 cursor-not-allowed' : 'glass-button'}"
           disabled={(posStore.paymentMethod === 'cash' && posStore.cashChange < 0) || (posStore.paymentMethod === 'split' && posStore.splitCashAmount >= posStore.cartTotal) || posStore.isProcessing}
           onclick={() => posService.processPayment(
             (data) => posService.startQrisWaiting(data, () => {
@@ -275,10 +310,10 @@
 {/if}
 
 {#if posStore.isWaitingQris && posStore.qrisOrderInfo}
-  <div class="fixed inset-0 bg-surface-900/90 backdrop-blur-md flex items-center justify-center z-[80] p-4">
-    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col text-center animate-in zoom-in-95 duration-300">
+  <div class="fixed inset-0 bg-surface-900/90 backdrop-blur-md flex items-center justify-center z-80 p-4" role="alertdialog" aria-modal="true" aria-labelledby="qris-title">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col text-center animate-in zoom-in-95 duration-300" use:focusTrap>
       <div class="p-6 pb-4">
-        <h2 class="text-xl font-bold mb-2">Menunggu Pembayaran</h2>
+        <h2 id="qris-title" class="text-xl font-bold mb-2">Menunggu Pembayaran</h2>
         <p class="text-surface-500 font-medium">#{posStore.qrisOrderInfo.client_uuid.split('-')[0].toUpperCase()}</p>
       </div>
       <div class="px-6 py-4 bg-surface-50 border-y border-surface-200">
@@ -296,13 +331,13 @@
 {/if}
 
 {#if posStore.showSuccessModal && posStore.lastOrderDetails}
-  <div class="fixed inset-0 bg-surface-900/80 backdrop-blur-sm flex items-center justify-center z-[70] p-4">
-    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col text-center animate-in zoom-in-95 border-4 border-green-500">
+  <div class="fixed inset-0 bg-surface-900/80 backdrop-blur-sm flex items-center justify-center z-70 p-4" role="dialog" aria-modal="true" aria-labelledby="success-title">
+    <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden flex flex-col text-center animate-in zoom-in-95 border-4 border-green-500" use:focusTrap>
       <div class="p-8 pt-10 pb-6 flex flex-col items-center">
         <div class="w-20 h-20 bg-green-100 text-green-600 rounded-full flex items-center justify-center mb-6 shadow-inner">
           <svg class="w-10 h-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="3" d="M5 13l4 4L19 7"></path></svg>
         </div>
-        <h2 class="text-2xl font-black text-slate-800 mb-2">Transaksi Berhasil!</h2>
+        <h2 id="success-title" class="text-2xl font-black text-surface-800 dark:text-surface-100 mb-2">Transaksi Berhasil!</h2>
         <p class="text-slate-500 font-medium">#{posStore.lastOrderDetails.client_uuid.split('-')[0].toUpperCase()}</p>
       </div>
       <div class="p-6 bg-slate-50 space-y-3 border-t border-slate-100">
@@ -314,11 +349,11 @@
 {/if}
 
 {#if posStore.showHistoryModal}
-  <div class="fixed inset-0 bg-surface-900/80 backdrop-blur-sm flex items-end md:items-center justify-center z-[70] md:p-4">
-    <div class="bg-white rounded-t-3xl md:rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col h-[85vh] md:h-[70vh] animate-in slide-in-from-bottom-full md:zoom-in-95">
+  <div class="fixed inset-0 bg-surface-900/80 backdrop-blur-sm flex items-end md:items-center justify-center z-70 md:p-4" role="dialog" aria-modal="true" aria-labelledby="history-title">
+    <div class="bg-white rounded-t-3xl md:rounded-3xl shadow-2xl w-full max-w-2xl overflow-hidden flex flex-col h-[85vh] md:h-[70vh] animate-in slide-in-from-bottom-full md:zoom-in-95 pb-safe" use:focusTrap>
       <div class="p-5 border-b border-surface-200 flex justify-between items-center bg-surface-50">
-        <h2 class="text-xl font-bold">Riwayat Transaksi</h2>
-        <button class="w-10 h-10 rounded-full bg-surface-200 text-surface-500 flex items-center justify-center" onclick={() => posStore.showHistoryModal = false}>
+        <h2 id="history-title" class="text-xl font-bold">Riwayat Transaksi</h2>
+        <button type="button" class="w-10 h-10 rounded-full bg-surface-200 text-surface-500 flex items-center justify-center" onclick={() => posStore.showHistoryModal = false} data-modal-close>
           <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path></svg>
         </button>
       </div>

@@ -4,7 +4,8 @@ import { Request, Response, NextFunction } from 'express';
 @Injectable()
 export class RateLimitLoggerMiddleware implements NestMiddleware {
   private readonly logger = new Logger('RateLimit');
-  private requestCounts: Map<string, { count: number; resetTime: number }> = new Map();
+  private requestCounts: Map<string, { count: number; resetTime: number }> =
+    new Map();
 
   use(req: Request, res: Response, next: NextFunction) {
     const ip = req.ip || req.socket.remoteAddress || 'unknown';
@@ -23,7 +24,9 @@ export class RateLimitLoggerMiddleware implements NestMiddleware {
 
     // Log warning if approaching limit
     if (clientData.count > maxRequests * 0.8) {
-      this.logger.warn(`High request rate from ${ip}: ${clientData.count}/${maxRequests}`);
+      this.logger.warn(
+        `High request rate from ${ip}: ${clientData.count}/${maxRequests}`,
+      );
     }
 
     // Clean up expired entries on every request (prevent unbounded memory growth)
@@ -37,10 +40,14 @@ export class RateLimitLoggerMiddleware implements NestMiddleware {
 
     // Hard limit: if map grows too large, clear oldest entries
     if (this.requestCounts.size > 50000) {
-      this.logger.warn(`Rate limit map overflow: ${this.requestCounts.size} entries, clearing old entries`);
+      this.logger.warn(
+        `Rate limit map overflow: ${this.requestCounts.size} entries, clearing old entries`,
+      );
       const entries = Array.from(this.requestCounts.entries());
       // Keep only the most recent 25000 entries
-      entries.slice(0, entries.length - 25000).forEach(([key]) => this.requestCounts.delete(key));
+      entries
+        .slice(0, entries.length - 25000)
+        .forEach(([key]) => this.requestCounts.delete(key));
     }
 
     next();

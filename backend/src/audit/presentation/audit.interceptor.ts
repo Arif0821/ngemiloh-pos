@@ -1,7 +1,16 @@
-import { Injectable, NestInterceptor, ExecutionContext, CallHandler, Inject } from '@nestjs/common';
+import {
+  Injectable,
+  NestInterceptor,
+  ExecutionContext,
+  CallHandler,
+  Inject,
+} from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
-import { AUDIT_REPOSITORY, type IAuditRepository } from '../domain/interfaces/audit.repository.interface';
+import {
+  AUDIT_REPOSITORY,
+  type IAuditRepository,
+} from '../domain/interfaces/audit.repository.interface';
 
 /**
  * TINGGI-05: Sanitize body to redact sensitive fields
@@ -9,7 +18,15 @@ import { AUDIT_REPOSITORY, type IAuditRepository } from '../domain/interfaces/au
 function sanitizeBody(obj: any): any {
   if (!obj || typeof obj !== 'object') return obj;
   const clean: any = { ...obj };
-  const sensitiveFields = ['pin', 'password', 'pin_hash', 'password_hash', 'token', 'secret', 'key'];
+  const sensitiveFields = [
+    'pin',
+    'password',
+    'pin_hash',
+    'password_hash',
+    'token',
+    'secret',
+    'key',
+  ];
   for (const field of sensitiveFields) {
     if (field in clean) clean[field] = '[REDACTED]';
   }
@@ -19,7 +36,8 @@ function sanitizeBody(obj: any): any {
 @Injectable()
 export class AuditInterceptor implements NestInterceptor {
   constructor(
-    @Inject(AUDIT_REPOSITORY) private readonly auditRepository: IAuditRepository
+    @Inject(AUDIT_REPOSITORY)
+    private readonly auditRepository: IAuditRepository,
   ) {}
 
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
@@ -28,7 +46,9 @@ export class AuditInterceptor implements NestInterceptor {
     const method = String(request.method ?? '').toUpperCase();
 
     // Only log mutating requests
-    const isMutatingRequest = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(method);
+    const isMutatingRequest = ['POST', 'PUT', 'PATCH', 'DELETE'].includes(
+      method,
+    );
     if (!isMutatingRequest) {
       return next.handle();
     }
@@ -60,18 +80,20 @@ export class AuditInterceptor implements NestInterceptor {
 
     return next.handle().pipe(
       tap(() => {
-        this.auditRepository.createAuditLog({
-          actor_id: userId,
-          action: action,
-          entity_type: 'API_REQUEST',
-          entity_id: requestUrl,
-          old_value: null,
-          new_value: newValue,
-          ip_address: ipAddress,
-        }).catch((err: Error) => {
-          console.error('Failed to write audit log:', err.message);
-        });
-      })
+        this.auditRepository
+          .createAuditLog({
+            actor_id: userId,
+            action: action,
+            entity_type: 'API_REQUEST',
+            entity_id: requestUrl,
+            old_value: null,
+            new_value: newValue,
+            ip_address: ipAddress,
+          })
+          .catch((err: Error) => {
+            console.error('Failed to write audit log:', err.message);
+          });
+      }),
     );
   }
 }

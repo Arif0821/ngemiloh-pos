@@ -1,9 +1,23 @@
-import { Controller, Get, Post, Body, Param, Patch, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Param,
+  Patch,
+  UseGuards,
+} from '@nestjs/common';
 import { UsersService } from '../application/services/users.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { Roles } from '../../auth/decorators/roles.decorator';
-import { CreateCashierDto, ResetPinDto, ToggleStatusDto, CreateCustomerDto, AddLoyaltyPointsDto } from './dto/users.dto';
+import {
+  CreateCashierDto,
+  ResetPinDto,
+  ToggleStatusDto,
+  CreateCustomerDto,
+  AddLoyaltyPointsDto,
+} from './dto/users.dto';
 
 @Controller('api/v1/admin/users')
 @UseGuards(JwtAuthGuard, RolesGuard)
@@ -49,7 +63,10 @@ export class UsersController {
   }
 
   @Patch('customers/:id/loyalty')
-  async addLoyaltyPoints(@Param('id') id: string, @Body() dto: AddLoyaltyPointsDto) {
+  async addLoyaltyPoints(
+    @Param('id') id: string,
+    @Body() dto: AddLoyaltyPointsDto,
+  ) {
     const data = await this.usersService.addLoyaltyPoints(id, dto.points);
     return { success: true, data };
   }
