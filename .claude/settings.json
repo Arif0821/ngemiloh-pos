@@ -8,6 +8,9 @@
     "showMCPResources": true
   },
   "directories": {
-    "commands": ".claude/commands"
+    "commands": [
+      ".claude/commands",
+      "agent-skills/.claude/commands"
+    ]
   }
 }
