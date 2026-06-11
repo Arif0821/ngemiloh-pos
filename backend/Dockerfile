@@ -41,6 +41,9 @@ FROM mirror.gcr.io/library/node:20-alpine AS production
 ENV NODE_ENV=production
 WORKDIR /app
 
+# KRITIS-01: Install curl for Docker healthcheck
+RUN apk add --no-cache curl
+
 # Copy package files
 COPY package.json package-lock.json* ./
 

@@ -169,6 +169,7 @@ export class OrdersService {
         discounted_base: basePrice - maxDiscountAmount,
         modifier_total: modifierTotal,
         final_price: itemTotal,
+        discount_amount: maxDiscountAmount * item.quantity,
         modifierSnaps,
       });
     }
@@ -229,6 +230,7 @@ export class OrdersService {
           product_name_snapshot: i.product_name_snapshot,
           base_price: i.unit_price,
           discounted_base: i.discounted_base,
+          discount_amount: i.discount_amount || 0,
           modifier_total: i.modifier_total,
           final_price: i.final_price,
           quantity: i.quantity,
@@ -458,6 +460,7 @@ export class OrdersService {
         quantity: item.quantity,
         base_price: product.base_price,
         discounted_base: Number(product.base_price),
+        discount_amount: 0,
         modifier_total: modifierTotal,
         final_price: itemTotal,
         subtotal: itemTotal * item.quantity,

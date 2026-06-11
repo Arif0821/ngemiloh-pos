@@ -1,10 +1,11 @@
-import { Controller, Get, Patch, Body, UseGuards, Req, Param } from '@nestjs/common';
+import { Controller, Get, Patch, Body, UseGuards, Req, Param, Res, HttpStatus } from '@nestjs/common';
 import { AppService } from './app.service';
 import { JwtAuthGuard } from './auth/guards/jwt-auth.guard';
 import { RolesGuard } from './auth/guards/roles.guard';
 import { Roles } from './auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { Request } from 'express';
+import { Response } from 'express';
 import { SkipThrottle } from '@nestjs/throttler';
 
 interface AuthenticatedRequest extends Request {
@@ -22,8 +23,10 @@ export class AppController {
 
   @SkipThrottle()
   @Get('health')
-  async healthCheck() {
-    return this.appService.healthCheck();
+  async healthCheck(@Res() res: Response) {
+    const health = await this.appService.healthCheck();
+    const statusCode = health.status === 'ok' ? HttpStatus.OK : HttpStatus.SERVICE_UNAVAILABLE;
+    return res.status(statusCode).json(health);
   }
 
   @Get('api/v1/admin/settings')

@@ -26,10 +26,11 @@ services:
           memory: 1G
     healthcheck:
       # CI/CD: Use postgres superuser for healthcheck (more reliable)
-      test: ["CMD-SHELL", "pg_isready -U postgres -d ngemiloh_db"]
+      test: ["CMD-SHELL", "pg_isready -U ngemiloh -d ngemiloh_db"]
       interval: 5s
       timeout: 5s
       retries: 10
+      start_period: 30s
     restart: unless-stopped
 
   # ============================================================
@@ -50,7 +51,7 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
-      start_period: 120s
+      start_period: 15s
     restart: unless-stopped
 
   # ============================================================
