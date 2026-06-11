@@ -149,7 +149,7 @@ model Discount {
   target_id       String?       @db.Uuid
   valid_from      DateTime      @db.Timestamptz
   valid_until     DateTime?     @db.Timestamptz
-  applicable_days Int[]        @db.SmallInt[]
+  applicable_days Int[]
   is_active       Boolean       @default(true)
   manually_disabled Boolean     @default(false)  // TINGGI-02: Prevent cron from re-activating admin-disabled discounts
   created_by      String?       @db.Uuid
