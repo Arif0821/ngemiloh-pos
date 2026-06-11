@@ -176,21 +176,21 @@
   <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
     <div class="bg-white dark:bg-surface-800 p-6 rounded-2xl shadow-sm border border-surface-200 dark:border-surface-700">
       <h3 class="font-bold text-lg mb-6 text-surface-800 dark:text-surface-100">Tren Pendapatan 7 Hari</h3>
-      <div class="h-[250px] w-full">
+      <div class="h-64 w-full">
         <canvas bind:this={revenueCanvas}></canvas>
       </div>
     </div>
-    
+
     <div class="bg-white dark:bg-surface-800 p-6 rounded-2xl shadow-sm border border-surface-200 dark:border-surface-700">
       <h3 class="font-bold text-lg mb-6 text-surface-800 dark:text-surface-100">Top 5 Produk</h3>
-      <div class="h-[250px] w-full">
+      <div class="h-64 w-full">
         <canvas bind:this={topProductsCanvas}></canvas>
       </div>
     </div>
 
     <div class="bg-white dark:bg-surface-800 p-6 rounded-2xl shadow-sm border border-surface-200 dark:border-surface-700">
       <h3 class="font-bold text-lg mb-6 text-surface-800 dark:text-surface-100">Distribusi Pembayaran</h3>
-      <div class="h-[250px] w-full">
+      <div class="h-64 w-full">
         <canvas id="paymentCanvas"></canvas>
       </div>
     </div>

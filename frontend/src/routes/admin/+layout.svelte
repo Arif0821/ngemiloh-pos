@@ -39,7 +39,7 @@
   <!-- Sidebar -->
   <aside class="w-64 bg-slate-900 text-white flex flex-col transition-all duration-300 shadow-xl z-20">
     <div class="h-20 flex items-center justify-center border-b border-slate-800 px-6">
-      <div class="text-2xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-indigo-400 to-purple-400 tracking-tight">Ngemiloh<span class="text-white text-sm font-normal ml-2 bg-slate-700 px-2 py-1 rounded-md">Admin</span></div>
+      <div class="text-2xl font-bold bg-clip-text text-transparent bg-linear-to-r from-indigo-400 to-purple-400 tracking-tight">Ngemiloh<span class="text-white text-sm font-normal ml-2 bg-slate-700 px-2 py-1 rounded-md">Admin</span></div>
     </div>
     
     <nav class="flex-1 py-6 px-4 space-y-2 overflow-y-auto">
@@ -71,7 +71,7 @@
     
     <div class="p-4 border-t border-slate-800">
       <div class="flex items-center mb-4 px-2">
-        <div class="w-10 h-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-lg">
+        <div class="w-10 h-10 rounded-full bg-linear-to-tr from-indigo-500 to-purple-500 flex items-center justify-center text-white font-bold shadow-lg">
           {adminName.charAt(0)}
         </div>
         <div class="ml-3">
