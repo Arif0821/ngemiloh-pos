@@ -87,13 +87,32 @@ export class AuthService {
     }
 
     let isValid = false;
+
     if (user.role === Role.kasir) {
       if (!user.pin_hash) throw new UnauthorizedException('Invalid credentials');
       isValid = await this.verifyPin(pinOrPassword, user.pin_hash);
     } else if (user.role === Role.superadmin) {
       if (!user.password_hash) throw new UnauthorizedException('Invalid credentials');
-      // SEDANG-04: Password format validation should be done at SET/CHANGE time, not login
-      // This prevents attackers from bypassing brute force protection with short passwords
+
+      // Validate password format BEFORE bcrypt compare for clear error messages
+      if (pinOrPassword.length < 16) {
+        // Increment brute force counter for weak password attempts
+        await this.authRepository.incrementUserFailedLogin(user.id);
+        await this.authRepository.incrementIpLockout(ipAddress);
+        throw new UnauthorizedException('Password must be at least 16 characters');
+      }
+
+      const hasUpperCase = /[A-Z]/.test(pinOrPassword);
+      const hasLowerCase = /[a-z]/.test(pinOrPassword);
+      const hasNumber = /[0-9]/.test(pinOrPassword);
+      const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(pinOrPassword);
+      if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSymbol) {
+        // Increment brute force counter for invalid format
+        await this.authRepository.incrementUserFailedLogin(user.id);
+        await this.authRepository.incrementIpLockout(ipAddress);
+        throw new UnauthorizedException('Password must contain uppercase, lowercase, number, and symbol');
+      }
+
       isValid = await bcrypt.compare(pinOrPassword, user.password_hash);
     }
 

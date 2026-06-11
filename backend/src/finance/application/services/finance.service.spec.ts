@@ -101,8 +101,9 @@ describe('FinanceService', () => {
         shift_start: new Date('2026-06-10T08:00:00Z'),
       };
       mockFinanceRepository.findFirstCashRegister.mockResolvedValue(mockShift);
+      // Fix: Include payment_method for correct cash calculation
       mockFinanceRepository.findOrders.mockResolvedValue([
-        { id: 'order-1', total_amount: 500000 },
+        { id: 'order-1', total_amount: 500000, payment_method: 'cash', cash_amount: 500000 },
       ]);
       mockFinanceRepository.updateCashRegister.mockResolvedValue({
         ...mockShift,
@@ -110,6 +111,7 @@ describe('FinanceService', () => {
         discrepancy: 200000,
       });
       mockFinanceRepository.createAuditLog.mockResolvedValue({ id: 'audit-1' });
+      mockEmailService.sendAlert.mockClear();
 
       await service.closeShift('cashier-1', 1200000);
 
