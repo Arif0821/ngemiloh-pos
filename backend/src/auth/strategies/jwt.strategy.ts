@@ -10,12 +10,10 @@ const logger = new Logger('JwtStrategy');
 export class JwtStrategy extends PassportStrategy(Strategy) {
   constructor() {
     const secret = process.env.JWT_ACCESS_SECRET;
+    // SECURITY FIX S-01: Throw error immediately if secret is missing
+    // No fallback allowed - security depends on this being set
     if (!secret) {
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error('FATAL: JWT_ACCESS_SECRET environment variable is required');
-      }
-      // SECURITY: Only allow fallback in development - but log warning
-      logger.warn('JWT_ACCESS_SECRET not set - using insecure fallback (development only)');
+      throw new Error('FATAL: JWT_ACCESS_SECRET environment variable is required');
     }
 
     super({
@@ -29,7 +27,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
         },
       ]),
       ignoreExpiration: false,
-      secretOrKey: secret || 'dev-only-insecure-fallback-do-not-use-in-production',
+      secretOrKey: secret,
     });
   }
 

@@ -9,13 +9,11 @@ export class UsersService {
   ) {}
 
   private getPepper(): string {
+    // SECURITY FIX S-01: Throw error immediately if pepper is missing
+    // No fallback allowed - security depends on this being set
     const pepper = process.env.PIN_PEPPER_SECRET;
     if (!pepper) {
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error('FATAL: PIN_PEPPER_SECRET environment variable is required');
-      }
-      console.warn('WARNING: PIN_PEPPER_SECRET not set - using insecure fallback (development only)');
-      return 'default_pepper_insecure_fallback';
+      throw new Error('FATAL: PIN_PEPPER_SECRET environment variable is required');
     }
     return pepper;
   }

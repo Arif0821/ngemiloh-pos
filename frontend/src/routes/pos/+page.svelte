@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount } from 'svelte';
+  import { onMount, onDestroy } from 'svelte';
   import { posStore } from '$lib/stores/pos.store.svelte';
   import { posService } from '$lib/services/pos.service';
   import { db } from '$lib/db';
@@ -9,32 +9,66 @@
   import CartSidebar from '$lib/components/pos/CartSidebar.svelte';
   import Modals from '$lib/components/pos/Modals.svelte';
 
+  // FIX F-01: Track interval references for cleanup
+  let flagInterval: ReturnType<typeof setInterval> | undefined;
+  // FIX F-03: Track event handler references for cleanup
+  let handleOnline: () => void;
+  let handleOffline: () => void;
+
   $effect(() => {
     if (posStore.isCartLoaded) {
       db.cart.put({ id: 'current_cart', items: $state.snapshot(posStore.cart) });
     }
   });
 
+  // FIX F-02 & F-03: Cleanup on component destroy
+  onDestroy(() => {
+    // Clear flag refresh interval
+    if (flagInterval) {
+      clearInterval(flagInterval);
+      flagInterval = undefined;
+    }
+    // Remove event listeners
+    if (handleOnline) {
+      window.removeEventListener('online', handleOnline);
+      handleOnline = undefined;
+    }
+    if (handleOffline) {
+      window.removeEventListener('offline', handleOffline);
+      handleOffline = undefined;
+    }
+    // FIX F-01: Cancel SSE/polling on component destroy
+    posService.cancelQrisWaiting();
+  });
+
   onMount(async () => {
     posStore.isOffline = !navigator.onLine;
-    window.addEventListener('online', async () => {
+
+    // FIX F-03: Store handler references for cleanup
+    handleOnline = async () => {
       posStore.isOffline = false;
       await posService.syncPendingOrders();
-    });
-    window.addEventListener('offline', () => {
+    };
+    handleOffline = () => {
       posStore.isOffline = true;
       if (posStore.paymentMethod === 'qris' || posStore.paymentMethod === 'split') {
         posStore.paymentMethod = 'cash';
       }
-    });
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
 
     await posService.loadProductsFromDb();
     if (!posStore.isOffline) {
       posService.fetchFlags();
-      setInterval(() => posService.fetchFlags(), FLAG_REFRESH_INTERVAL_MS);
+      // FIX F-02: Store interval reference for cleanup
+      flagInterval = setInterval(() => posService.fetchFlags(), FLAG_REFRESH_INTERVAL_MS);
       await posService.checkShift();
       await posService.fetchProductsFromApi();
       await posService.fetchDiscounts();
+      // FIX F-08: Sync pending orders on app start if online
+      await posService.syncPendingOrders();
     } else {
       posStore.isCheckingShift = false;
     }

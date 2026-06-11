@@ -1,5 +1,7 @@
 export class ApiClient {
   private static recursionDepth = 0;
+  // HIGH FIX F-04: Request timeout in milliseconds
+  private static readonly REQUEST_TIMEOUT_MS = 30000; // 30 seconds
 
   private static getCookie(name: string) {
     if (typeof document === 'undefined') return undefined;
@@ -45,37 +47,50 @@ export class ApiClient {
       };
     }
 
-    // Call native fetch
-    let response = await fetch(url, options);
+    // HIGH FIX F-04: Add request timeout using AbortController
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), this.REQUEST_TIMEOUT_MS);
+    options.signal = controller.signal;
 
-    // Global 401 handling
-    if (response.status === 401 && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/refresh')) {
-      this.recursionDepth++;
-      const refreshUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1/auth/refresh` : `/api/v1/auth/refresh`;
-      const refreshRes = await fetch(refreshUrl, {
-        method: 'POST',
-        credentials: 'include'
-      });
+    try {
+      let response = await fetch(url, options);
+      clearTimeout(timeoutId);
 
-      if (refreshRes.ok) {
-        // Retry the original request (re-fetch CSRF token for new request)
-        try {
-          const retryResponse = await this.request(endpoint, options);
+      // Global 401 handling
+      if (response.status === 401 && !endpoint.includes('/auth/login') && !endpoint.includes('/auth/refresh')) {
+        this.recursionDepth++;
+        const refreshUrl = import.meta.env.VITE_API_URL ? `${import.meta.env.VITE_API_URL}/api/v1/auth/refresh` : `/api/v1/auth/refresh`;
+        const refreshRes = await fetch(refreshUrl, {
+          method: 'POST',
+          credentials: 'include'
+        });
+
+        if (refreshRes.ok) {
+          // Retry the original request (re-fetch CSRF token for new request)
+          try {
+            const retryResponse = await this.request(endpoint, options);
+            this.recursionDepth = 0;
+            return retryResponse;
+          } catch (e) {
+            this.recursionDepth = 0;
+            throw e;
+          }
+        } else {
           this.recursionDepth = 0;
-          return retryResponse;
-        } catch (e) {
-          this.recursionDepth = 0;
-          throw e;
-        }
-      } else {
-        this.recursionDepth = 0;
-        if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
-          window.location.href = '/login';
+          if (typeof window !== 'undefined' && !window.location.pathname.includes('/login')) {
+            window.location.href = '/login';
+          }
         }
       }
-    }
 
-    return response;
+      return response;
+    } catch (error: any) {
+      clearTimeout(timeoutId);
+      if (error.name === 'AbortError') {
+        throw new Error(`Request timeout after ${this.REQUEST_TIMEOUT_MS}ms`);
+      }
+      throw error;
+    }
   }
 
   static async get(endpoint: string, options?: RequestInit) {

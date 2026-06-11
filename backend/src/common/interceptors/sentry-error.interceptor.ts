@@ -13,24 +13,51 @@ import * as Sentry from '@sentry/node';
 export class SentryErrorInterceptor implements NestInterceptor {
   private readonly logger = new Logger(SentryErrorInterceptor.name);
 
+  // HIGH FIX S-03: Sensitive fields to redact before sending to Sentry
+  private readonly sensitiveFields = [
+    'password',
+    'pin',
+    'pin_hash',
+    'access_token',
+    'refresh_token',
+    'authorization',
+    'cookie',
+    'secret',
+    'api_key',
+    'apiKey',
+    'token',
+  ];
+
+  private sanitizeBody(body: any): any {
+    if (!body || typeof body !== 'object') return body;
+    const sanitized: any = Array.isArray(body) ? [] : {};
+    for (const [key, value] of Object.entries(body)) {
+      if (this.sensitiveFields.some(f => key.toLowerCase().includes(f.toLowerCase()))) {
+        sanitized[key] = '[REDACTED]';
+      } else if (typeof value === 'object' && value !== null) {
+        sanitized[key] = this.sanitizeBody(value);
+      } else {
+        sanitized[key] = value;
+      }
+    }
+    return sanitized;
+  }
+
   intercept(context: ExecutionContext, next: CallHandler): Observable<unknown> {
     return next.handle().pipe(
       catchError((error) => {
-        // Only capture errors that weren't already handled by exception filter
         const request = context.switchToHttp().getRequest();
-
-        // Get status safely - use getStatus() method if available
         const status = error.getStatus ? error.getStatus() : (error.status || 500);
-
-        // Don't capture expected errors (4xx) in Sentry
         const isExpectedError = status >= 400 && status < 500;
 
         if (!isExpectedError && status !== 404) {
+          // HIGH FIX S-03: Sanitize body before sending to Sentry
+          const sanitizedBody = this.sanitizeBody(request.body);
           Sentry.captureException(error, {
             extra: {
               path: request.url,
               method: request.method,
-              body: request.body,
+              body: sanitizedBody,
             },
           });
 

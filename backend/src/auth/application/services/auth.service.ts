@@ -18,18 +18,13 @@ export class AuthService {
     private jwtService: JwtService,
     private emailService: EmailService
   ) {
-    // SECURITY: Require PIN_PEPPER_SECRET in production
+    // SECURITY FIX S-01: Throw error immediately if pepper is missing
+    // No fallback allowed - security depends on this being set
     const configuredPepper = process.env.PIN_PEPPER_SECRET;
     if (!configuredPepper) {
-      if (process.env.NODE_ENV === 'production') {
-        throw new Error('FATAL: PIN_PEPPER_SECRET environment variable is required');
-      }
-      // Only allow fallback in development
-      this.pepper = 'dev-only-fallback-pepper-do-not-use-in-production';
-      this.logger.warn('PIN_PEPPER_SECRET not set - using insecure fallback (development only)');
-    } else {
-      this.pepper = configuredPepper;
+      throw new Error('FATAL: PIN_PEPPER_SECRET environment variable is required');
     }
+    this.pepper = configuredPepper;
   }
 
   private async hashPin(pin: string): Promise<string> {

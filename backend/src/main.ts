@@ -61,9 +61,9 @@ async function bootstrap() {
         formAction: ["'self'"],
         frameSrc: ["'self'", 'https://app.sandbox.midtrans.com'], // Midtrans sandbox
         connectSrc: ["'self'", 'https://api.sandbox.midtrans.com'], // Midtrans sandbox
-        // TINGGI-07: Removed literal 'nonce' - use allowed domains instead
-        scriptSrc: ["'self'", 'https://cdn.tailwindcss.com'],
-        styleSrc: ["'self'", 'https://cdn.tailwindcss.com'],
+        // HIGH FIX S-04: Removed Tailwind CDN - CSS is bundled at build time
+        scriptSrc: ["'self'"],
+        styleSrc: ["'self'"],
         upgradeInsecureRequests: [],
       },
     },
