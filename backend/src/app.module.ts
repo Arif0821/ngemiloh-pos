@@ -34,7 +34,7 @@ import { AuditInterceptor } from './audit/presentation/audit.interceptor';
             const port = Number(url.port) || 6379;
             if (!host) throw new Error('Invalid hostname in REDIS_URL');
             return { host, port };
-          } catch (error) {
+          } catch {
             // Log warning but use fallback
             console.warn(`Invalid REDIS_URL: ${redisUrl}, using fallback`);
           }

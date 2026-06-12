@@ -7,7 +7,6 @@ import helmet from 'helmet';
 import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import compression from 'compression';
-import { join } from 'path';
 import express from 'express';
 
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';

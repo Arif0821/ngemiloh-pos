@@ -180,10 +180,11 @@ export class FinanceService {
           'Laporan Rugi Bulanan',
           `<p>Total penjualan bulan ini tidak menghasilkan laba.</p><p>Mohon periksa laporan keuangan untuk detail.</p>`,
         );
-      } catch (emailError) {
+      } catch (emailError: unknown) {
+        const err = emailError as Error;
         this.logger.error(
-          `Failed to send loss notification email: ${emailError.message}`,
-          emailError.stack,
+          `Failed to send loss notification email: ${err.message}`,
+          err.stack,
         );
         // Don't throw - this is a non-critical operation
       }
@@ -392,6 +393,8 @@ export class FinanceService {
         splitVal += Number(o.total_amount);
       }
     }
+    const counts = { cash, qris, split };
+    const values = { cash: cashVal, qris: qrisVal, split: splitVal };
 
     const hoursCount = new Array(24).fill(0);
     for (const o of orders) {
@@ -408,8 +411,8 @@ export class FinanceService {
         byRevenue: topByRevenue,
       },
       paymentDistribution: {
-        counts: { cash, qris, split },
-        values: { cash: cashVal, qris: qrisVal, split: splitVal },
+        counts,
+        values,
       },
       peakHours: hoursCount.map((count, hour) => ({ hour, count })),
     };
@@ -485,8 +488,11 @@ export class FinanceService {
           `<p>Shift kasir dengan ID <strong>${cashierId}</strong> telah ditutup dengan <strong>selisih (discrepancy) Rp ${discrepancy}</strong>.</p>
          <p>Batas toleransi sistem adalah Rp ${threshold}. Mohon segera verifikasi laci kas.</p>`,
         )
-        .catch((err) =>
-          this.logger.error('Failed to send discrepancy alert:', err.message),
+        .catch((err: unknown) =>
+          this.logger.error(
+            'Failed to send discrepancy alert:',
+            (err as Error).message,
+          ),
         );
     }
 

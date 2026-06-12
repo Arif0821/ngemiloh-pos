@@ -8,7 +8,6 @@ import {
   Patch,
   Param,
   Delete,
-  UseInterceptors,
 } from '@nestjs/common';
 import { InventoryService } from '../application/services/inventory.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';

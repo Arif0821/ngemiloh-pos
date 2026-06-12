@@ -9,7 +9,6 @@ import {
   HttpStatus,
   Param,
   Sse,
-  MessageEvent,
   Patch,
   Res,
   Query,
@@ -25,10 +24,13 @@ import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { EventEmitter2 } from '@nestjs/event-emitter';
-import { Observable, filter, map, fromEvent, merge, interval } from 'rxjs';
+import { filter, map, fromEvent, merge, interval, Observable } from 'rxjs';
 import type { Response } from 'express';
 import { CreateOrderDto, SyncBatchDto } from './dto/create-order.dto';
 import type { AuthenticatedRequest } from '../../types/express';
+
+// SSE event type used by the @Sse() decorator return type
+type SseEvent = { data: Record<string, unknown> };
 
 @Controller('api/v1')
 export class OrdersController {
@@ -189,7 +191,7 @@ export class OrdersController {
 
   @Get('orders/:id/status')
   @UseGuards(JwtAuthGuard)
-  async getOrderStatus(@Param('id') id: string, @Req() req: Request) {
+  async getOrderStatus(@Param('id') id: string, @Req() _req: Request) {
     // SECURITY: Require authentication via guard for proper 401 response
     const order = await this.ordersService.getOrder(id);
     return {
@@ -197,10 +199,9 @@ export class OrdersController {
       data: { status: order.status, payment_status: order.payment_status },
     };
   }
-
   @Sse('orders/:id/sse')
   @UseGuards(JwtAuthGuard)
-  async sse(@Param('id') id: string, @Req() req: Request) {
+  sse(@Param('id') id: string, @Req() _req: Request): Observable<SseEvent> {
     // SECURITY: JwtAuthGuard ensures only authenticated users can access SSE
     const orderEvents = fromEvent(this.eventEmitter, 'order.paid').pipe(
       filter((payload: { orderId: string }) => payload.orderId === id),

@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { IDiscountRepository } from '../../domain/interfaces/discount.repository.interface';
 import { Discount, Prisma } from '@prisma/client';
@@ -63,7 +63,7 @@ export class PrismaDiscountRepository implements IDiscountRepository {
         valid_until:
           data.valid_until !== undefined
             ? data.valid_until
-              ? new Date(String(data.valid_until))
+              ? new Date(String(String(data.valid_until)))
               : null
             : undefined,
         applicable_days: data.applicable_days,

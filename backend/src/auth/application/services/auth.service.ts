@@ -8,11 +8,10 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
-import type { StringValue } from 'ms';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { EmailService } from '../../../email/email.service';
-import { Role, User } from '@prisma/client';
+import { Role } from '@prisma/client';
 import {
   AUTH_REPOSITORY,
   type AuthRepositoryInterface,
@@ -60,7 +59,7 @@ export class AuthService {
     const hasUpperCase = /[A-Z]/.test(password);
     const hasLowerCase = /[a-z]/.test(password);
     const hasNumber = /[0-9]/.test(password);
-    const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password);
+    const hasSymbol = /[!@#$%^&*()_+\-={}:;"'<>,.?\\|/-]/.test(password);
 
     if (password.length < minLength) {
       // SECURITY: Don't leak password length in error message
@@ -130,9 +129,7 @@ export class AuthService {
       const hasUpperCase = /[A-Z]/.test(pinOrPassword);
       const hasLowerCase = /[a-z]/.test(pinOrPassword);
       const hasNumber = /[0-9]/.test(pinOrPassword);
-      const hasSymbol = /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(
-        pinOrPassword,
-      );
+      const hasSymbol = /[!@#$%^&*()_+\-={}:;"'<>,.?\\|/-]/.test(pinOrPassword);
       if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSymbol) {
         // Increment brute force counter for invalid format
         await this.authRepository.incrementUserFailedLogin(user.id);
@@ -165,10 +162,10 @@ export class AuthService {
             'Akun Terkunci - Gagal Login',
             `Akun kasir dengan username <strong>${safeUsername}</strong> telah dikunci karena 5 kali percobaan login gagal berturut-turut. Akun akan terbuka kembali dalam 30 menit.`,
           )
-          .catch((err) =>
+          .catch((err: unknown) =>
             this.logger.error(
               'Failed to send lockout alert email',
-              err.message,
+              (err as Error).message,
             ),
           );
       }
@@ -304,6 +301,7 @@ export class AuthService {
       return null;
     }
     // Return safe user data (exclude sensitive fields)
+    // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { pin_hash, password_hash, ...safeUser } = user;
     return safeUser;
   }

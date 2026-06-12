@@ -1,6 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
-import { escapeHtml, escapeHtmlForEmail } from '../common/utils/html';
+import { escapeHtmlForEmail } from '../common/utils/html';
 
 @Injectable()
 export class EmailService {

@@ -1,15 +1,6 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Body,
-  UseGuards,
-  UseInterceptors,
-  Req,
-} from '@nestjs/common';
+import { Controller, Get, Post, Body, UseGuards, Req } from '@nestjs/common';
 import { FlagsService } from '../application/services/flags.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
-import { RolesGuard } from '../../auth/guards/roles.guard';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { ToggleFlagDto } from './dto/flags.dto';

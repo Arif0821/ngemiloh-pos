@@ -1,186 +1,231 @@
 <script lang="ts">
-  import { api } from '$lib/services/api.client';
-  import { onMount } from 'svelte';
-  
-  let settings: Record<string, string> = $state({});
-  import type { FeatureFlag } from '$lib/domain/models/types';
-  let featureFlags: FeatureFlag[] = $state([]);
-  let isLoading = $state(true);
-  
-  let isSavingSettings = $state(false);
+	import { api } from '$lib/services/api.client';
+	import { onMount } from 'svelte';
 
-  // Settings Forms
-  let storeName = $state('');
-  let halalNumber = $state('');
-  let storeAddress = $state('');
-  let receiptFooter = $state('');
+	let settings: Record<string, string> = $state({});
+	import type { FeatureFlag } from '$lib/domain/models/types';
+	let featureFlags: FeatureFlag[] = $state([]);
+	let isLoading = $state(true);
 
-  async function fetchData() {
-    isLoading = true;
-    try {
-      const hostname = window.location.hostname;
-      
-      // Fetch settings
-      const resSettings = await api.request(`/api/v1/admin/settings`, { credentials: 'include' });
-      if (resSettings.ok) {
-        const json = await resSettings.json();
-        // convert array [{key, value}] to object {key: value}
-        const st: Record<string, string> = {};
-        json.data.forEach((s: {key: string, value: string}) => {
-          st[s.key] = s.value;
-        });
-        settings = st;
-        
-        storeName = st['STORE_NAME'] || 'Ngemiloh F&B';
-        halalNumber = st['HALAL_NUMBER'] || '';
-        storeAddress = st['STORE_ADDRESS'] || '';
-        receiptFooter = st['RECEIPT_FOOTER'] || 'Terima kasih atas kunjungannya!';
-      }
+	let isSavingSettings = $state(false);
 
-      // Fetch flags
-      const resFlags = await api.request(`/api/v1/admin/feature-flags`, { credentials: 'include' });
-      if (resFlags.ok) {
-        const json = await resFlags.json();
-        featureFlags = json.data;
-      }
-      
-    } catch (e) {
-      console.error(e);
-    } finally {
-      isLoading = false;
-    }
-  }
+	// Settings Forms
+	let storeName = $state('');
+	let halalNumber = $state('');
+	let storeAddress = $state('');
+	let receiptFooter = $state('');
 
-  onMount(() => {
-    fetchData();
-  });
+	async function fetchData() {
+		isLoading = true;
+		try {
+			const hostname = window.location.hostname;
 
-  async function saveSettings(e: Event) {
-    e.preventDefault();
-    if (isSavingSettings) return;
-    isSavingSettings = true;
-    try {
-      const hostname = window.location.hostname;
-      const payload = {
-        'STORE_NAME': storeName,
-        'HALAL_NUMBER': halalNumber,
-        'STORE_ADDRESS': storeAddress,
-        'RECEIPT_FOOTER': receiptFooter
-      };
-      
-      const res = await api.request(`/api/v1/admin/settings`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify(payload)
-      });
-      
-      if (res.ok) {
-        alert('Pengaturan berhasil disimpan!');
-      } else {
-        alert('Gagal menyimpan pengaturan');
-      }
-    } catch (e) {
-      alert('Error pada server');
-    } finally {
-      isSavingSettings = false;
-    }
-  }
+			// Fetch settings
+			const resSettings = await api.request(`/api/v1/admin/settings`, { credentials: 'include' });
+			if (resSettings.ok) {
+				const json = await resSettings.json();
+				// convert array [{key, value}] to object {key: value}
+				const st: Record<string, string> = {};
+				json.data.forEach((s: { key: string; value: string }) => {
+					st[s.key] = s.value;
+				});
+				settings = st;
 
-  async function toggleFlag(id: string, currentStatus: boolean) {
-    try {
-      const hostname = window.location.hostname;
-      const res = await api.request(`/api/v1/admin/feature-flags/${id}`, {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        credentials: 'include',
-        body: JSON.stringify({ is_enabled: !currentStatus })
-      });
-      
-      if (res.ok) {
-        fetchData();
-      }
-    } catch (e) {
-      console.error(e);
-    }
-  }
+				storeName = st['STORE_NAME'] || 'Ngemiloh F&B';
+				halalNumber = st['HALAL_NUMBER'] || '';
+				storeAddress = st['STORE_ADDRESS'] || '';
+				receiptFooter = st['RECEIPT_FOOTER'] || 'Terima kasih atas kunjungannya!';
+			}
+
+			// Fetch flags
+			const resFlags = await api.request(`/api/v1/admin/feature-flags`, { credentials: 'include' });
+			if (resFlags.ok) {
+				const json = await resFlags.json();
+				featureFlags = json.data;
+			}
+		} catch (e) {
+			console.error(e);
+		} finally {
+			isLoading = false;
+		}
+	}
+
+	onMount(() => {
+		fetchData();
+	});
+
+	async function saveSettings(e: Event) {
+		e.preventDefault();
+		if (isSavingSettings) return;
+		isSavingSettings = true;
+		try {
+			const hostname = window.location.hostname;
+			const payload = {
+				STORE_NAME: storeName,
+				HALAL_NUMBER: halalNumber,
+				STORE_ADDRESS: storeAddress,
+				RECEIPT_FOOTER: receiptFooter
+			};
+
+			const res = await api.request(`/api/v1/admin/settings`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'include',
+				body: JSON.stringify(payload)
+			});
+
+			if (res.ok) {
+				alert('Pengaturan berhasil disimpan!');
+			} else {
+				alert('Gagal menyimpan pengaturan');
+			}
+		} catch (e) {
+			alert('Error pada server');
+		} finally {
+			isSavingSettings = false;
+		}
+	}
+
+	async function toggleFlag(id: string, currentStatus: boolean) {
+		try {
+			const hostname = window.location.hostname;
+			const res = await api.request(`/api/v1/admin/feature-flags/${id}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'include',
+				body: JSON.stringify({ is_enabled: !currentStatus })
+			});
+
+			if (res.ok) {
+				fetchData();
+			}
+		} catch (e) {
+			console.error(e);
+		}
+	}
 </script>
 
 <svelte:head>
-  <title>Settings - Ngemiloh Admin</title>
+	<title>Settings - Ngemiloh Admin</title>
 </svelte:head>
 
 <div class="h-full overflow-y-auto p-8">
-  <div class="max-w-4xl mx-auto space-y-8">
-    <header>
-      <h1 class="text-3xl font-bold text-slate-900 tracking-tight">Pengaturan & Konfigurasi Sistem</h1>
-      <p class="mt-2 text-slate-500">Kelola informasi bisnis Ngemiloh dan kontrol fitur secara dinamis.</p>
-    </header>
+	<div class="mx-auto max-w-4xl space-y-8">
+		<header>
+			<h1 class="text-3xl font-bold tracking-tight text-slate-900">
+				Pengaturan & Konfigurasi Sistem
+			</h1>
+			<p class="mt-2 text-slate-500">
+				Kelola informasi bisnis Ngemiloh dan kontrol fitur secara dinamis.
+			</p>
+		</header>
 
-    {#if isLoading}
-      <div class="flex justify-center p-12 bg-white rounded-2xl shadow-sm border border-slate-200">
-        <div class="animate-spin rounded-full h-8 w-8 border-t-2 border-b-2 border-indigo-500"></div>
-      </div>
-    {:else}
-      <!-- Section 1: Business Settings -->
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="p-6 bg-slate-50 border-b border-slate-200">
-          <h2 class="text-xl font-bold text-slate-800">Profil Bisnis & Struk</h2>
-        </div>
-        <form onsubmit={saveSettings} class="p-6 space-y-6">
-          <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-            <div>
-              <label class="block text-sm font-bold text-slate-700 mb-1">Nama Toko</label>
-              <input type="text" bind:value={storeName} required class="w-full border-slate-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm">
-            </div>
-            <div>
-              <label class="block text-sm font-bold text-slate-700 mb-1">Sertifikat Halal MUI</label>
-              <input type="text" bind:value={halalNumber} class="w-full border-slate-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm" placeholder="ID123456789">
-            </div>
-            <div class="md:col-span-2">
-              <label class="block text-sm font-bold text-slate-700 mb-1">Alamat Outlet</label>
-              <textarea bind:value={storeAddress} rows="2" class="w-full border-slate-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm"></textarea>
-            </div>
-            <div class="md:col-span-2">
-              <label class="block text-sm font-bold text-slate-700 mb-1">Pesan Penutup (Footer) Struk</label>
-              <input type="text" bind:value={receiptFooter} class="w-full border-slate-300 rounded-lg focus:ring-indigo-500 focus:border-indigo-500 text-sm">
-            </div>
-          </div>
-          <div class="flex justify-end pt-4 border-t border-slate-100">
-            <button type="submit" disabled={isSavingSettings} class="bg-indigo-600 hover:bg-indigo-700 disabled:bg-indigo-400 text-white px-6 py-2.5 rounded-lg font-bold shadow-sm transition-colors">
-              {isSavingSettings ? 'Menyimpan...' : 'Simpan Pengaturan'}
-            </button>
-          </div>
-        </form>
-      </div>
+		{#if isLoading}
+			<div class="flex justify-center rounded-2xl border border-slate-200 bg-white p-12 shadow-sm">
+				<div
+					class="h-8 w-8 animate-spin rounded-full border-t-2 border-b-2 border-indigo-500"
+				></div>
+			</div>
+		{:else}
+			<!-- Section 1: Business Settings -->
+			<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+				<div class="border-b border-slate-200 bg-slate-50 p-6">
+					<h2 class="text-xl font-bold text-slate-800">Profil Bisnis & Struk</h2>
+				</div>
+				<form onsubmit={saveSettings} class="space-y-6 p-6">
+					<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
+						<div>
+							<label class="mb-1 block text-sm font-bold text-slate-700">Nama Toko</label>
+							<input
+								type="text"
+								bind:value={storeName}
+								required
+								class="w-full rounded-lg border-slate-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+							/>
+						</div>
+						<div>
+							<label class="mb-1 block text-sm font-bold text-slate-700">Sertifikat Halal MUI</label
+							>
+							<input
+								type="text"
+								bind:value={halalNumber}
+								class="w-full rounded-lg border-slate-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+								placeholder="ID123456789"
+							/>
+						</div>
+						<div class="md:col-span-2">
+							<label class="mb-1 block text-sm font-bold text-slate-700">Alamat Outlet</label>
+							<textarea
+								bind:value={storeAddress}
+								rows="2"
+								class="w-full rounded-lg border-slate-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+							></textarea>
+						</div>
+						<div class="md:col-span-2">
+							<label class="mb-1 block text-sm font-bold text-slate-700"
+								>Pesan Penutup (Footer) Struk</label
+							>
+							<input
+								type="text"
+								bind:value={receiptFooter}
+								class="w-full rounded-lg border-slate-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
+							/>
+						</div>
+					</div>
+					<div class="flex justify-end border-t border-slate-100 pt-4">
+						<button
+							type="submit"
+							disabled={isSavingSettings}
+							class="rounded-lg bg-indigo-600 px-6 py-2.5 font-bold text-white shadow-sm transition-colors hover:bg-indigo-700 disabled:bg-indigo-400"
+						>
+							{isSavingSettings ? 'Menyimpan...' : 'Simpan Pengaturan'}
+						</button>
+					</div>
+				</form>
+			</div>
 
-      <!-- Section 2: Feature Flags -->
-      <div class="bg-white rounded-2xl shadow-sm border border-slate-200 overflow-hidden">
-        <div class="p-6 bg-slate-50 border-b border-slate-200">
-          <h2 class="text-xl font-bold text-slate-800">Feature Flags (Toggle Fitur)</h2>
-          <p class="text-sm text-slate-500 mt-1">Nyalakan/matikan fitur aplikasi secara instan tanpa perlu redeploy ke server.</p>
-        </div>
-        <div class="p-0">
-          {#if featureFlags.length === 0}
-            <div class="p-8 text-center text-slate-500 italic">Belum ada Feature Flag yang terdaftar di database.</div>
-          {:else}
-            <div class="divide-y divide-slate-100">
-              {#each featureFlags as flag}
-                <div class="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                  <div>
-                    <h3 class="font-bold text-slate-800 font-mono text-sm mb-1">{flag.name}</h3>
-                    <p class="text-sm text-slate-500">{flag.description || 'Tidak ada deskripsi'}</p>
-                  </div>
-                  <label class="relative inline-flex items-center cursor-pointer">
-                    <input type="checkbox" class="sr-only peer" checked={flag.is_enabled} onchange={() => toggleFlag(flag.id, flag.is_enabled)}>
-                    <div class="w-14 h-7 bg-slate-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-indigo-300 rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-green-500"></div>
-                  </label>
-                </div>
-              {/each}
-            </div>
-          {/if}
-        </div>
-      </div>
-    {/if}
-  </div>
+			<!-- Section 2: Feature Flags -->
+			<div class="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
+				<div class="border-b border-slate-200 bg-slate-50 p-6">
+					<h2 class="text-xl font-bold text-slate-800">Feature Flags (Toggle Fitur)</h2>
+					<p class="mt-1 text-sm text-slate-500">
+						Nyalakan/matikan fitur aplikasi secara instan tanpa perlu redeploy ke server.
+					</p>
+				</div>
+				<div class="p-0">
+					{#if featureFlags.length === 0}
+						<div class="p-8 text-center text-slate-500 italic">
+							Belum ada Feature Flag yang terdaftar di database.
+						</div>
+					{:else}
+						<div class="divide-y divide-slate-100">
+							{#each featureFlags as flag}
+								<div
+									class="flex items-center justify-between p-6 transition-colors hover:bg-slate-50"
+								>
+									<div>
+										<h3 class="mb-1 font-mono text-sm font-bold text-slate-800">{flag.name}</h3>
+										<p class="text-sm text-slate-500">
+											{flag.description || 'Tidak ada deskripsi'}
+										</p>
+									</div>
+									<label class="relative inline-flex cursor-pointer items-center">
+										<input
+											type="checkbox"
+											class="peer sr-only"
+											checked={flag.is_enabled}
+											onchange={() => toggleFlag(flag.id, flag.is_enabled)}
+										/>
+										<div
+											class="peer h-7 w-14 rounded-full bg-slate-200 peer-checked:bg-green-500 peer-focus:ring-4 peer-focus:ring-indigo-300 peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-6 after:w-6 after:rounded-full after:border after:border-slate-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"
+										></div>
+									</label>
+								</div>
+							{/each}
+						</div>
+					{/if}
+				</div>
+			</div>
+		{/if}
+	</div>
 </div>

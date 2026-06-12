@@ -2,483 +2,495 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 // Mock the api client
 const mockApi = {
-  get: vi.fn(),
-  post: vi.fn(),
+	get: vi.fn(),
+	post: vi.fn()
 };
 
 const mockPosStore = {
-  featureFlags: {},
-  products: [],
-  activeDiscounts: [] as Array<{ id: string; name: string; type: string; value: number; scope: string; target_id: string | null; is_active: boolean; applicable_days?: number[] }>,
-  historyOrders: [],
-  cart: [],
-  isOffline: false,
-  hasOpenShift: false,
-  showOpenShiftModal: false,
-  showCloseShiftModal: false,
-  showHistoryModal: false,
-  paymentMethod: 'cash' as 'cash' | 'qris' | 'split',
-  cartTotal: 50000,
-  discountTotal: 0,
-  appliedDiscount: null,
-  isProcessing: false,
-  isWaitingQris: false,
-  qrisCountdown: 900,
-  isCheckingShift: false,
-  showPaymentModal: false,
-  qrisOrderInfo: null,
-  resetCart: vi.fn(),
+	featureFlags: {},
+	products: [],
+	activeDiscounts: [] as Array<{
+		id: string;
+		name: string;
+		type: string;
+		value: number;
+		scope: string;
+		target_id: string | null;
+		is_active: boolean;
+		applicable_days?: number[];
+	}>,
+	historyOrders: [],
+	cart: [],
+	isOffline: false,
+	hasOpenShift: false,
+	showOpenShiftModal: false,
+	showCloseShiftModal: false,
+	showHistoryModal: false,
+	paymentMethod: 'cash' as 'cash' | 'qris' | 'split',
+	cartTotal: 50000,
+	discountTotal: 0,
+	appliedDiscount: null,
+	isProcessing: false,
+	isWaitingQris: false,
+	qrisCountdown: 900,
+	isCheckingShift: false,
+	showPaymentModal: false,
+	qrisOrderInfo: null,
+	resetCart: vi.fn()
 };
 
 vi.mock('$lib/services/api.client', () => ({
-  api: mockApi,
+	api: mockApi
 }));
 
 vi.mock('$lib/stores/pos.store.svelte', () => ({
-  posStore: mockPosStore,
+	posStore: mockPosStore
 }));
 
 vi.mock('$lib/db', () => ({
-  db: {
-    products: { toArray: vi.fn().mockResolvedValue([]), clear: vi.fn(), bulkAdd: vi.fn() },
-    orders: {
-      add: vi.fn().mockResolvedValue('order-1'),
-      where: vi.fn().mockReturnValue({ equals: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) }) }),
-    },
-  },
+	db: {
+		products: { toArray: vi.fn().mockResolvedValue([]), clear: vi.fn(), bulkAdd: vi.fn() },
+		orders: {
+			add: vi.fn().mockResolvedValue('order-1'),
+			where: vi.fn().mockReturnValue({
+				equals: vi.fn().mockReturnValue({ toArray: vi.fn().mockResolvedValue([]) })
+			})
+		}
+	}
 }));
 
 describe('PosService', () => {
-  let PosService: any;
-
-  beforeEach(async () => {
-    vi.clearAllMocks();
+	let PosService: any;
+
+	beforeEach(async () => {
+		vi.clearAllMocks();
 
-    // Reset store state
-    Object.assign(mockPosStore, {
-      featureFlags: {},
-      products: [],
-      activeDiscounts: [],
-      historyOrders: [],
-      cart: [],
-      isOffline: false,
-      hasOpenShift: false,
-      isCheckingShift: false,
-      isProcessing: false,
-    });
-
-    mockPosStore.resetCart = vi.fn();
-
-    // Dynamically import to get fresh instance
-    const module = await import('$lib/services/pos.service');
-    PosService = module.posService;
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
+		// Reset store state
+		Object.assign(mockPosStore, {
+			featureFlags: {},
+			products: [],
+			activeDiscounts: [],
+			historyOrders: [],
+			cart: [],
+			isOffline: false,
+			hasOpenShift: false,
+			isCheckingShift: false,
+			isProcessing: false
+		});
+
+		mockPosStore.resetCart = vi.fn();
+
+		// Dynamically import to get fresh instance
+		const module = await import('$lib/services/pos.service');
+		PosService = module.posService;
+	});
+
+	afterEach(() => {
+		vi.restoreAllMocks();
+	});
 
-  describe('fetchFlags', () => {
-    it('should fetch and set feature flags', async () => {
-      const mockFlags = { QRIS_ENABLED: true, SPLIT_PAYMENT: false };
+	describe('fetchFlags', () => {
+		it('should fetch and set feature flags', async () => {
+			const mockFlags = { QRIS_ENABLED: true, SPLIT_PAYMENT: false };
 
-      mockApi.get.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true, data: mockFlags }),
-      });
+			mockApi.get.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ success: true, data: mockFlags })
+			});
 
-      await PosService.fetchFlags();
+			await PosService.fetchFlags();
 
-      expect(mockApi.get).toHaveBeenCalledWith('/flags');
-      expect(mockPosStore.featureFlags).toEqual(mockFlags);
-    });
+			expect(mockApi.get).toHaveBeenCalledWith('/flags');
+			expect(mockPosStore.featureFlags).toEqual(mockFlags);
+		});
 
-    it('should handle fetch flags failure silently', async () => {
-      mockApi.get.mockResolvedValueOnce({
-        ok: false,
-      });
+		it('should handle fetch flags failure silently', async () => {
+			mockApi.get.mockResolvedValueOnce({
+				ok: false
+			});
 
-      // Should not throw
-      await expect(PosService.fetchFlags()).resolves.not.toThrow();
-      expect(mockPosStore.featureFlags).toEqual({});
-    });
+			// Should not throw
+			await expect(PosService.fetchFlags()).resolves.not.toThrow();
+			expect(mockPosStore.featureFlags).toEqual({});
+		});
 
-    it('should handle network error gracefully', async () => {
-      mockApi.get.mockRejectedValueOnce(new Error('Network error'));
+		it('should handle network error gracefully', async () => {
+			mockApi.get.mockRejectedValueOnce(new Error('Network error'));
 
-      // Should not throw
-      await expect(PosService.fetchFlags()).resolves.not.toThrow();
-    });
-  });
+			// Should not throw
+			await expect(PosService.fetchFlags()).resolves.not.toThrow();
+		});
+	});
 
-  describe('checkShift', () => {
-    it('should check shift status and set hasOpenShift to true', async () => {
-      mockPosStore.isCheckingShift = false;
+	describe('checkShift', () => {
+		it('should check shift status and set hasOpenShift to true', async () => {
+			mockPosStore.isCheckingShift = false;
 
-      mockApi.get.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true, data: { id: 'shift-1' } }),
-      });
+			mockApi.get.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ success: true, data: { id: 'shift-1' } })
+			});
 
-      await PosService.checkShift();
+			await PosService.checkShift();
 
-      expect(mockApi.get).toHaveBeenCalledWith('/cash/current');
-      expect(mockPosStore.isCheckingShift).toBe(true);
-      expect(mockPosStore.hasOpenShift).toBe(true);
-    });
+			expect(mockApi.get).toHaveBeenCalledWith('/cash/current');
+			expect(mockPosStore.isCheckingShift).toBe(true);
+			expect(mockPosStore.hasOpenShift).toBe(true);
+		});
 
-    it('should set hasOpenShift to false when no shift', async () => {
-      mockPosStore.isCheckingShift = false;
+		it('should set hasOpenShift to false when no shift', async () => {
+			mockPosStore.isCheckingShift = false;
 
-      mockApi.get.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true, data: null }),
-      });
+			mockApi.get.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ success: true, data: null })
+			});
 
-      await PosService.checkShift();
+			await PosService.checkShift();
 
-      expect(mockPosStore.hasOpenShift).toBe(false);
-    });
+			expect(mockPosStore.hasOpenShift).toBe(false);
+		});
 
-    it('should set isCheckingShift back to false on error', async () => {
-      mockPosStore.isCheckingShift = false;
+		it('should set isCheckingShift back to false on error', async () => {
+			mockPosStore.isCheckingShift = false;
 
-      mockApi.get.mockRejectedValueOnce(new Error('Network error'));
+			mockApi.get.mockRejectedValueOnce(new Error('Network error'));
 
-      await PosService.checkShift();
+			await PosService.checkShift();
 
-      expect(mockPosStore.isCheckingShift).toBe(false);
-    });
-  });
+			expect(mockPosStore.isCheckingShift).toBe(false);
+		});
+	});
 
-  describe('handleOpenShift', () => {
-    it('should open shift successfully', async () => {
-      mockApi.post.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true }),
-      });
+	describe('handleOpenShift', () => {
+		it('should open shift successfully', async () => {
+			mockApi.post.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ success: true })
+			});
 
-      const result = await PosService.handleOpenShift(500000);
+			const result = await PosService.handleOpenShift(500000);
 
-      expect(mockApi.post).toHaveBeenCalledWith('/cash/open', { opening_balance: 500000 });
-      expect(mockPosStore.hasOpenShift).toBe(true);
-      expect(mockPosStore.showOpenShiftModal).toBe(false);
-      expect(result).toBe(true);
-    });
+			expect(mockApi.post).toHaveBeenCalledWith('/cash/open', { opening_balance: 500000 });
+			expect(mockPosStore.hasOpenShift).toBe(true);
+			expect(mockPosStore.showOpenShiftModal).toBe(false);
+			expect(result).toBe(true);
+		});
 
-    it('should handle open shift failure', async () => {
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+		it('should handle open shift failure', async () => {
+			const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
-      mockApi.post.mockResolvedValueOnce({
-        ok: false,
-        json: async () => ({ message: 'Gagal buka shift' }),
-      });
+			mockApi.post.mockResolvedValueOnce({
+				ok: false,
+				json: async () => ({ message: 'Gagal buka shift' })
+			});
 
-      const result = await PosService.handleOpenShift(500000);
+			const result = await PosService.handleOpenShift(500000);
 
-      expect(alertSpy).toHaveBeenCalledWith('Gagal buka shift: Gagal buka shift');
-      expect(result).toBe(false);
+			expect(alertSpy).toHaveBeenCalledWith('Gagal buka shift: Gagal buka shift');
+			expect(result).toBe(false);
 
-      alertSpy.mockRestore();
-    });
+			alertSpy.mockRestore();
+		});
 
-    it('should handle open shift network error', async () => {
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+		it('should handle open shift network error', async () => {
+			const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
-      mockApi.post.mockRejectedValueOnce(new Error('Network error'));
+			mockApi.post.mockRejectedValueOnce(new Error('Network error'));
 
-      const result = await PosService.handleOpenShift(500000);
+			const result = await PosService.handleOpenShift(500000);
 
-      expect(alertSpy).toHaveBeenCalledWith('Error buka shift');
-      expect(result).toBe(false);
+			expect(alertSpy).toHaveBeenCalledWith('Error buka shift');
+			expect(result).toBe(false);
 
-      alertSpy.mockRestore();
-    });
-  });
+			alertSpy.mockRestore();
+		});
+	});
 
-  describe('handleCloseShift', () => {
-    it('should close shift successfully', async () => {
-      mockPosStore.hasOpenShift = true;
-
-      mockApi.post.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true }),
-      });
+	describe('handleCloseShift', () => {
+		it('should close shift successfully', async () => {
+			mockPosStore.hasOpenShift = true;
 
-      const result = await PosService.handleCloseShift(600000);
+			mockApi.post.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ success: true })
+			});
 
-      expect(mockApi.post).toHaveBeenCalledWith('/cash/close', { closing_balance: 600000 });
-      expect(mockPosStore.hasOpenShift).toBe(false);
-      expect(mockPosStore.showCloseShiftModal).toBe(false);
-      expect(result).toBe(true);
-    });
-
-    it('should handle close shift failure', async () => {
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
-
-      mockApi.post.mockResolvedValueOnce({
-        ok: false,
-        json: async () => ({ message: 'Gagal tutup shift' }),
-      });
-
-      const result = await PosService.handleCloseShift(600000);
-
-      expect(alertSpy).toHaveBeenCalledWith('Gagal tutup shift: Gagal tutup shift');
-      expect(result).toBe(false);
+			const result = await PosService.handleCloseShift(600000);
 
-      alertSpy.mockRestore();
-    });
-  });
+			expect(mockApi.post).toHaveBeenCalledWith('/cash/close', { closing_balance: 600000 });
+			expect(mockPosStore.hasOpenShift).toBe(false);
+			expect(mockPosStore.showCloseShiftModal).toBe(false);
+			expect(result).toBe(true);
+		});
+
+		it('should handle close shift failure', async () => {
+			const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+
+			mockApi.post.mockResolvedValueOnce({
+				ok: false,
+				json: async () => ({ message: 'Gagal tutup shift' })
+			});
+
+			const result = await PosService.handleCloseShift(600000);
+
+			expect(alertSpy).toHaveBeenCalledWith('Gagal tutup shift: Gagal tutup shift');
+			expect(result).toBe(false);
+
+			alertSpy.mockRestore();
+		});
+	});
+
+	describe('fetchProductsFromApi', () => {
+		it('should fetch and store products', async () => {
+			const mockProducts = [{ id: 'p1', name: 'Product 1', base_price: 10000 }];
 
-  describe('fetchProductsFromApi', () => {
-    it('should fetch and store products', async () => {
-      const mockProducts = [
-        { id: 'p1', name: 'Product 1', base_price: 10000 },
-      ];
+			mockApi.get.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ success: true, data: mockProducts })
+			});
+
+			await PosService.fetchProductsFromApi();
 
-      mockApi.get.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true, data: mockProducts }),
-      });
+			expect(mockApi.get).toHaveBeenCalledWith('/products?include_modifiers=true');
+		});
 
-      await PosService.fetchProductsFromApi();
+		it('should redirect to login on 401', async () => {
+			const originalLocation = window.location;
+			const locationMock = { href: '' };
+			Object.defineProperty(window, 'location', {
+				value: locationMock,
+				writable: true
+			});
 
-      expect(mockApi.get).toHaveBeenCalledWith('/products?include_modifiers=true');
-    });
+			mockApi.get.mockResolvedValueOnce({
+				ok: false,
+				status: 401
+			});
 
-    it('should redirect to login on 401', async () => {
-      const originalLocation = window.location;
-      const locationMock = { href: '' };
-      Object.defineProperty(window, 'location', {
-        value: locationMock,
-        writable: true,
-      });
+			await PosService.fetchProductsFromApi();
 
-      mockApi.get.mockResolvedValueOnce({
-        ok: false,
-        status: 401,
-      });
+			expect(locationMock.href).toBe('/login');
 
-      await PosService.fetchProductsFromApi();
+			Object.defineProperty(window, 'location', {
+				value: originalLocation,
+				writable: true
+			});
+		});
+	});
 
-      expect(locationMock.href).toBe('/login');
+	describe('fetchDiscounts', () => {
+		it('should fetch and filter active discounts', async () => {
+			const mockDiscounts = [
+				{ id: 'd1', name: 'Diskon 10%', is_active: true },
+				{ id: 'd2', name: 'Diskon 20%', is_active: false }
+			];
 
-      Object.defineProperty(window, 'location', {
-        value: originalLocation,
-        writable: true,
-      });
-    });
-  });
+			mockApi.get.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ success: true, data: mockDiscounts })
+			});
 
-  describe('fetchDiscounts', () => {
-    it('should fetch and filter active discounts', async () => {
-      const mockDiscounts = [
-        { id: 'd1', name: 'Diskon 10%', is_active: true },
-        { id: 'd2', name: 'Diskon 20%', is_active: false },
-      ];
+			await PosService.fetchDiscounts();
 
-      mockApi.get.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true, data: mockDiscounts }),
-      });
+			expect(mockPosStore.activeDiscounts).toHaveLength(1);
+			expect(mockPosStore.activeDiscounts[0].id).toBe('d1');
+		});
+	});
 
-      await PosService.fetchDiscounts();
+	describe('fetchHistory', () => {
+		it('should fetch order history', async () => {
+			const mockOrders = [{ id: 'o1', order_number: '001' }];
 
-      expect(mockPosStore.activeDiscounts).toHaveLength(1);
-      expect(mockPosStore.activeDiscounts[0].id).toBe('d1');
-    });
-  });
+			mockApi.get.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ success: true, data: mockOrders })
+			});
 
-  describe('fetchHistory', () => {
-    it('should fetch order history', async () => {
-      const mockOrders = [
-        { id: 'o1', order_number: '001' },
-      ];
+			await PosService.fetchHistory();
 
-      mockApi.get.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true, data: mockOrders }),
-      });
+			expect(mockPosStore.historyOrders).toEqual(mockOrders);
+		});
+	});
 
-      await PosService.fetchHistory();
+	describe('processPayment', () => {
+		beforeEach(() => {
+			mockPosStore.cart = [
+				{
+					id: 'p1',
+					quantity: 2,
+					base_price: 10000,
+					is_out_of_stock: false,
+					modifier_groups: [] as any[],
+					selectedModifiers: [] as any[],
+					cartItemId: 'cart-1'
+				}
+			] as any;
+			mockPosStore.cartTotal = 20000;
+			mockPosStore.paymentMethod = 'cash';
+			mockPosStore.isProcessing = false;
+		});
 
-      expect(mockPosStore.historyOrders).toEqual(mockOrders);
-    });
-  });
+		it('should not process empty cart', async () => {
+			mockPosStore.cart = [];
 
-  describe('processPayment', () => {
-    beforeEach(() => {
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      mockPosStore.cart = [
-        { id: 'p1', quantity: 2, base_price: 10000, is_out_of_stock: false, modifier_groups: [] as any[], selectedModifiers: [] as any[], cartItemId: 'cart-1' },
-      ] as any;
-      mockPosStore.cartTotal = 20000;
-      mockPosStore.paymentMethod = 'cash';
-      mockPosStore.isProcessing = false;
-    });
+			await PosService.processPayment(vi.fn(), vi.fn());
 
-    it('should not process empty cart', async () => {
-      mockPosStore.cart = [];
+			expect(mockApi.post).not.toHaveBeenCalled();
+		});
 
-      await PosService.processPayment(vi.fn(), vi.fn());
+		it('should not process while already processing', async () => {
+			mockPosStore.isProcessing = true;
 
-      expect(mockApi.post).not.toHaveBeenCalled();
-    });
+			await PosService.processPayment(vi.fn(), vi.fn());
 
-    it('should not process while already processing', async () => {
-      mockPosStore.isProcessing = true;
+			expect(mockApi.post).not.toHaveBeenCalled();
+		});
 
-      await PosService.processPayment(vi.fn(), vi.fn());
+		it('should handle offline cash payment', async () => {
+			mockPosStore.isOffline = true;
+			mockPosStore.paymentMethod = 'cash';
 
-      expect(mockApi.post).not.toHaveBeenCalled();
-    });
+			const db = await import('$lib/db');
 
-    it('should handle offline cash payment', async () => {
-      mockPosStore.isOffline = true;
-      mockPosStore.paymentMethod = 'cash';
+			await PosService.processPayment(vi.fn(), vi.fn());
 
-      const db = await import('$lib/db');
+			expect(db.db.orders.add).toHaveBeenCalled();
+			expect(mockPosStore.resetCart).toHaveBeenCalled();
+		});
 
-      await PosService.processPayment(vi.fn(), vi.fn());
+		it('should reject QRIS payment when offline', async () => {
+			mockPosStore.isOffline = true;
+			mockPosStore.paymentMethod = 'qris';
 
-      expect(db.db.orders.add).toHaveBeenCalled();
-      expect(mockPosStore.resetCart).toHaveBeenCalled();
-    });
+			const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
-    it('should reject QRIS payment when offline', async () => {
-      mockPosStore.isOffline = true;
-      mockPosStore.paymentMethod = 'qris';
+			await PosService.processPayment(vi.fn(), vi.fn());
 
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+			expect(alertSpy).toHaveBeenCalledWith(
+				'QRIS tidak dapat diproses saat sistem offline. Mohon arahkan ke pembayaran tunai.'
+			);
+			expect(mockPosStore.isProcessing).toBe(false);
 
-      await PosService.processPayment(vi.fn(), vi.fn());
+			alertSpy.mockRestore();
+		});
 
-      expect(alertSpy).toHaveBeenCalledWith(
-        'QRIS tidak dapat diproses saat sistem offline. Mohon arahkan ke pembayaran tunai.'
-      );
-      expect(mockPosStore.isProcessing).toBe(false);
+		it('should reject split payment when offline', async () => {
+			mockPosStore.isOffline = true;
+			mockPosStore.paymentMethod = 'split';
 
-      alertSpy.mockRestore();
-    });
+			const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
 
-    it('should reject split payment when offline', async () => {
-      mockPosStore.isOffline = true;
-      mockPosStore.paymentMethod = 'split';
+			await PosService.processPayment(vi.fn(), vi.fn());
 
-      const alertSpy = vi.spyOn(window, 'alert').mockImplementation(() => {});
+			expect(alertSpy).toHaveBeenCalledWith(
+				'QRIS tidak dapat diproses saat sistem offline. Mohon arahkan ke pembayaran tunai.'
+			);
 
-      await PosService.processPayment(vi.fn(), vi.fn());
+			alertSpy.mockRestore();
+		});
 
-      expect(alertSpy).toHaveBeenCalledWith(
-        'QRIS tidak dapat diproses saat sistem offline. Mohon arahkan ke pembayaran tunai.'
-      );
+		it('should process online cash payment successfully', async () => {
+			const mockOrderResponse = { id: 'order-1', order_number: '001' };
+			const onSuccess = vi.fn();
 
-      alertSpy.mockRestore();
-    });
+			mockApi.post.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ success: true, data: mockOrderResponse })
+			});
 
-    it('should process online cash payment successfully', async () => {
-      const mockOrderResponse = { id: 'order-1', order_number: '001' };
-      const onSuccess = vi.fn();
+			await PosService.processPayment(vi.fn(), onSuccess);
 
-      mockApi.post.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true, data: mockOrderResponse }),
-      });
+			expect(mockApi.post).toHaveBeenCalledWith('/orders', expect.any(Object));
+			expect(onSuccess).toHaveBeenCalledWith(mockOrderResponse);
+		});
 
-      await PosService.processPayment(vi.fn(), onSuccess);
+		it('should handle QRIS payment and call onQrisWait', async () => {
+			const mockOrderResponse = { id: 'order-1', order_number: '001' };
+			const onQrisWait = vi.fn();
 
-      expect(mockApi.post).toHaveBeenCalledWith('/orders', expect.any(Object));
-      expect(onSuccess).toHaveBeenCalledWith(mockOrderResponse);
-    });
+			mockPosStore.paymentMethod = 'qris';
 
-    it('should handle QRIS payment and call onQrisWait', async () => {
-      const mockOrderResponse = { id: 'order-1', order_number: '001' };
-      const onQrisWait = vi.fn();
+			mockApi.post.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ success: true, data: mockOrderResponse })
+			});
 
-      mockPosStore.paymentMethod = 'qris';
+			await PosService.processPayment(onQrisWait, vi.fn());
 
-      mockApi.post.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true, data: mockOrderResponse }),
-      });
+			expect(onQrisWait).toHaveBeenCalledWith(mockOrderResponse);
+		});
 
-      await PosService.processPayment(onQrisWait, vi.fn());
+		it('should redirect to login on 401', async () => {
+			const locationMock = { href: '' };
+			Object.defineProperty(window, 'location', {
+				value: locationMock,
+				writable: true
+			});
 
-      expect(onQrisWait).toHaveBeenCalledWith(mockOrderResponse);
-    });
+			mockApi.post.mockResolvedValueOnce({
+				ok: false,
+				status: 401
+			});
 
-    it('should redirect to login on 401', async () => {
-      const locationMock = { href: '' };
-      Object.defineProperty(window, 'location', {
-        value: locationMock,
-        writable: true,
-      });
+			await PosService.processPayment(vi.fn(), vi.fn());
 
-      mockApi.post.mockResolvedValueOnce({
-        ok: false,
-        status: 401,
-      });
+			expect(locationMock.href).toBe('/login');
+		});
+	});
 
-      await PosService.processPayment(vi.fn(), vi.fn());
+	describe('syncPendingOrders', () => {
+		it('should sync pending orders to server', async () => {
+			const mockPendingOrders = [
+				{ client_uuid: 'uuid-1', payment_method: 'cash', final_price: 20000, items: [] }
+			];
 
-      expect(locationMock.href).toBe('/login');
-    });
-  });
+			const db = await import('$lib/db');
+			(db.db.orders.where as any).mockReturnValue({
+				equals: vi.fn().mockReturnValue({
+					toArray: vi.fn().mockResolvedValue(mockPendingOrders)
+				})
+			});
 
-  describe('syncPendingOrders', () => {
-    it('should sync pending orders to server', async () => {
-      const mockPendingOrders = [
-        { client_uuid: 'uuid-1', payment_method: 'cash', final_price: 20000, items: [] },
-      ];
+			mockApi.post.mockResolvedValueOnce({
+				ok: true,
+				json: async () => ({ success: true, data: [{ client_uuid: 'uuid-1', status: 'success' }] })
+			});
 
-      const db = await import('$lib/db');
-      (db.db.orders.where as any).mockReturnValue({
-        equals: vi.fn().mockReturnValue({
-          toArray: vi.fn().mockResolvedValue(mockPendingOrders),
-        }),
-      });
+			await PosService.syncPendingOrders();
 
-      mockApi.post.mockResolvedValueOnce({
-        ok: true,
-        json: async () => ({ success: true, data: [{ client_uuid: 'uuid-1', status: 'success' }] }),
-      });
+			expect(mockApi.post).toHaveBeenCalledWith('/orders/sync-batch', {
+				orders: expect.arrayContaining([expect.objectContaining({ client_uuid: 'uuid-1' })])
+			});
+		});
 
-      await PosService.syncPendingOrders();
+		it('should do nothing when no pending orders', async () => {
+			const db = await import('$lib/db');
+			(db.db.orders.where as any).mockReturnValue({
+				equals: vi.fn().mockReturnValue({
+					toArray: vi.fn().mockResolvedValue([])
+				})
+			});
 
-      expect(mockApi.post).toHaveBeenCalledWith('/orders/sync-batch', {
-        orders: expect.arrayContaining([
-          expect.objectContaining({ client_uuid: 'uuid-1' }),
-        ]),
-      });
-    });
+			await PosService.syncPendingOrders();
 
-    it('should do nothing when no pending orders', async () => {
-      const db = await import('$lib/db');
-      (db.db.orders.where as any).mockReturnValue({
-        equals: vi.fn().mockReturnValue({
-          toArray: vi.fn().mockResolvedValue([]),
-        }),
-      });
+			expect(mockApi.post).not.toHaveBeenCalled();
+		});
+	});
 
-      await PosService.syncPendingOrders();
+	describe('cancelQrisWaiting', () => {
+		it('should clear all QRIS waiting states', () => {
+			mockPosStore.isWaitingQris = true;
+			mockPosStore.qrisCountdown = 500;
 
-      expect(mockApi.post).not.toHaveBeenCalled();
-    });
-  });
+			// Mock timers
+			vi.useFakeTimers();
 
-  describe('cancelQrisWaiting', () => {
-    it('should clear all QRIS waiting states', () => {
-      mockPosStore.isWaitingQris = true;
-      mockPosStore.qrisCountdown = 500;
+			PosService.cancelQrisWaiting();
 
-      // Mock timers
-      vi.useFakeTimers();
+			expect(mockPosStore.isWaitingQris).toBe(false);
 
-      PosService.cancelQrisWaiting();
-
-      expect(mockPosStore.isWaitingQris).toBe(false);
-
-      vi.useRealTimers();
-    });
-  });
+			vi.useRealTimers();
+		});
+	});
 });

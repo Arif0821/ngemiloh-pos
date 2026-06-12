@@ -1,52 +1,52 @@
-@import "tailwindcss";
+@import 'tailwindcss';
 
 /* Force manual dark mode instead of OS preference to keep default light theme */
 @custom-variant dark (&:is(.dark *));
 
 @theme {
-  /* Warm Orange/Amber - Appealing for F&B, not aggressive red */
-  --color-brand-50: #fff7ed;
-  --color-brand-100: #ffedd5;
-  --color-brand-200: #fed7aa;
-  --color-brand-300: #fdba74;
-  --color-brand-400: #fb923c;
-  --color-brand-500: #f97316;
-  --color-brand-600: #ea580c;
-  --color-brand-700: #c2410c;
-  --color-brand-800: #9a3412;
-  --color-brand-900: #7c2d12;
+	/* Warm Orange/Amber - Appealing for F&B, not aggressive red */
+	--color-brand-50: #fff7ed;
+	--color-brand-100: #ffedd5;
+	--color-brand-200: #fed7aa;
+	--color-brand-300: #fdba74;
+	--color-brand-400: #fb923c;
+	--color-brand-500: #f97316;
+	--color-brand-600: #ea580c;
+	--color-brand-700: #c2410c;
+	--color-brand-800: #9a3412;
+	--color-brand-900: #7c2d12;
 
-  /* Clean, slightly warm surface colors */
-  --color-surface-50: #f9fafb;
-  --color-surface-100: #f3f4f6;
-  --color-surface-200: #e5e7eb;
-  --color-surface-300: #d1d5db;
-  --color-surface-400: #9ca3af;
-  --color-surface-500: #6b7280;
-  --color-surface-600: #4b5563;
-  --color-surface-700: #374151;
-  --color-surface-800: #1f2937;
-  --color-surface-900: #111827;
+	/* Clean, slightly warm surface colors */
+	--color-surface-50: #f9fafb;
+	--color-surface-100: #f3f4f6;
+	--color-surface-200: #e5e7eb;
+	--color-surface-300: #d1d5db;
+	--color-surface-400: #9ca3af;
+	--color-surface-500: #6b7280;
+	--color-surface-600: #4b5563;
+	--color-surface-700: #374151;
+	--color-surface-800: #1f2937;
+	--color-surface-900: #111827;
 
-  --animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+	--animate-pulse-slow: pulse 3s cubic-bezier(0.4, 0, 0.6, 1) infinite;
 }
 
 @layer base {
-  body {
-    @apply bg-surface-50 text-surface-900 font-sans antialiased;
-  }
+	body {
+		@apply bg-surface-50 text-surface-900 font-sans antialiased;
+	}
 }
 
 @layer components {
-  .glass-panel {
-    @apply bg-white/90 backdrop-blur-md border border-white/40 shadow-sm;
-  }
-  
-  .glass-button {
-    @apply bg-brand-500 hover:bg-brand-600 text-white shadow-md transition-all active:scale-95 flex items-center justify-center;
-  }
-  
-  .glass-button-secondary {
-    @apply bg-white hover:bg-surface-50 border-2 border-surface-200 text-surface-700 transition-all active:scale-95 flex items-center justify-center;
-  }
+	.glass-panel {
+		@apply border border-white/40 bg-white/90 shadow-sm backdrop-blur-md;
+	}
+
+	.glass-button {
+		@apply bg-brand-500 hover:bg-brand-600 flex items-center justify-center text-white shadow-md transition-all active:scale-95;
+	}
+
+	.glass-button-secondary {
+		@apply hover:bg-surface-50 border-surface-200 text-surface-700 flex items-center justify-center border-2 bg-white transition-all active:scale-95;
+	}
 }

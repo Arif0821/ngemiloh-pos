@@ -13,9 +13,7 @@ import { FinanceService } from '../application/services/finance.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
-import { Request } from 'express';
 import { Roles } from '../../auth/decorators/roles.decorator';
-import { Role } from '@prisma/client';
 import {
   CreateOpexDto,
   ClosePeriodDto,

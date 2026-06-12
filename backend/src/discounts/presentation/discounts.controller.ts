@@ -7,14 +7,12 @@ import {
   Param,
   Delete,
   UseGuards,
-  UseInterceptors,
   Req,
 } from '@nestjs/common';
 import { DiscountsService } from '../application/services/discounts.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
-import { Request } from 'express';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { CreateDiscountDto, UpdateDiscountDto } from './dto/discounts.dto';
 import type { AuthenticatedRequest } from '../../types/express';
