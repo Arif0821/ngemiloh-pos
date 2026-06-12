@@ -31,15 +31,21 @@ export class DiscountsService {
     return this.discountRepository.create(data, adminId);
   }
 
-  async update(id: string, data: Prisma.DiscountUncheckedUpdateInput) {
+  async update(
+    id: string,
+    data: Prisma.DiscountUncheckedUpdateInput,
+    adminId?: string,
+  ) {
+    const updateData = { ...data };
     // TINGGI-02: Track manual activation/deactivation to prevent cron from overriding
-    if ('is_active' in data) {
-      data.manually_disabled = !data.is_active;
+    if ('is_active' in updateData) {
+      (updateData as Record<string, unknown>).manually_disabled =
+        !updateData.is_active;
     }
-    return this.discountRepository.update(id, data);
+    return this.discountRepository.update(id, updateData, adminId);
   }
 
-  async remove(id: string) {
-    return this.discountRepository.remove(id);
+  async remove(id: string, adminId?: string) {
+    return this.discountRepository.remove(id, adminId);
   }
 }

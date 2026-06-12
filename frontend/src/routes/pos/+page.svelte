@@ -12,8 +12,8 @@
   // FIX F-01: Track interval references for cleanup
   let flagInterval: ReturnType<typeof setInterval> | undefined;
   // FIX F-03: Track event handler references for cleanup
-  let handleOnline: () => void;
-  let handleOffline: () => void;
+  let handleOnline: (() => void) | undefined;
+  let handleOffline: (() => void) | undefined;
 
   $effect(() => {
     if (posStore.isCartLoaded) {
@@ -76,7 +76,7 @@
     try {
       const savedCart = await db.cart.get('current_cart');
       if (savedCart && savedCart.items && savedCart.items.length > 0) {
-        posStore.cart = savedCart.items;
+        posStore.cart = savedCart.items as typeof posStore.cart;
       }
     } catch (e) {
       console.error('Failed to load cart', e);

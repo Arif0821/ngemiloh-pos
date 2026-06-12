@@ -1,12 +1,24 @@
 import { Injectable } from '@nestjs/common';
 import { IUserRepository } from '../../domain/interfaces/user.repository.interface';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { User, Customer, Prisma } from '@prisma/client';
 
 @Injectable()
 export class PrismaUserRepository implements IUserRepository {
   constructor(private prisma: PrismaService) {}
 
-  async findCashiers() {
+  async findCashiers(): Promise<
+    Array<{
+      id: string;
+      name: string;
+      username: string;
+      is_active: boolean;
+      failed_login_count: number;
+      locked_until: Date | null;
+      last_login_at: Date | null;
+      created_at: Date;
+    }>
+  > {
     return this.prisma.user.findMany({
       where: { role: 'kasir' },
       select: {
@@ -31,28 +43,30 @@ export class PrismaUserRepository implements IUserRepository {
     return this.prisma.user.findUnique({ where: { id } });
   }
 
-  async create(data: any) {
+  async create(data: Prisma.UserUncheckedCreateInput) {
     return this.prisma.user.create({ data });
   }
 
-  async update(id: string, data: any) {
+  async update(id: string, data: Prisma.UserUncheckedUpdateInput) {
     return this.prisma.user.update({
       where: { id },
       data,
     });
   }
 
-  async findCustomers(): Promise<any[]> {
+  async findCustomers(): Promise<Customer[]> {
     return this.prisma.customer.findMany({
       orderBy: { created_at: 'desc' },
     });
   }
 
-  async createCustomer(data: any): Promise<any> {
+  async createCustomer(
+    data: Prisma.CustomerUncheckedCreateInput,
+  ): Promise<Customer> {
     return this.prisma.customer.create({ data });
   }
 
-  async updateCustomerLoyalty(id: string, points: number): Promise<any> {
+  async updateCustomerLoyalty(id: string, points: number): Promise<Customer> {
     return this.prisma.customer.update({
       where: { id },
       data: { loyalty_points: { increment: points } },

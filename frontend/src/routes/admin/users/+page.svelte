@@ -69,7 +69,8 @@
   async function handleResetPin(e: Event) {
     e.preventDefault();
     if (resetPin.length !== 4) return alert('PIN harus 4 digit angka');
-    
+    if (!selectedCashier) return;
+
     try {
       const hostname = window.location.hostname;
       const res = await api.request(`/api/v1/admin/users/cashiers/${selectedCashier.id}/reset-pin`, {

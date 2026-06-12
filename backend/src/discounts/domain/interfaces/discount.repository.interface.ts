@@ -12,6 +12,7 @@ export interface IDiscountRepository {
   update(
     id: string,
     data: Prisma.DiscountUncheckedUpdateInput,
+    adminId?: string,
   ): Promise<Discount>;
-  remove(id: string): Promise<Discount>;
+  remove(id: string, adminId?: string): Promise<Discount>;
 }

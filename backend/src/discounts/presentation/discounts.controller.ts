@@ -17,6 +17,7 @@ import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { Request } from 'express';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { CreateDiscountDto, UpdateDiscountDto } from './dto/discounts.dto';
+import type { AuthenticatedRequest } from '../../types/express';
 
 @Controller('api/v1/admin/discounts')
 @UseGuards(JwtAuthGuard, RolesGuard, ThrottlerGuard)
@@ -26,7 +27,10 @@ export class DiscountsController {
 
   @Post()
   @Throttle({ default: { limit: 20, ttl: 60000 } })
-  async create(@Body() createDiscountDto: CreateDiscountDto, @Req() req: any) {
+  async create(
+    @Body() createDiscountDto: CreateDiscountDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const data = await this.discountsService.create(
       createDiscountDto,
       req.user.id,
@@ -51,15 +55,20 @@ export class DiscountsController {
   async update(
     @Param('id') id: string,
     @Body() updateDiscountDto: UpdateDiscountDto,
+    @Req() req: AuthenticatedRequest,
   ) {
-    const data = await this.discountsService.update(id, updateDiscountDto);
+    const data = await this.discountsService.update(
+      id,
+      updateDiscountDto,
+      req.user.id,
+    );
     return { success: true, data };
   }
 
   @Delete(':id')
   @Throttle({ default: { limit: 10, ttl: 60000 } })
-  async remove(@Param('id') id: string) {
-    const data = await this.discountsService.remove(id);
+  async remove(@Param('id') id: string, @Req() req: AuthenticatedRequest) {
+    const data = await this.discountsService.remove(id, req.user.id);
     return { success: true, data };
   }
 }

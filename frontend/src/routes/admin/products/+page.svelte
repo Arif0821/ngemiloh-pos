@@ -48,7 +48,7 @@
     isEditing = true;
     pId = prod.id;
     pName = prod.name;
-    pBasePrice = prod.base_price;
+    pBasePrice = String(prod.base_price);
     pIsOutOfStock = prod.is_out_of_stock;
     pIsActive = prod.is_active;
     showProductModal = true;
@@ -105,7 +105,7 @@
 
   async function addModifierGroup(e: Event) {
     e.preventDefault();
-    if (!newGroupName) return;
+    if (!newGroupName || !activeProductForModifier) return;
     try {
       const res = await api.request(`/admin/products/${activeProductForModifier.id}/modifier-groups`, {
         method: 'POST',
@@ -147,13 +147,14 @@
     } catch(e) {}
   }
 
-  async function toggleGroupStatus(groupId: string, currentStatus: boolean) {
+  async function toggleGroupStatus(groupId: string, currentStatus?: boolean) {
+    const newStatus = !currentStatus;
     try {
       const res = await api.request(`/admin/modifier-groups/${groupId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ is_active: !currentStatus })
+        body: JSON.stringify({ is_active: newStatus })
       });
       if (res.ok) {
         fetchProducts();
@@ -164,13 +165,14 @@
     } catch(e) {}
   }
 
-  async function toggleOptionStatus(optionId: string, currentStatus: boolean) {
+  async function toggleOptionStatus(optionId: string, currentStatus?: boolean) {
+    const newStatus = !currentStatus;
     try {
       const res = await api.request(`/admin/modifier-options/${optionId}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         credentials: 'include',
-        body: JSON.stringify({ is_active: !currentStatus })
+        body: JSON.stringify({ is_active: newStatus })
       });
       if (res.ok) {
         fetchProducts();
@@ -314,7 +316,7 @@
 
 <!-- Modal Kelola Varian (Modifier) -->
 {#if showModifierModal && activeProductForModifier}
-<div class="fixed inset-0 bg-slate-900/75 z-[60] flex items-center justify-center p-4">
+<div class="fixed inset-0 bg-slate-900/75 z-60 flex items-center justify-center p-4">
   <div class="bg-white rounded-2xl shadow-xl w-full max-w-2xl overflow-hidden max-h-[90vh] flex flex-col">
     <div class="p-6 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
       <div>

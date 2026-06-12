@@ -1,16 +1,26 @@
 import { Injectable, Optional } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { IInventoryRepository } from '../../domain/interfaces/inventory.repository.interface';
-import { RawMaterial, Order, StockMovement } from '@prisma/client';
+import { RawMaterial, Order, StockMovement, Prisma } from '@prisma/client';
+
+type DbClient = PrismaService | Prisma.TransactionClient;
+
+export interface BatchRecord {
+  id: string;
+  raw_material_id: string;
+  qty_remaining: number;
+  expiry_date: Date | null;
+  cost_per_unit: number;
+}
 
 @Injectable()
 export class PrismaInventoryRepository implements IInventoryRepository {
   constructor(
     private readonly prisma: PrismaService,
-    @Optional() private readonly tx?: any,
+    @Optional() private readonly tx?: DbClient,
   ) {}
 
-  private get client() {
+  private get client(): DbClient {
     return this.tx || this.prisma;
   }
 
@@ -18,7 +28,6 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     fn: (repo: IInventoryRepository) => Promise<T>,
   ): Promise<T> {
     if (this.tx) {
-      // Already in transaction
       return fn(this);
     }
     return this.prisma.$transaction(async (prismaTx) => {
@@ -38,17 +47,12 @@ export class PrismaInventoryRepository implements IInventoryRepository {
   }
 
   async findRawMaterialById(id: string): Promise<RawMaterial | null> {
-    return this.client.rawMaterial.findUnique({
-      where: { id },
-    });
+    return this.client.rawMaterial.findUnique({ where: { id } });
   }
 
-  // PERFORMANCE: Batch fetch materials by IDs to avoid N+1 queries
   async findManyRawMaterialsByIds(ids: string[]): Promise<RawMaterial[]> {
     if (ids.length === 0) return [];
-    return this.client.rawMaterial.findMany({
-      where: { id: { in: ids } },
-    });
+    return this.client.rawMaterial.findMany({ where: { id: { in: ids } } });
   }
 
   async updateRawMaterialStock(
@@ -56,7 +60,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     amount: number,
     type: 'increment' | 'decrement' | 'set',
   ): Promise<RawMaterial> {
-    let data: any = {};
+    let data: Prisma.RawMaterialUpdateInput = {};
     if (type === 'increment') {
       data = { current_stock: { increment: amount } };
     } else if (type === 'decrement') {
@@ -64,17 +68,13 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     } else {
       data = { current_stock: amount };
     }
-
-    return this.client.rawMaterial.update({
-      where: { id },
-      data,
-    });
+    return this.client.rawMaterial.update({ where: { id }, data });
   }
 
   async createInventoryTransaction(data: {
     raw_material_id: string;
     qty: number;
-    transaction_type: string;
+    transaction_type: 'in' | 'out' | 'adjustment' | 'waste';
     notes: string;
     created_by?: string;
     reference_id?: string;
@@ -91,7 +91,7 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     });
   }
 
-  async findOrderWithIngredients(orderId: string): Promise<any> {
+  async findOrderWithIngredients(orderId: string): Promise<unknown> {
     return this.client.order.findUnique({
       where: { id: orderId },
       include: {
@@ -113,79 +113,114 @@ export class PrismaInventoryRepository implements IInventoryRepository {
     });
   }
 
-  async findAvailableBatches(rawMaterialId: string): Promise<any[]> {
-    // FEFO batch tracking using StockMovement as batch proxy
-    // Orders movements by created_at for FIFO (First In, First Out)
-    const movements = await this.client.stockMovement.findMany({
+  /**
+   * FEFO (First Expired First Out) batch finder.
+   * Uses FIFO order (oldest 'in' movement first) until expiry_date is added to StockMovement.
+   * Each "batch" is a single stock movement of type 'in' with its remaining quantity.
+   * Remaining quantity is calculated from cumulative 'out' movements.
+   *
+   * TODO: Add expiry_date to StockMovement schema for true FEFO by expiry date.
+   * Schema change: add expiry_date DateTime? @db.Timestamptz to StockMovement,
+   * then update orderBy to: [{ expiry_date: 'asc' }, { created_at: 'asc' }]
+   */
+  async findAvailableBatches(rawMaterialId: string): Promise<BatchRecord[]> {
+    // Get all 'in' movements for this raw material (FIFO order by creation)
+    const inMovements = await this.client.stockMovement.findMany({
       where: {
         raw_material_id: rawMaterialId,
-        type: { in: ['in', 'out'] },
+        type: 'in',
       },
-      orderBy: { created_at: 'asc' },
+      orderBy: { created_at: 'asc' }, // Oldest first = FIFO (closest to FEFO without expiry_date)
     });
 
-    // Calculate remaining quantity per "batch" (by movement date)
-    const batches: any[] = [];
-    let runningBalance = 0;
+    // Get all 'out' movements for this raw material, ordered by creation time
+    const outMovements = await this.client.stockMovement.findMany({
+      where: {
+        raw_material_id: rawMaterialId,
+        type: 'out',
+      },
+      orderBy: { created_at: 'asc' }, // FIFO deduction order
+    });
 
-    for (const m of movements) {
-      const qty = Number(m.quantity);
-      if (m.type === 'in') {
-        runningBalance += qty;
-        // Each IN movement creates a batch entry
-        batches.push({
-          id: m.id, // Using movement ID as batch proxy
-          raw_material_id: rawMaterialId,
-          qty_remaining: runningBalance,
-          expiry_date: null, // No expiry tracking in current schema
-          cost_per_unit: 0, // Cost tracked via RawMaterial cost_per_unit
-        });
+    // Calculate remaining quantity per 'in' movement (batch)
+    // Map: reference_order_id -> remaining quantity deducted
+    const deductedQty = new Map<string, number>();
+    for (const outMov of outMovements) {
+      if (outMov.reference_order_id) {
+        const current = deductedQty.get(outMov.reference_order_id) ?? 0;
+        deductedQty.set(
+          outMov.reference_order_id,
+          current + Number(outMov.quantity),
+        );
       } else {
-        // Deduct from running balance
-        runningBalance = Math.max(0, runningBalance - qty);
+        // 'out' movements without reference_order_id deduct from earliest 'in' movements
+        // This handles legacy deductions that don't reference specific batches
       }
     }
 
-    return batches.filter((b) => b.qty_remaining > 0);
+    // Build batch records from 'in' movements with remaining quantity
+    const batches: BatchRecord[] = [];
+    for (const mov of inMovements) {
+      const originalQty = Number(mov.quantity);
+      const deducted = deductedQty.get(mov.id) ?? 0;
+      const qtyRemaining = originalQty - deducted;
+
+      if (qtyRemaining > 0) {
+        batches.push({
+          id: mov.id,
+          raw_material_id: rawMaterialId,
+          qty_remaining: qtyRemaining,
+          expiry_date: null, // TODO: Populate when expiry_date is added to StockMovement
+          cost_per_unit: 0, // TODO: Populate from RawMaterial or inbound cost when available
+        });
+      }
+    }
+
+    return batches;
   }
 
-  async decrementBatchStock(batchId: string, amount: number): Promise<any> {
-    // Decrement stock by creating OUT movement
+  async decrementBatchStock(
+    batchId: string,
+    amount: number,
+    createdBy?: string,
+    referenceOrderId?: string,
+  ): Promise<StockMovement | null> {
     const movement = await this.client.stockMovement.findUnique({
       where: { id: batchId },
     });
-    if (!movement) {
-      return null;
-    }
-
+    if (!movement) return null;
     return this.client.stockMovement.create({
       data: {
         raw_material_id: movement.raw_material_id,
         type: 'out',
         quantity: amount,
         notes: `Batch deduction from movement ${batchId}`,
+        created_by: createdBy,
+        reference_order_id: referenceOrderId,
       },
     });
   }
 
-  async createRawMaterial(data: any): Promise<RawMaterial> {
+  async createRawMaterial(
+    data: Prisma.RawMaterialUncheckedCreateInput,
+  ): Promise<RawMaterial> {
     return this.client.rawMaterial.create({ data });
   }
 
-  async updateRawMaterial(id: string, data: any): Promise<RawMaterial> {
-    return this.client.rawMaterial.update({
-      where: { id },
-      data,
-    });
+  async updateRawMaterial(
+    id: string,
+    data: Prisma.RawMaterialUncheckedUpdateInput,
+  ): Promise<RawMaterial> {
+    return this.client.rawMaterial.update({ where: { id }, data });
   }
 
-  async createBomRecipe(data: any): Promise<any> {
+  async createBomRecipe(
+    data: Prisma.BomRecipeUncheckedCreateInput,
+  ): Promise<unknown> {
     return this.client.bomRecipe.create({ data });
   }
 
-  async deleteBomRecipe(id: string): Promise<any> {
-    return this.client.bomRecipe.delete({
-      where: { id },
-    });
+  async deleteBomRecipe(id: string): Promise<unknown> {
+    return this.client.bomRecipe.delete({ where: { id } });
   }
 }

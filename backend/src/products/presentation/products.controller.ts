@@ -15,7 +15,7 @@ import {
 import { ProductsService } from '../application/services/products.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
-import { Request } from 'express';
+import type { AuthenticatedRequest } from '../../types/express';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { Role } from '@prisma/client';
 import { FileInterceptor } from '@nestjs/platform-express';
@@ -23,6 +23,7 @@ import sharp from 'sharp';
 import { join } from 'path';
 import { v4 as uuidv4 } from 'uuid';
 import * as fs from 'fs';
+import { Prisma } from '@prisma/client';
 import {
   CreateProductDto,
   UpdateProductDto,
@@ -107,7 +108,7 @@ export class ProductsController {
   )
   async createProduct(
     @Body() body: CreateProductDto,
-    @Req() req: Request & { user: any },
+    @Req() req: AuthenticatedRequest,
     @UploadedFile() file: Express.Multer.File,
   ) {
     const payload = {
@@ -132,14 +133,14 @@ export class ProductsController {
   async updateProduct(
     @Param('id') id: string,
     @Body() body: UpdateProductDto,
-    @Req() req: Request & { user: any },
+    @Req() req: AuthenticatedRequest,
     @UploadedFile() file: Express.Multer.File,
   ) {
     const uploadedUrl = await this.processImageUpload(file);
     // SECURITY: Sanitize image_url to prevent path traversal and XSS
     const sanitizedImageUrl =
       uploadedUrl || this.sanitizeImageUrl(body.image_url);
-    const payload: any = { ...body };
+    const payload: Prisma.ProductUncheckedUpdateInput = { ...body };
     if (body.base_price) payload.base_price = Number(body.base_price);
     if (sanitizedImageUrl) payload.image_url = sanitizedImageUrl;
     const product = await this.productsService.update(id, payload, req.user.id);
@@ -161,7 +162,7 @@ export class ProductsController {
     @Param('id') id: string,
     @Body() body: CreateModifierGroupDto,
   ) {
-    const payload: any = { ...body, product_id: id };
+    const payload = { ...body, product_id: id };
     const group = await this.productsService.createModifierGroup(id, payload);
     return { success: true, data: group };
   }
@@ -173,7 +174,10 @@ export class ProductsController {
     @Param('id') id: string,
     @Body() body: CreateModifierOptionDto,
   ) {
-    const payload: any = { ...body, group_id: id };
+    const payload = {
+      ...body,
+      group_id: id,
+    } as Prisma.ProductModifierOptionUncheckedCreateInput;
     const option = await this.productsService.createModifierOption(id, payload);
     return { success: true, data: option };
   }

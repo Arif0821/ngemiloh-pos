@@ -3,6 +3,7 @@ import {
   IsNumber,
   IsOptional,
   IsDateString,
+  IsBoolean,
   MaxLength,
   Min,
 } from 'class-validator';
@@ -67,6 +68,10 @@ export class UpdateAssetDto {
   @IsOptional()
   @IsDateString()
   purchase_date?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  is_active?: boolean;
 }
 
 export class ClosePeriodDto {

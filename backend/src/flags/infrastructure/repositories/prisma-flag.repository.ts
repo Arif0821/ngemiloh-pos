@@ -1,7 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { IFlagRepository } from '../../domain/interfaces/flag.repository.interface';
-import { FeatureFlag } from '@prisma/client';
+import { FeatureFlag, Prisma } from '@prisma/client';
 
 @Injectable()
 export class PrismaFlagRepository implements IFlagRepository {
@@ -19,7 +19,9 @@ export class PrismaFlagRepository implements IFlagRepository {
     return this.prisma.featureFlag.create({ data });
   }
 
-  async findAll(orderBy?: any): Promise<FeatureFlag[]> {
+  async findAll(
+    orderBy?: Prisma.FeatureFlagOrderByWithRelationInput,
+  ): Promise<FeatureFlag[]> {
     return this.prisma.featureFlag.findMany({ orderBy });
   }
 

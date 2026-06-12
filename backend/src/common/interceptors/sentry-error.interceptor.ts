@@ -28,10 +28,18 @@ export class SentryErrorInterceptor implements NestInterceptor {
     'token',
   ];
 
-  private sanitizeBody(body: any): any {
-    if (!body || typeof body !== 'object') return body;
-    const sanitized: any = Array.isArray(body) ? [] : {};
-    for (const [key, value] of Object.entries(body)) {
+  private sanitizeBody(body: unknown): Record<string, unknown> | unknown[] {
+    if (!body || typeof body !== 'object')
+      return body as Record<string, unknown>;
+    if (Array.isArray(body)) {
+      return body.map(
+        (item) => this.sanitizeBody(item) as Record<string, unknown>,
+      );
+    }
+    const sanitized: Record<string, unknown> = {};
+    for (const [key, value] of Object.entries(
+      body as Record<string, unknown>,
+    )) {
       if (
         this.sensitiveFields.some((f) =>
           key.toLowerCase().includes(f.toLowerCase()),

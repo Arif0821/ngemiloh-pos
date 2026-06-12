@@ -8,8 +8,27 @@ import {
   Min,
   MaxLength,
   IsIn,
+  Validate,
+  ValidatorConstraint,
+  ValidatorConstraintInterface,
+  ValidationArguments,
 } from 'class-validator';
 import { Type } from 'class-transformer';
+
+@ValidatorConstraint({ name: 'atLeastOneRequired', async: false })
+export class AtLeastOneRequiredConstraint implements ValidatorConstraintInterface {
+  validate(_value: unknown, args: ValidationArguments) {
+    const obj = args.object as Record<string, unknown>;
+    const fields = args.constraints as string[];
+    return fields.some(
+      (f) => obj[f] !== undefined && obj[f] !== null && obj[f] !== '',
+    );
+  }
+  defaultMessage(args: ValidationArguments) {
+    const fields = args.constraints as string[];
+    return `At least one of [${fields.join(', ')}] must be provided`;
+  }
+}
 
 export class AdjustStockDto {
   @IsUUID()
@@ -131,6 +150,9 @@ export class CreateBomRecipeDto {
   @IsOptional()
   @IsUUID()
   modifier_option_id?: string;
+
+  @Validate(AtLeastOneRequiredConstraint, ['product_id', 'modifier_option_id'])
+  _atLeastOne: undefined;
 
   @IsUUID()
   raw_material_id: string;

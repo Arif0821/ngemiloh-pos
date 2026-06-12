@@ -1,8 +1,15 @@
-import { Injectable, Inject, NotFoundException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  NotFoundException,
+  BadRequestException,
+  Logger,
+} from '@nestjs/common';
 import {
   INVENTORY_REPOSITORY,
   type IInventoryRepository,
 } from '../../domain/interfaces/inventory.repository.interface';
+import { Prisma } from '@prisma/client';
 
 @Injectable()
 export class InventoryService {
@@ -17,15 +24,18 @@ export class InventoryService {
     return this.inventoryRepository.findAllRawMaterials();
   }
 
-  async createRawMaterial(data: any) {
+  async createRawMaterial(data: Prisma.RawMaterialUncheckedCreateInput) {
     return this.inventoryRepository.createRawMaterial(data);
   }
 
-  async updateRawMaterial(id: string, data: any) {
+  async updateRawMaterial(
+    id: string,
+    data: Prisma.RawMaterialUncheckedUpdateInput,
+  ) {
     return this.inventoryRepository.updateRawMaterial(id, data);
   }
 
-  async createBomRecipe(data: any) {
+  async createBomRecipe(data: Prisma.BomRecipeUncheckedCreateInput) {
     return this.inventoryRepository.createBomRecipe(data);
   }
 
@@ -41,7 +51,7 @@ export class InventoryService {
   async adjustStock(
     id: string,
     qty: number,
-    type: 'IN' | 'OUT',
+    type: 'in' | 'out' | 'adjustment' | 'waste',
     notes: string,
     userId: string,
   ) {
@@ -49,7 +59,9 @@ export class InventoryService {
     if (!material) throw new NotFoundException('Raw material not found');
 
     const amount = Number(qty);
-    if (amount <= 0) throw new Error('Quantity must be greater than 0');
+    if (amount <= 0) {
+      throw new BadRequestException('Quantity must be greater than 0');
+    }
 
     return this.inventoryRepository.executeInTransaction(async (repo) => {
       await repo.createInventoryTransaction({
@@ -63,7 +75,7 @@ export class InventoryService {
       return repo.updateRawMaterialStock(
         id,
         amount,
-        type === 'IN' ? 'increment' : 'decrement',
+        type === 'in' ? 'increment' : 'decrement',
       );
     });
   }
@@ -73,9 +85,12 @@ export class InventoryService {
     userId: string,
   ) {
     return this.inventoryRepository.executeInTransaction(async (repo) => {
-      const results: any[] = [];
+      const results: Array<{
+        id: string;
+        updated: boolean;
+        difference: number;
+      }> = [];
 
-      // PERFORMANCE: Fetch all materials at once instead of N queries
       const materialIds = items.map((i) => i.id);
       const materials = await repo.findManyRawMaterialsByIds(materialIds);
       const materialMap = new Map(materials.map((m) => [m.id, m]));
@@ -89,7 +104,7 @@ export class InventoryService {
         const difference = physStock - sysStock;
 
         if (difference !== 0) {
-          const type = difference > 0 ? 'IN' : 'OUT';
+          const type = difference > 0 ? 'in' : 'out';
           const absDiff = Math.abs(difference);
 
           await repo.createInventoryTransaction({
@@ -110,9 +125,24 @@ export class InventoryService {
   }
 
   async reduceStockForOrder(orderId: string) {
-    const order =
-      await this.inventoryRepository.findOrderWithIngredients(orderId);
-    if (!order) return;
+    const order = (await this.inventoryRepository.findOrderWithIngredients(
+      orderId,
+    )) as {
+      items: Array<{
+        quantity: number;
+        product: {
+          bom_recipes: Array<{
+            raw_material_id: string;
+            quantity_per_serving: { toNumber(): number };
+          }>;
+        };
+      }>;
+    } | null;
+    if (!order) {
+      this.logger.warn(`Order ${orderId} not found for stock reduction`);
+      return;
+    }
+
     await this.inventoryRepository.executeInTransaction(async (repo) => {
       let totalCogs = 0;
       const deductions: Record<string, number> = {};
@@ -129,7 +159,7 @@ export class InventoryService {
         for (const batch of await repo.findAvailableBatches(rawMaterialId)) {
           if (remaining <= 0) break;
           const used = Math.min(remaining, Number(batch.qty_remaining));
-          await repo.decrementBatchStock(batch.id, used);
+          await repo.decrementBatchStock(batch.id, used, undefined, orderId);
           totalCogs += used * Number(batch.cost_per_unit);
           remaining -= used;
         }
@@ -146,7 +176,7 @@ export class InventoryService {
         await repo.createInventoryTransaction({
           raw_material_id: rawMaterialId,
           qty,
-          transaction_type: 'OUT',
+          transaction_type: 'out',
           reference_id: orderId,
           notes: `Auto-deduct for Order ${orderId}`,
         });

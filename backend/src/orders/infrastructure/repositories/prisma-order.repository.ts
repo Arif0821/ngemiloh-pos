@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
-import { OrderRepositoryInterface } from '../../domain/interfaces/order.repository.interface';
+import {
+  OrderRepositoryInterface,
+  type ProductWithModifiers,
+} from '../../domain/interfaces/order.repository.interface';
 import {
   Order,
   CashRegister,
@@ -8,7 +11,6 @@ import {
   AuditLog,
   OrderRefund,
   Discount,
-  Product,
   Prisma,
 } from '@prisma/client';
 
@@ -32,15 +34,20 @@ export class PrismaOrderRepository implements OrderRepositoryInterface {
     });
   }
 
-  async findProductWithModifiers(productId: string): Promise<any> {
-    return this.prisma.product.findUnique({
+  async findProductWithModifiers(
+    productId: string,
+  ): Promise<ProductWithModifiers | null> {
+    const product = await this.prisma.product.findUnique({
       where: { id: productId },
       include: { modifier_groups: { include: { options: true } } },
     });
+    return product;
   }
 
-  async findProductsWithModifiers(productIds: string[]): Promise<any[]> {
-    return this.prisma.product.findMany({
+  async findProductsWithModifiers(
+    productIds: string[],
+  ): Promise<ProductWithModifiers[]> {
+    return await this.prisma.product.findMany({
       where: { id: { in: productIds } },
       include: { modifier_groups: { include: { options: true } } },
     });
@@ -68,11 +75,11 @@ export class PrismaOrderRepository implements OrderRepositoryInterface {
 
   async findOrders(
     where: Prisma.OrderWhereInput,
-    orderBy: Prisma.OrderOrderByWithRelationInput,
+    orderBy?: Prisma.OrderOrderByWithRelationInput,
     include?: Prisma.OrderInclude,
     take?: number,
     skip?: number,
-  ): Promise<any[]> {
+  ) {
     return this.prisma.order.findMany({
       where,
       orderBy,
@@ -133,7 +140,7 @@ export class PrismaOrderRepository implements OrderRepositoryInterface {
     include?: Prisma.CashRegisterInclude,
     orderBy?: Prisma.CashRegisterOrderByWithRelationInput,
     take?: number,
-  ): Promise<any[]> {
+  ): Promise<CashRegister[]> {
     return this.prisma.cashRegister.findMany({
       where,
       include,

@@ -13,6 +13,7 @@ import { RolesGuard } from '../../auth/guards/roles.guard';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { Roles } from '../../auth/decorators/roles.decorator';
 import { ToggleFlagDto } from './dto/flags.dto';
+import type { AuthenticatedRequest } from '../../types/express';
 
 @Controller('flags')
 @UseGuards(JwtAuthGuard, ThrottlerGuard)
@@ -36,7 +37,10 @@ export class FlagsController {
   @Post('toggle')
   @Roles('superadmin')
   @Throttle({ default: { limit: 30, ttl: 60000 } })
-  async toggleFlag(@Body() body: ToggleFlagDto, @Req() req: any) {
+  async toggleFlag(
+    @Body() body: ToggleFlagDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const data = await this.flagsService.toggleFlag(
       body.name,
       body.is_enabled,

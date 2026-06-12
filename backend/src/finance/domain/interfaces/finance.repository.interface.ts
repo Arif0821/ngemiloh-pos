@@ -14,7 +14,7 @@ export interface IFinanceRepository {
   findOrders(
     where: Prisma.OrderWhereInput,
     include?: Prisma.OrderInclude,
-  ): Promise<any[]>;
+  ): Promise<Order[]>;
   findOperationalExpenses(
     where: Prisma.OperationalExpenseWhereInput,
     orderBy?: Prisma.OperationalExpenseOrderByWithRelationInput,
@@ -55,5 +55,5 @@ export interface IFinanceRepository {
   findManyCashRegisters(
     orderBy?: Prisma.CashRegisterOrderByWithRelationInput,
     include?: Prisma.CashRegisterInclude,
-  ): Promise<any[]>;
+  ): Promise<CashRegister[]>;
 }

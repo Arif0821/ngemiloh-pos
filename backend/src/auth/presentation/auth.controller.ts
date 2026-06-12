@@ -15,6 +15,7 @@ import type { Response, Request } from 'express';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
 import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { LoginDto } from '../dto/login.dto';
+import type { AuthenticatedRequest } from '../../types/express';
 
 @Controller('api/v1/auth')
 export class AuthController {
@@ -136,8 +137,8 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
-  async getMe(@Req() req: Request) {
-    const userId = (req as any).user?.id;
+  async getMe(@Req() req: AuthenticatedRequest) {
+    const userId = req.user?.id;
     if (!userId) {
       return { success: false, message: 'User not authenticated' };
     }

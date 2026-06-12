@@ -54,9 +54,9 @@
   async function handleVoid(e: Event) {
     e.preventDefault();
     if (voidReason.length < 10) return alert('Alasan void minimal 10 karakter');
-    
+    if (!selectedOrder) return;
+
     try {
-      const hostname = window.location.hostname;
       const res = await api.request(`/api/v1/admin/transactions/${selectedOrder.id}/void`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -76,8 +76,8 @@
   }
 
   async function flagTransaction(status: string) {
+    if (!selectedOrder) return;
     try {
-      const hostname = window.location.hostname;
       const res = await api.request(`/api/v1/admin/transactions/${selectedOrder.id}/flag`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
@@ -256,7 +256,7 @@
         <div class="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl">
           <p class="text-xs text-red-600 uppercase font-bold mb-1">Alasan Void:</p>
           <p class="text-red-800">{selectedOrder.void_reason || 'Tidak ada alasan'}</p>
-          <p class="text-xs text-red-500 mt-2">Dibatalkan oleh: {selectedOrder.voider?.name || 'Superadmin'}</p>
+          <p class="text-xs text-red-500 mt-2">Dibatalkan oleh: {selectedOrder.voider || 'Superadmin'}</p>
         </div>
       {/if}
 

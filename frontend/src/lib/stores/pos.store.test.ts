@@ -33,7 +33,8 @@ vi.mock('$lib/db', () => ({
 
 // Import after mocks are set up
 import { posStore, type CartItem } from '$lib/stores/pos.store.svelte';
-import type { LocalProduct, Discount, ModifierOption } from '$lib/domain/models/types';
+import { db, type LocalProduct, type ModifierOption } from '$lib/db';
+import type { Discount } from '$lib/domain/models/types';
 
 // Test data factories
 const createMockProduct = (overrides: Partial<LocalProduct> = {}): LocalProduct => ({
@@ -53,13 +54,8 @@ const createMockProduct = (overrides: Partial<LocalProduct> = {}): LocalProduct 
 
 const createMockModifierOption = (overrides: Partial<ModifierOption> = {}): ModifierOption => ({
   id: 'mod-opt-1',
-  group_id: 'group-1',
   name: 'Extra Topping',
   additional_price: 5000,
-  sort_order: 0,
-  is_active: true,
-  created_at: new Date().toISOString(),
-  updated_at: new Date().toISOString(),
   ...overrides,
 });
 
@@ -70,8 +66,8 @@ const createMockDiscount = (overrides: Partial<Discount> = {}): Discount => ({
   value: 10,
   scope: 'all_products',
   target_id: null,
-  valid_from: new Date().toISOString(),
-  valid_until: null,
+  valid_from: undefined,
+  valid_until: undefined,
   applicable_days: [1, 2, 3, 4, 5, 6, 7],
   is_active: true,
   ...overrides,
@@ -319,8 +315,6 @@ describe('POSStore', () => {
             name: 'Taste',
             is_required: true,
             max_selections: 1,
-            sort_order: 0,
-            is_active: true,
             options: [
               createMockModifierOption({ id: 'opt-1' }),
               createMockModifierOption({ id: 'opt-2' }),

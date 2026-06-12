@@ -51,8 +51,8 @@
     isEditing = true;
     formId = asset.id;
     formName = asset.name;
-    formValue = asset.value;
-    formLifespan = asset.lifespan_months;
+    formValue = String(asset.value ?? '');
+    formLifespan = String(asset.lifespan_months ?? '');
     formPurchaseDate = new Date(asset.purchase_date).toISOString().split('T')[0];
     formIsActive = asset.is_active;
     showModal = true;
@@ -150,7 +150,7 @@
                 <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase">Tgl Beli</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase">Nilai Aset</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase">Umur (Bulan)</th>
-                <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase text-red-600">Depresiasi/Bulan</th>
+                <th class="px-6 py-4 text-left text-xs font-semibold uppercase text-red-600">Depresiasi/Bulan</th>
                 <th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase">Status</th>
                 <th class="px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase">Aksi</th>
               </tr>

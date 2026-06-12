@@ -1,6 +1,14 @@
-import { RawMaterial, Order, StockMovement } from '@prisma/client';
+import { RawMaterial, Order, StockMovement, Prisma } from '@prisma/client';
 
 export const INVENTORY_REPOSITORY = 'INVENTORY_REPOSITORY';
+
+export interface BatchRecord {
+  id: string;
+  raw_material_id: string;
+  qty_remaining: number;
+  expiry_date: Date | null;
+  cost_per_unit: number;
+}
 
 export interface IInventoryRepository {
   executeInTransaction<T>(
@@ -21,20 +29,30 @@ export interface IInventoryRepository {
   createInventoryTransaction(data: {
     raw_material_id: string;
     qty: number;
-    transaction_type: string;
+    transaction_type: 'in' | 'out' | 'adjustment' | 'waste';
     notes: string;
     created_by?: string;
     reference_id?: string;
   }): Promise<StockMovement>;
 
-  findOrderWithIngredients(orderId: string): Promise<any>;
+  findOrderWithIngredients(orderId: string): Promise<unknown>;
   updateOrderCogs(orderId: string, cogsTotal: number): Promise<Order>;
 
-  findAvailableBatches(rawMaterialId: string): Promise<any[]>;
-  decrementBatchStock(batchId: string, amount: number): Promise<any>;
+  findAvailableBatches(rawMaterialId: string): Promise<BatchRecord[]>;
+  decrementBatchStock(
+    batchId: string,
+    amount: number,
+    createdBy?: string,
+    referenceOrderId?: string,
+  ): Promise<StockMovement | null>;
 
-  createRawMaterial(data: any): Promise<RawMaterial>;
-  updateRawMaterial(id: string, data: any): Promise<RawMaterial>;
-  createBomRecipe(data: any): Promise<any>;
-  deleteBomRecipe(id: string): Promise<any>;
+  createRawMaterial(
+    data: Prisma.RawMaterialUncheckedCreateInput,
+  ): Promise<RawMaterial>;
+  updateRawMaterial(
+    id: string,
+    data: Prisma.RawMaterialUncheckedUpdateInput,
+  ): Promise<RawMaterial>;
+  createBomRecipe(data: Prisma.BomRecipeUncheckedCreateInput): Promise<unknown>;
+  deleteBomRecipe(id: string): Promise<unknown>;
 }

@@ -23,6 +23,7 @@ import {
   UpdateRawMaterialDto,
   CreateBomRecipeDto,
 } from './dto/inventory.dto';
+import type { AuthenticatedRequest } from '../../types/express';
 
 @UseGuards(JwtAuthGuard, RolesGuard, ThrottlerGuard)
 @Controller('api/v1/admin/inventory')
@@ -47,13 +48,16 @@ export class InventoryController {
   @Roles(Role.superadmin)
   @Post('adjust')
   @Throttle({ default: { limit: 30, ttl: 60000 } }) // 30 req/min for mutations
-  async adjustStock(@Body() body: AdjustStockDto, @Req() req: any) {
+  async adjustStock(
+    @Body() body: AdjustStockDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const { id, qty, type, notes } = body;
     const userId = req.user.id;
     const data = await this.inventoryService.adjustStock(
       id,
       qty,
-      type as 'IN' | 'OUT',
+      type as 'in' | 'out' | 'adjustment' | 'waste',
       notes || '',
       userId,
     );
@@ -63,7 +67,10 @@ export class InventoryController {
   @Roles(Role.superadmin)
   @Post('opname')
   @Throttle({ default: { limit: 10, ttl: 60000 } }) // 10 req/min for bulk operations
-  async submitOpname(@Body() body: SubmitOpnameDto, @Req() req: any) {
+  async submitOpname(
+    @Body() body: SubmitOpnameDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
     const { items } = body;
     const userId = req.user.id;
     const data = await this.inventoryService.submitOpname(items, userId);

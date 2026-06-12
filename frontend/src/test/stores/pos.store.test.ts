@@ -8,11 +8,9 @@ const createMockProduct = (overrides = {}): LocalProduct => ({
   name: 'Test Product',
   category_id: 'cat-1',
   base_price: 25000,
-  image_url: null,
-  is_active: true,
+  image_url: undefined,
   is_out_of_stock: false,
   modifier_groups: [],
-  sort_order: 0,
   ...overrides,
 });
 

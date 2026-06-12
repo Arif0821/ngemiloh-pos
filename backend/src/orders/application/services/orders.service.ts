@@ -5,7 +5,13 @@ import {
   NotFoundException,
   Inject,
 } from '@nestjs/common';
-import { OrderStatus, PaymentMethod, Prisma } from '@prisma/client';
+import {
+  OrderStatus,
+  PaymentMethod,
+  Prisma,
+  ProductModifierOption,
+  Order,
+} from '@prisma/client';
 import * as crypto from 'crypto';
 import { InventoryService } from '../../../inventory/application/services/inventory.service';
 import { EmailService } from '../../../email/email.service';
@@ -17,9 +23,10 @@ import {
 import { startOfDay, endOfDay } from '../../../common/utils/date';
 import { PrismaService } from '../../../prisma/prisma.service';
 
-import midtransClient from 'midtrans-client';
+import midtransClient, { CoreApi } from 'midtrans-client';
 
 import { CreateOrderDto } from '../../presentation/dto/create-order.dto';
+import type { ProductWithModifiers } from '../../domain/interfaces/order.repository.interface';
 
 /**
  * Escape CSV field to prevent formula injection and CSV injection attacks
@@ -54,7 +61,7 @@ function escapeCsvField(value: unknown): string {
 @Injectable()
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
-  private midtransCore: any;
+  private midtransCore: CoreApi;
 
   constructor(
     @Inject(ORDER_REPOSITORY)
@@ -92,7 +99,7 @@ export class OrdersService {
 
     const activeDiscounts = await this.orderRepository.findActiveDiscounts();
 
-    const productIds = data.items.map((item: any) => item.product_id);
+    const productIds = data.items.map((item) => item.product_id);
     const products =
       await this.orderRepository.findProductsWithModifiers(productIds);
     const productMap = new Map(products.map((p) => [p.id, p]));
@@ -110,9 +117,8 @@ export class OrdersService {
         // TINGGI-03: Check applicable_days before applying discount
         if (disc.applicable_days && disc.applicable_days.length > 0) {
           const now = new Date();
-          // JS getDay(): 0=Sunday, 1=Monday...6=Saturday
-          // PRD uses 1=Monday...7=Sunday (ISO), convert accordingly
-          const dayOfWeek = now.getDay() || 7; // Convert Sunday (0) to 7
+          // Use UTC day to match server timezone-agnostic discount schedule
+          const dayOfWeek = now.getUTCDay() || 7; // Convert Sunday (0) to 7
           if (!disc.applicable_days.includes(dayOfWeek)) continue;
         }
 
@@ -142,11 +148,9 @@ export class OrdersService {
 
       if (item.modifiers?.length) {
         for (const mod of item.modifiers) {
-          let foundOption: any = null;
+          let foundOption: ProductModifierOption | null = null;
           for (const group of product.modifier_groups) {
-            const option = group.options.find(
-              (o: any) => o.id === mod.option_id,
-            );
+            const option = group.options.find((o) => o.id === mod.option_id);
             if (option) foundOption = option;
           }
           if (foundOption) {
@@ -165,15 +169,13 @@ export class OrdersService {
         option_id: string;
         group_name_snapshot: string;
         option_name_snapshot: string;
-        additional_price_at_time: any;
+        additional_price_at_time: Prisma.Decimal;
       }> = [];
 
       if (item.modifiers?.length) {
         for (const mod of item.modifiers) {
           for (const group of product.modifier_groups) {
-            const option = group.options.find(
-              (o: any) => o.id === mod.option_id,
-            );
+            const option = group.options.find((o) => o.id === mod.option_id);
             if (option) {
               modifierSnaps.push({
                 option_id: option.id,
@@ -342,7 +344,7 @@ export class OrdersService {
 
         if (qrisResponse.actions && qrisResponse.actions.length > 0) {
           const qrString = qrisResponse.actions.find(
-            (a: any) => a.name === 'generate-qr-code',
+            (a) => a.name === 'generate-qr-code',
           )?.url;
 
           // CRITICAL: Validate qrString exists before returning
@@ -362,9 +364,17 @@ export class OrdersService {
             midtrans_transaction_id: qrisResponse.transaction_id,
           };
         }
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
+        // SECURITY: Never silently mock in production — this is a fraud risk
+        if (process.env.MIDTRANS_ENV === 'production') {
+          this.logger.error(
+            `QRIS charge failed in PRODUCTION: ${message}. Order ${order.id} left in pending state.`,
+          );
+          throw err;
+        }
         this.logger.warn(
-          'QRIS charge failed, falling back to mock: ' + err.message,
+          `QRIS charge failed (sandbox), falling back to mock: ${message}`,
         );
         const mockQrString = `https://api.qrserver.com/v1/create-qr-code/?size=250x250&data=ngemiloh-mock-${order.id}`;
 
@@ -388,21 +398,20 @@ export class OrdersService {
     const results = [];
 
     // PERFORMANCE: Fetch discounts and products ONCE for entire batch
-    let products: any[] = [];
+    let products: ProductWithModifiers[] = [];
     try {
       const productIdSet = this.extractProductIds(orders);
       products = await this.orderRepository.findProductsWithModifiers([
         ...productIdSet,
       ]);
-    } catch (err: any) {
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
       // If product fetch fails, all orders in batch fail
-      this.logger.error(
-        `Failed to fetch products for batch sync: ${err.message}`,
-      );
+      this.logger.error(`Failed to fetch products for batch sync: ${message}`);
       return orders.map((order) => ({
         client_uuid: order.client_uuid,
         status: 'error',
-        message: err.message,
+        message: message,
       }));
     }
 
@@ -435,14 +444,15 @@ export class OrdersService {
           status: 'success',
           server_id: order.id,
         });
-      } catch (err: any) {
+      } catch (err: unknown) {
+        const message = err instanceof Error ? err.message : 'Unknown error';
         this.logger.error(
-          `Failed to sync offline order ${orderData.client_uuid}: ${err.message}`,
+          `Failed to sync offline order ${orderData.client_uuid}: ${message}`,
         );
         results.push({
           client_uuid: orderData.client_uuid,
           status: 'error',
-          message: err.message,
+          message: message,
         });
       }
     }
@@ -471,8 +481,8 @@ export class OrdersService {
   private async createOrderWithCache(
     data: CreateOrderDto,
     kasirId: string,
-    products: any[],
-  ): Promise<any> {
+    products: ProductWithModifiers[],
+  ): Promise<Order | null> {
     const existingOrder = await this.orderRepository.findOrderByClientUuid(
       data.client_uuid,
     );
@@ -490,8 +500,15 @@ export class OrdersService {
       }
     }
 
+    // PERFORMANCE: Fetch discounts ONCE for entire batch
+    const activeDiscounts = await this.orderRepository.findActiveDiscounts();
+
     // Calculate order items
-    const orderItemsPayload = this.buildOrderItems(data, productMap);
+    const orderItemsPayload = this.buildOrderItems(
+      data,
+      productMap,
+      activeDiscounts,
+    );
 
     // Validate price consistency (same as createOrder)
     const calculatedFinalPrice = orderItemsPayload.reduce(
@@ -551,29 +568,71 @@ export class OrdersService {
    */
   private buildOrderItems(
     data: CreateOrderDto,
-    productMap: Map<string, any>,
-  ): any[] {
-    const orderItems: any[] = [];
+    productMap: Map<string, ProductWithModifiers>,
+    activeDiscounts?: Array<{
+      id: string;
+      type: string;
+      value: number | Prisma.Decimal;
+      scope: string;
+      target_id: string | null;
+      applicable_days: number[] | null;
+    }>,
+  ): Prisma.OrderItemUncheckedCreateWithoutOrderInput[] {
+    const orderItems: Prisma.OrderItemUncheckedCreateWithoutOrderInput[] = [];
 
     for (const item of data.items) {
       const product = productMap.get(item.product_id);
       if (!product) continue;
 
-      let itemTotal = Number(product.base_price);
+      const basePrice = Number(product.base_price);
+      let maxDiscountAmount = 0;
+      let appliedDiscountId: string | null = null;
+
+      // Apply discount logic (same as createOrder)
+      if (activeDiscounts && activeDiscounts.length > 0) {
+        for (const disc of activeDiscounts) {
+          if (disc.applicable_days && disc.applicable_days.length > 0) {
+            const now = new Date();
+            const dayOfWeek = now.getUTCDay() || 7;
+            if (!disc.applicable_days.includes(dayOfWeek)) continue;
+          }
+
+          const isApplicable =
+            disc.scope === 'all_products' ||
+            (disc.scope === 'specific_product' &&
+              disc.target_id === product.id) ||
+            (disc.scope === 'category' &&
+              disc.target_id === product.category_id);
+
+          if (isApplicable) {
+            let currentDiscAmount = 0;
+            if (disc.type === 'percentage') {
+              currentDiscAmount = basePrice * (Number(disc.value) / 100);
+            } else if (disc.type === 'fixed_amount') {
+              currentDiscAmount = Math.min(Number(disc.value), basePrice);
+            }
+
+            if (currentDiscAmount > maxDiscountAmount) {
+              maxDiscountAmount = currentDiscAmount;
+              appliedDiscountId = disc.id;
+            }
+          }
+        }
+      }
+
+      let itemTotal = basePrice - maxDiscountAmount;
       let modifierTotal = 0;
       const modifierSnaps: Array<{
         option_id: string;
         group_name_snapshot: string;
         option_name_snapshot: string;
-        additional_price_at_time: any;
+        additional_price_at_time: Prisma.Decimal;
       }> = [];
 
       if (item.modifiers?.length) {
         for (const mod of item.modifiers) {
           for (const group of product.modifier_groups || []) {
-            const option = group.options?.find(
-              (o: any) => o.id === mod.option_id,
-            );
+            const option = group.options?.find((o) => o.id === mod.option_id);
             if (option) {
               modifierTotal += Number(option.additional_price);
               itemTotal += Number(option.additional_price);
@@ -591,16 +650,21 @@ export class OrdersService {
       orderItems.push({
         product_id: product.id,
         product_name_snapshot: product.name,
-        discount_id: null,
+        discount_id: appliedDiscountId,
         quantity: item.quantity,
         base_price: product.base_price,
-        discounted_base: Number(product.base_price),
-        discount_amount: 0,
+        discounted_base: basePrice - maxDiscountAmount,
+        discount_amount: maxDiscountAmount * item.quantity,
         modifier_total: modifierTotal,
         final_price: itemTotal,
         subtotal: itemTotal * item.quantity,
         modifiers: {
-          create: modifierSnaps,
+          create: modifierSnaps.map((m) => ({
+            option_id: m.option_id,
+            group_name_snapshot: m.group_name_snapshot,
+            option_name_snapshot: m.option_name_snapshot,
+            additional_price_at_time: m.additional_price_at_time,
+          })),
         },
       });
     }
@@ -608,7 +672,7 @@ export class OrdersService {
     return orderItems;
   }
 
-  async handleMidtransWebhook(notification: any) {
+  async handleMidtransWebhook(notification: Record<string, unknown>) {
     try {
       const statusResponse =
         await this.midtransCore.transaction.notification(notification);
@@ -762,7 +826,7 @@ export class OrdersService {
     let totalCash = 0;
     let totalQris = 0;
 
-    orders.forEach((o: any) => {
+    orders.forEach((o) => {
       const amount = Number(o.total_amount);
       if (o.payment_method === PaymentMethod.cash) totalCash += amount;
       else if (o.payment_method === PaymentMethod.qris) totalQris += amount;
@@ -888,7 +952,7 @@ export class OrdersService {
       action: 'FLAG_TRANSACTION',
       entity_type: 'Order',
       entity_id: orderId,
-      old_value: { verification_status: (order as any).verification_status },
+      old_value: { verification_status: order.verification_status },
       new_value: { verification_status: status },
     });
 
@@ -947,7 +1011,7 @@ export class OrdersService {
   }
 
   async getAllShifts(kasirId?: string, dateStr?: string) {
-    const where: any = {};
+    const where: Prisma.CashRegisterWhereInput = {};
     if (kasirId) {
       where.cashier_id = kasirId;
     }

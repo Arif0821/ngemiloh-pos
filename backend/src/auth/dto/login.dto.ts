@@ -9,7 +9,7 @@ import {
 
 @ValidatorConstraint()
 export class IsCredentialPair implements ValidatorConstraintInterface {
-  validate(_value: any, args: ValidationArguments) {
+  validate(_value: unknown, args: ValidationArguments) {
     const obj = args.object as LoginDto;
     // Must have at least one identifier AND one secret
     const hasIdentifier = !!(obj.username || obj.email);

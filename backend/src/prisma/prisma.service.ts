@@ -34,18 +34,16 @@ export class PrismaService
   async onModuleInit() {
     await this.$connect();
 
-    // Type casting needed because $on signature is tricky with event emit types
-    (this as any).$on('error', (e: any) => {
+    this.$on('error' as never, (e: { message: string; target: string }) => {
       this.logger.error(`Prisma Error: ${e.message}`, e.target);
     });
 
-    (this as any).$on('warn', (e: any) => {
+    this.$on('warn' as never, (e: { message: string }) => {
       this.logger.warn(`Prisma Warning: ${e.message}`);
     });
 
-    // Log slow queries in development
     if (process.env.NODE_ENV !== 'production') {
-      (this as any).$on('query', (e: any) => {
+      this.$on('query' as never, (e: { duration: number; query: string }) => {
         if (e.duration > 100) {
           this.logger.debug(`Slow query (${e.duration}ms): ${e.query}`);
         }

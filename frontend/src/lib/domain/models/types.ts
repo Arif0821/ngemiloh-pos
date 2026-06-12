@@ -18,8 +18,9 @@ export interface ProductItem {
 export interface ModifierGroup {
   id: string;
   name: string;
-  is_required: boolean;
-  max_selections: number;
+  is_required?: boolean;
+  max_selections?: number;
+  is_active?: boolean;
   options: ModifierOption[];
 }
 
@@ -27,6 +28,7 @@ export interface ModifierOption {
   id: string;
   name: string;
   additional_price: number | string;
+  is_active?: boolean;
 }
 
 export interface Discount {
@@ -35,8 +37,10 @@ export interface Discount {
   type: 'percentage' | 'fixed_amount';
   value: number | string;
   scope: 'all_products' | 'category' | 'specific_product';
-  target_id: string | null;
+  target_id?: string | null;
   is_active: boolean;
+  valid_from?: string;
+  valid_until?: string;
   applicable_days?: number[];
 }
 
@@ -63,7 +67,12 @@ export interface OrderItemResponse {
   product_name_snapshot?: string;
   quantity: number;
   subtotal: number;
-  modifiers?: { name: string; additional_price: number }[];
+  modifiers?: {
+    name: string;
+    additional_price: number;
+    option_name_snapshot?: string;
+    additional_price_at_time?: number;
+  }[];
 }
 
 export interface OrderResponse {
@@ -87,13 +96,20 @@ export interface OrderResponse {
   voider?: string;
   client_created_at?: string;
   created_at?: string;
+  verification_status?: string;
 }
 
 export interface ShiftInfo {
   id: string;
   cashier_id: string;
+  cashier?: { name: string; username?: string };
   shift_date: string;
+  shift_start?: string;
+  shift_end?: string;
   opening_balance: number | string;
+  closing_balance?: number | string;
+  system_cash_total?: number | string;
+  discrepancy?: number | string;
   status: string;
 }
 
@@ -119,7 +135,9 @@ export interface Asset {
   id: string;
   name: string;
   purchase_price: number | string;
+  value?: number | string; // alias for purchase_price
   useful_life_months: number;
+  lifespan_months?: number; // alias for useful_life_months
   monthly_depreciation: number | string;
   purchase_date: string;
   is_active: boolean;
@@ -131,32 +149,37 @@ export interface AuditLog {
   action: string;
   entity_type: string;
   entity_id: string;
-  old_value?: any;
-  new_value?: any;
+  old_value?: unknown;
+  new_value?: unknown;
   created_at: string;
-  actor?: { name: string; role: string };
+  actor?: { name: string; username?: string; role: string };
 }
 
 export interface OperationalExpense {
   id: string;
   category: string;
-  description: string;
+  description?: string | null; // name shown from description
   amount: number | string;
-  expense_date: string;
+  expense_date: string; // date alias
+  date?: string;
 }
 
 export interface RawMaterial {
   id: string;
   name: string;
-  purchase_unit: string;
-  purchase_qty: number;
-  usage_unit: string;
-  conversion_factor: number;
-  cost_per_unit: number;
-  stock_level: number;
+  unit?: string;
+  stock?: number; // alias for current_stock used in inventory page
+  current_stock: number;
+  stock_level?: number;
   min_stock?: number;
+  purchase_unit?: string;
+  purchase_qty?: number;
+  usage_unit?: string;
+  conversion_factor?: number;
+  cost_per_unit?: number;
   supplier?: string;
-  last_purchase_price: number;
+  last_purchase_price?: number;
+  is_active?: boolean;
 }
 
 export interface ProfitShareData {
@@ -183,4 +206,10 @@ export interface User {
   username?: string;
   role: string;
   is_active: boolean;
+  locked_until?: string | null;
+  last_login_at?: string | null;
+  failed_login_count?: number;
 }
+
+// Re-export LocalProduct from db.ts for backward compatibility
+export type { LocalProduct } from '$lib/db';

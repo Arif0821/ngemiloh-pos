@@ -139,14 +139,14 @@
             {:else}
               {#each expenses as exp}
                 <tr class="hover:bg-slate-50">
-                  <td class="px-6 py-4 whitespace-nowrap text-slate-600">{formatDate(exp.date)}</td>
-                  <td class="px-6 py-4 font-medium text-slate-900">{exp.name}</td>
+                  <td class="px-6 py-4 whitespace-nowrap text-slate-600">{formatDate(exp.expense_date)}</td>
+                  <td class="px-6 py-4 font-medium text-slate-900">{exp.description ?? '-'}</td>
                   <td class="px-6 py-4">
                     <span class="inline-flex items-center px-2.5 py-0.5 rounded-md text-xs font-medium bg-slate-100 text-slate-800">
                       {categories.find(c => c.id === exp.category)?.label || exp.category}
                     </span>
                   </td>
-                  <td class="px-6 py-4 text-right font-bold text-red-600">-{formatRp(exp.amount)}</td>
+                  <td class="px-6 py-4 text-right font-bold text-red-600">-{formatRp(Number(exp.amount))}</td>
                 </tr>
               {/each}
             {/if}

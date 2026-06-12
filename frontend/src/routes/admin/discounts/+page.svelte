@@ -159,7 +159,7 @@
                       </div>
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-slate-600">
-                      Mulai: {new Date(d.valid_from).toLocaleDateString('id-ID')}
+                      Mulai: {d.valid_from ? new Date(d.valid_from).toLocaleDateString('id-ID') : '-'}
                     </td>
                     <td class="px-6 py-4 whitespace-nowrap">
                       {#if d.is_active}

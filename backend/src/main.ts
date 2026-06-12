@@ -64,8 +64,16 @@ async function bootstrap() {
           imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
           fontSrc: ["'self'", 'data:'],
           formAction: ["'self'"],
-          frameSrc: ["'self'", 'https://app.sandbox.midtrans.com'], // Midtrans sandbox
-          connectSrc: ["'self'", 'https://api.sandbox.midtrans.com'], // Midtrans sandbox
+          frameSrc: [
+            "'self'",
+            'https://app.sandbox.midtrans.com',
+            'https://app.midtrans.com',
+          ], // Midtrans sandbox + production
+          connectSrc: [
+            "'self'",
+            'https://api.sandbox.midtrans.com',
+            'https://api.midtrans.com',
+          ], // Midtrans sandbox + production
           // HIGH FIX S-04: Removed Tailwind CDN - CSS is bundled at build time
           scriptSrc: ["'self'"],
           styleSrc: ["'self'"],
@@ -122,14 +130,20 @@ async function bootstrap() {
   // ========================================
   // SECURITY HEADERS (additional)
   // ========================================
-  app.use((req: any, res: any, next: any) => {
-    res.setHeader('X-Content-Type-Options', 'nosniff');
-    res.setHeader('X-Frame-Options', 'DENY');
-    res.setHeader('X-XSS-Protection', '1; mode=block');
-    res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
-    res.removeHeader('X-Powered-By');
-    next();
-  });
+  app.use(
+    (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction,
+    ) => {
+      res.setHeader('X-Content-Type-Options', 'nosniff');
+      res.setHeader('X-Frame-Options', 'DENY');
+      res.setHeader('X-XSS-Protection', '1; mode=block');
+      res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+      res.removeHeader('X-Powered-By');
+      next();
+    },
+  );
 
   // ========================================
   // STATIC FILES

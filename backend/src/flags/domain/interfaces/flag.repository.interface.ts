@@ -1,4 +1,4 @@
-import { FeatureFlag } from '@prisma/client';
+import { FeatureFlag, Prisma } from '@prisma/client';
 
 export const FLAG_REPOSITORY = Symbol('FLAG_REPOSITORY');
 
@@ -9,7 +9,9 @@ export interface IFlagRepository {
     description: string;
     is_enabled: boolean;
   }): Promise<FeatureFlag>;
-  findAll(orderBy?: any): Promise<FeatureFlag[]>;
+  findAll(
+    orderBy?: Prisma.FeatureFlagOrderByWithRelationInput,
+  ): Promise<FeatureFlag[]>;
   update(
     name: string,
     data: { is_enabled: boolean; updated_by: string; updated_at: Date },

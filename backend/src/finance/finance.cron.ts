@@ -12,8 +12,10 @@ export class FinanceCronService {
     private emailService: EmailService,
   ) {}
 
-  // 0 8 1 * * => 08:00 on day 1 of every month
-  @Cron('0 8 1 * *', { timeZone: 'Asia/Jakarta' })
+  // Run at 08:00 on day 1 of every month in Asia/Jakarta timezone
+  // NOTE: NestJS @Cron timeZone option is NOT reliably applied by the scheduler library.
+  // The TZ env var (set to Asia/Jakarta in docker-compose.yml) is the authoritative timezone.
+  @Cron('0 8 1 * *', { timeZone: process.env.TZ || 'Asia/Jakarta' })
   async checkUnpaidProfitShare() {
     this.logger.log('Running monthly profit share reminder check...');
 

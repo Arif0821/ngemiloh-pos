@@ -11,7 +11,7 @@
     return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', minimumFractionDigits: 0 }).format(amount);
   }
 
-  function formatDate(iso: string) {
+  function formatDate(iso: string | undefined) {
     if (!iso) return '-';
     return new Date(iso).toLocaleString('id-ID');
   }

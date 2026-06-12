@@ -341,7 +341,7 @@
         <p class="text-slate-500 font-medium">#{posStore.lastOrderDetails.client_uuid.split('-')[0].toUpperCase()}</p>
       </div>
       <div class="p-6 bg-slate-50 space-y-3 border-t border-slate-100">
-        <button class="w-full py-4 rounded-xl font-bold border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50 flex items-center justify-center gap-2" onclick={() => printReceipt(posStore.lastOrderDetails)}>CETAK STRUK</button>
+        <button class="w-full py-4 rounded-xl font-bold border-2 border-indigo-600 text-indigo-600 hover:bg-indigo-50 flex items-center justify-center gap-2" onclick={() => posStore.lastOrderDetails && printReceipt(posStore.lastOrderDetails)}>CETAK STRUK</button>
         <button class="w-full py-4 rounded-xl font-black bg-brand-600 hover:bg-brand-700 text-white shadow-lg" onclick={() => posStore.resetPos()}>SELESAI & ORDER BARU</button>
       </div>
     </div>
@@ -371,7 +371,7 @@
                     <span class="font-bold text-slate-800">#{order.client_uuid.split('-')[0].toUpperCase()}</span>
                     <span class="px-2 py-0.5 bg-green-100 text-green-700 text-xs font-bold rounded uppercase">{order.payment_status || 'PENDING'}</span>
                   </div>
-                  <p class="text-sm text-slate-500 mb-2">{new Date(order.created_at ?? Date.now()).toLocaleString('id-ID')} • {order.payment_method.toUpperCase()}</p>
+                  <p class="text-sm text-slate-500 mb-2">{new Date(order.created_at ?? Date.now()).toLocaleString('id-ID')} • {(order.payment_method ?? 'cash').toUpperCase()}</p>
                 </div>
                 <div class="text-right">
                   <p class="text-lg font-black text-brand-600">{posStore.formatRp(order.final_price)}</p>

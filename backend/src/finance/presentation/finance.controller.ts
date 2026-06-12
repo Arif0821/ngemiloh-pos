@@ -25,6 +25,7 @@ import {
   OpenShiftDto,
   CloseShiftDto,
 } from './dto/finance.dto';
+import type { AuthenticatedRequest } from '../../types/express';
 
 @Controller('api/v1/admin/finance')
 @UseGuards(JwtAuthGuard, RolesGuard, ThrottlerGuard)
@@ -53,7 +54,7 @@ export class FinanceController {
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   async createOpex(
     @Body() createDto: CreateOpexDto,
-    @Req() req: Request & { user: any },
+    @Req() req: AuthenticatedRequest,
   ) {
     const data = await this.financeService.createOpex(createDto, req.user.id);
     return { status: 'success', data };
@@ -84,7 +85,7 @@ export class FinanceController {
   @Throttle({ default: { limit: 10, ttl: 60000 } })
   async payProfitShare(
     @Body() body: CompleteProfitShareDto,
-    @Req() req: Request & { user: any },
+    @Req() req: AuthenticatedRequest,
   ) {
     const m = body.month ? parseInt(body.month) : new Date().getMonth() + 1;
     const y = body.year ? parseInt(body.year) : new Date().getFullYear();
@@ -108,7 +109,7 @@ export class FinanceController {
   @Post('assets')
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   async createAsset(@Body() createDto: CreateAssetDto) {
-    const data = await this.financeService.createAsset(createDto as any);
+    const data = await this.financeService.createAsset(createDto);
     return { status: 'success', data };
   }
 
@@ -118,7 +119,7 @@ export class FinanceController {
     @Param('id') id: string,
     @Body() updateDto: UpdateAssetDto,
   ) {
-    const data = await this.financeService.updateAsset(id, updateDto as any);
+    const data = await this.financeService.updateAsset(id, updateDto);
     return { status: 'success', data };
   }
 
@@ -135,7 +136,7 @@ export class FinanceController {
   @Get('cash/current')
   @Roles('kasir', 'superadmin')
   @Throttle({ default: { limit: 60, ttl: 60000 } })
-  async getCurrentShift(@Req() req: Request & { user: any }) {
+  async getCurrentShift(@Req() req: AuthenticatedRequest) {
     const data = await this.financeService.getCurrentShift(req.user.id);
     return { success: true, data };
   }
@@ -145,7 +146,7 @@ export class FinanceController {
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   async openShift(
     @Body() body: OpenShiftDto,
-    @Req() req: Request & { user: any },
+    @Req() req: AuthenticatedRequest,
   ) {
     const data = await this.financeService.openShift(
       req.user.id,
@@ -159,7 +160,7 @@ export class FinanceController {
   @Throttle({ default: { limit: 30, ttl: 60000 } })
   async closeShift(
     @Body() body: CloseShiftDto,
-    @Req() req: Request & { user: any },
+    @Req() req: AuthenticatedRequest,
   ) {
     const data = await this.financeService.closeShift(
       req.user.id,

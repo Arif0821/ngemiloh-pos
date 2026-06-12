@@ -8,6 +8,7 @@ import {
   BadRequestException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import type { StringValue } from 'ms';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { EmailService } from '../../../email/email.service';
@@ -194,15 +195,15 @@ export class AuthService {
     await this.authRepository.resetIpLockout(ipAddress);
 
     // Generate tokens
-    const payload = { sub: user.id, role: user.role };
+    const payload = { sub: user.id, role: user.role as string };
     const accessToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_ACCESS_SECRET,
-      expiresIn: process.env.JWT_ACCESS_EXPIRES as any,
+      secret: process.env.JWT_ACCESS_SECRET ?? '',
+      expiresIn: '8h',
     });
 
     const refreshToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: process.env.JWT_REFRESH_EXPIRES as any,
+      secret: process.env.JWT_REFRESH_SECRET ?? '',
+      expiresIn: '7d',
     });
 
     const csrfToken = crypto.randomBytes(32).toString('hex');
@@ -221,12 +222,19 @@ export class AuthService {
   }
 
   async refreshToken(token: string) {
-    let payload: any;
+    interface JwtPayload {
+      sub: string;
+      role: string;
+      exp?: number;
+      iat?: number;
+    }
+
+    let payload: JwtPayload;
     try {
       payload = this.jwtService.verify(token, {
         secret: process.env.JWT_REFRESH_SECRET,
       });
-    } catch (e) {
+    } catch {
       throw new UnauthorizedException('Invalid token');
     }
 
@@ -247,19 +255,19 @@ export class AuthService {
     }
 
     // P0-SECURITY: Revoke old refresh token (token rotation)
-    const expiresAt = new Date(payload.exp * 1000);
+    const expiresAt = new Date((payload.exp ?? 0) * 1000);
     await this.authRepository.revokeToken(tokenHash, user.id, expiresAt);
 
-    const newPayload = { sub: user.id, role: user.role };
+    const newPayload = { sub: user.id, role: user.role as string };
     const newAccessToken = this.jwtService.sign(newPayload, {
-      secret: process.env.JWT_ACCESS_SECRET,
-      expiresIn: process.env.JWT_ACCESS_EXPIRES as any,
+      secret: process.env.JWT_ACCESS_SECRET ?? '',
+      expiresIn: '8h',
     });
 
     // P0-SECURITY: Issue new refresh token (rotation)
     const newRefreshToken = this.jwtService.sign(newPayload, {
-      secret: process.env.JWT_REFRESH_SECRET,
-      expiresIn: process.env.JWT_REFRESH_EXPIRES as any,
+      secret: process.env.JWT_REFRESH_SECRET ?? '',
+      expiresIn: '7d',
     });
 
     return {
@@ -271,18 +279,21 @@ export class AuthService {
   async logout(refreshToken: string) {
     if (!refreshToken) return;
     try {
-      const payload = this.jwtService.verify(refreshToken, {
-        secret: process.env.JWT_REFRESH_SECRET,
-      });
+      const payload = this.jwtService.verify<{ sub: string; exp?: number }>(
+        refreshToken,
+        {
+          secret: process.env.JWT_REFRESH_SECRET,
+        },
+      );
 
-      const expiresAt = new Date(payload.exp * 1000);
+      const expiresAt = new Date((payload.exp ?? 0) * 1000);
 
       const tokenHash = crypto
         .createHash('sha256')
         .update(refreshToken)
         .digest('hex');
       await this.authRepository.revokeToken(tokenHash, payload.sub, expiresAt);
-    } catch (e) {
+    } catch {
       // Ignore invalid token during logout
     }
   }

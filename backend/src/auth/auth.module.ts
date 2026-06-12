@@ -14,10 +14,18 @@ import { RolesGuard } from './guards/roles.guard';
   imports: [
     PassportModule,
     JwtModule.registerAsync({
-      useFactory: () => ({
-        secret: process.env.JWT_ACCESS_SECRET,
-        signOptions: { expiresIn: '8h' },
-      }),
+      useFactory: () => {
+        const secret = process.env.JWT_ACCESS_SECRET;
+        if (!secret) {
+          throw new Error(
+            'FATAL: JWT_ACCESS_SECRET environment variable is required',
+          );
+        }
+        return {
+          secret,
+          signOptions: { expiresIn: '8h' },
+        };
+      },
     }),
   ],
   providers: [

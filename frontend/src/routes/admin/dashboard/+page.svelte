@@ -3,6 +3,7 @@
   import { formatRp } from '$lib/utils/format';
   import { onMount } from 'svelte';
   import Chart from 'chart.js/auto';
+  import type { Chart as ChartType } from 'chart.js';
 
   let revenueCanvas: HTMLCanvasElement;
   let topProductsCanvas: HTMLCanvasElement;
@@ -19,7 +20,7 @@
 
   let refreshTimer: ReturnType<typeof setInterval>;
 
-  let paymentChart: unknown = null;
+  let paymentChart: ChartType | null = null;
 
   async function fetchKpi() {
     try {

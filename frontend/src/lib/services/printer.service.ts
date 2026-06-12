@@ -1,5 +1,41 @@
 import type { OrderResponse } from '../domain/models/types';
 
+// Web Bluetooth API type declarations (available in Chrome/Edge, not in lib.dom.d.ts by default)
+declare global {
+  interface Navigator {
+    bluetooth: Bluetooth;
+  }
+  interface Bluetooth {
+    requestDevice(options: BluetoothRequestDeviceOptions): Promise<BluetoothDevice>;
+  }
+  interface BluetoothRequestDeviceOptions {
+    filters?: BluetoothLEScanFilter[];
+    optionalServices?: string[];
+  }
+  interface BluetoothLEScanFilter {
+    services?: string[];
+    namePrefix?: string;
+  }
+  interface BluetoothDevice {
+    readonly id: string;
+    readonly name?: string;
+    readonly gatt?: BluetoothRemoteGATTServer;
+  }
+  interface BluetoothRemoteGATTServer {
+    readonly connected: boolean;
+    connect(): Promise<BluetoothRemoteGATTServer>;
+    disconnect(): void;
+    getPrimaryService(service: string): Promise<BluetoothRemoteGATTService>;
+  }
+  interface BluetoothRemoteGATTService {
+    getCharacteristic(characteristic: string): Promise<BluetoothRemoteGATTCharacteristic>;
+  }
+  interface BluetoothRemoteGATTCharacteristic {
+    readonly uuid: string;
+    writeValue(data: BufferSource): Promise<void>;
+  }
+}
+
 export class PrinterService {
   private device: BluetoothDevice | null = null;
   private characteristic: BluetoothRemoteGATTCharacteristic | null = null;

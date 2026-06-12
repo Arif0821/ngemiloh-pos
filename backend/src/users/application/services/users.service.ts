@@ -9,6 +9,8 @@ import {
   USER_REPOSITORY,
   type IUserRepository,
 } from '../../domain/interfaces/user.repository.interface';
+import { Prisma } from '@prisma/client';
+import { CreateCashierDto } from '../../presentation/dto/users.dto';
 
 @Injectable()
 export class UsersService {
@@ -17,8 +19,6 @@ export class UsersService {
   ) {}
 
   private getPepper(): string {
-    // SECURITY FIX S-01: Throw error immediately if pepper is missing
-    // No fallback allowed - security depends on this being set
     const pepper = process.env.PIN_PEPPER_SECRET;
     if (!pepper) {
       throw new Error(
@@ -32,7 +32,7 @@ export class UsersService {
     return this.userRepository.findCashiers();
   }
 
-  async createCashier(data: any) {
+  async createCashier(data: CreateCashierDto) {
     const exists = await this.userRepository.findByUsername(
       data.username.toLowerCase(),
     );
@@ -43,10 +43,8 @@ export class UsersService {
     const user = await this.userRepository.create({
       name: data.name,
       username: data.username.toLowerCase(),
-      role: 'kasir',
       pin_hash: pinHash,
-      is_active: true,
-    });
+    } as Prisma.UserUncheckedCreateInput);
 
     return { id: user.id, username: user.username, name: user.name };
   }
@@ -76,8 +74,7 @@ export class UsersService {
     return this.userRepository.findCustomers();
   }
 
-  async createCustomer(data: any) {
-    // ensure unique phone number
+  async createCustomer(data: Prisma.CustomerUncheckedCreateInput) {
     return this.userRepository.createCustomer(data);
   }
 

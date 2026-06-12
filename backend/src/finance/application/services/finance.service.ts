@@ -11,6 +11,10 @@ import {
 } from '../../domain/interfaces/finance.repository.interface';
 import { EmailService } from '../../../email/email.service';
 import { Prisma, Order } from '@prisma/client';
+import {
+  CreateAssetDto,
+  UpdateAssetDto,
+} from '../../presentation/dto/finance.dto';
 
 @Injectable()
 export class FinanceService {
@@ -126,7 +130,7 @@ export class FinanceService {
       0,
     );
 
-    const netProfit = revenue - totalHpp - totalOpex - totalDepreciation;
+    const netProfit = revenue - totalOpex - totalDepreciation;
 
     const ownerShare = netProfit > 0 ? netProfit * 0.6 : 0;
     const cashierShare = netProfit > 0 ? netProfit * 0.4 : 0;
@@ -192,12 +196,9 @@ export class FinanceService {
     return this.financeRepository.findAssets(undefined, { created_at: 'desc' });
   }
 
-  async createAsset(data: any) {
-    // SEDANG-02: Support both 'value'/'lifespan_months' (non-standard) and 'purchase_price'/'useful_life_months' (standard)
-    const purchasePrice = Number(data.purchase_price ?? data.value ?? 0);
-    const lifespanMonths = Number(
-      data.useful_life_months ?? data.lifespan_months ?? 0,
-    );
+  async createAsset(data: CreateAssetDto) {
+    const purchasePrice = Number(data.purchase_price);
+    const lifespanMonths = Number(data.useful_life_months);
 
     if (!purchasePrice || !lifespanMonths) {
       throw new BadRequestException(
@@ -216,14 +217,12 @@ export class FinanceService {
     });
   }
 
-  async updateAsset(id: string, data: any) {
+  async updateAsset(id: string, data: UpdateAssetDto) {
     const asset = await this.financeRepository.findAssetById(id);
     if (!asset) throw new NotFoundException('Asset not found');
 
-    // SEDANG-02: Support both 'value' (non-standard) and 'purchase_price' (standard)
-    const newValue = data.purchase_price ?? data.value ?? undefined;
-    const newLifespan =
-      data.useful_life_months ?? data.lifespan_months ?? undefined;
+    const newValue = data.purchase_price;
+    const newLifespan = data.useful_life_months;
 
     let parsedValue =
       newValue !== undefined ? Number(newValue) : Number(asset.purchase_price);
@@ -301,7 +300,7 @@ export class FinanceService {
   }
 
   private buildTrend(
-    orders: any[],
+    orders: Order[],
     period: 'daily' | 'weekly' | 'monthly',
   ): { label: string; value: number }[] {
     const map = new Map<string, number>();
@@ -334,10 +333,19 @@ export class FinanceService {
       startDate.setMonth(now.getMonth() - 12);
     }
 
-    const orders = await this.financeRepository.findOrders(
+    type OrderWithItems = Order & {
+      items: Array<{
+        product_id: string;
+        product_name_snapshot: string | null;
+        quantity: number;
+        subtotal: Prisma.Decimal;
+      }>;
+    };
+
+    const orders = (await this.financeRepository.findOrders(
       { created_at: { gte: startDate }, status: { not: 'voided' } },
       { items: true },
-    );
+    )) as OrderWithItems[];
 
     const trend = this.buildTrend(orders, period);
 

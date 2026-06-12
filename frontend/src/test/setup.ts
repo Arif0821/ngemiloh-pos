@@ -24,15 +24,6 @@ vi.mock('$lib/db', () => ({
   },
 }));
 
-// Global test timeout
-beforeAll(() => {
-  vi.setTimeout(10000);
-});
-
-afterAll(() => {
-  vi.setTimeout(5000);
-});
-
 // Cleanup after each test
 afterEach(() => {
   cleanup();

@@ -28,6 +28,7 @@ import { EventEmitter2 } from '@nestjs/event-emitter';
 import { Observable, filter, map, fromEvent, merge, interval } from 'rxjs';
 import type { Response } from 'express';
 import { CreateOrderDto, SyncBatchDto } from './dto/create-order.dto';
+import type { AuthenticatedRequest } from '../../types/express';
 
 @Controller('api/v1')
 export class OrdersController {
@@ -42,7 +43,7 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard)
   async createOrder(
     @Body() body: CreateOrderDto,
-    @Req() req: Request & { user: any },
+    @Req() req: AuthenticatedRequest,
   ) {
     const order = await this.ordersService.createOrder(body, req.user.id);
     return { success: true, data: order };
@@ -52,7 +53,7 @@ export class OrdersController {
   @UseGuards(JwtAuthGuard)
   async syncBatchOrders(
     @Body() body: SyncBatchDto,
-    @Req() req: Request & { user: any },
+    @Req() req: AuthenticatedRequest,
   ) {
     const { orders } = body;
     const result = await this.ordersService.syncBatchOrders(
@@ -65,7 +66,7 @@ export class OrdersController {
   @Get('orders')
   @UseGuards(JwtAuthGuard)
   async getHistory(
-    @Req() req: Request & { user: any },
+    @Req() req: AuthenticatedRequest,
     @Query('page') page: string = '1',
     @Query('limit') limit: string = '50',
   ) {
@@ -104,9 +105,11 @@ export class OrdersController {
 
   @Get('orders/shift')
   @UseGuards(JwtAuthGuard)
-  async getShiftSummary(@Req() req: Request & { user: any }) {
+  async getShiftSummary(@Req() req: AuthenticatedRequest) {
     const filterKasir =
-      req.user.role === 'kasir' ? req.user.id : req.query.kasir_id;
+      req.user.role === 'kasir'
+        ? req.user.id
+        : String(req.query.kasir_id || '');
     if (!filterKasir) {
       return {
         success: false,
@@ -137,14 +140,14 @@ export class OrdersController {
 
   @Post('pos/shift/start')
   @UseGuards(JwtAuthGuard)
-  async startShift(@Req() req: Request & { user: any }) {
+  async startShift(@Req() req: AuthenticatedRequest) {
     const shift = await this.ordersService.startShift(req.user.id);
     return { success: true, data: shift };
   }
 
   @Get('pos/shift/status')
   @UseGuards(JwtAuthGuard)
-  async checkShiftStatus(@Req() req: Request & { user: any }) {
+  async checkShiftStatus(@Req() req: AuthenticatedRequest) {
     const shift = await this.ordersService.getCurrentShift(req.user.id);
     return { success: true, data: shift };
   }
@@ -154,7 +157,7 @@ export class OrdersController {
   async voidTransaction(
     @Param('id') id: string,
     @Body('reason') reason: string,
-    @Req() req: Request & { user: any },
+    @Req() req: AuthenticatedRequest,
   ) {
     // SECURITY: Check role in controller, not via Roles decorator for detailed control
     // @Roles decorator is still applied at class level, this is additional check
@@ -170,7 +173,7 @@ export class OrdersController {
   async flagTransaction(
     @Param('id') id: string,
     @Body('status') status: string,
-    @Req() req: Request & { user: any },
+    @Req() req: AuthenticatedRequest,
   ) {
     // SECURITY: Check role in controller for proper 403 response
     if (req.user.role !== 'superadmin') {
@@ -200,8 +203,8 @@ export class OrdersController {
   async sse(@Param('id') id: string, @Req() req: Request) {
     // SECURITY: JwtAuthGuard ensures only authenticated users can access SSE
     const orderEvents = fromEvent(this.eventEmitter, 'order.paid').pipe(
-      filter((payload: any) => payload.orderId === id),
-      map((payload: any) => ({
+      filter((payload: { orderId: string }) => payload.orderId === id),
+      map((payload: { orderId: string; status: string }) => ({
         data: payload,
       })),
     );
@@ -218,7 +221,10 @@ export class OrdersController {
 
   @Post('webhooks/midtrans')
   @HttpCode(HttpStatus.OK)
-  async midtransWebhook(@Body() body: any, @Req() req: Request) {
+  async midtransWebhook(
+    @Body() body: Record<string, unknown>,
+    @Req() req: Request,
+  ) {
     // KRITIS-06: Get real client IP from X-Forwarded-For header (set by Caddy proxy)
     const forwardedFor = req.headers['x-forwarded-for'];
     const ip = Array.isArray(forwardedFor)

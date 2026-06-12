@@ -9,7 +9,7 @@ const mockApi = {
 const mockPosStore = {
   featureFlags: {},
   products: [],
-  activeDiscounts: [],
+  activeDiscounts: [] as Array<{ id: string; name: string; type: string; value: number; scope: string; target_id: string | null; is_active: boolean; applicable_days?: number[] }>,
   historyOrders: [],
   cart: [],
   isOffline: false,
@@ -17,7 +17,7 @@ const mockPosStore = {
   showOpenShiftModal: false,
   showCloseShiftModal: false,
   showHistoryModal: false,
-  paymentMethod: 'cash' as const,
+  paymentMethod: 'cash' as 'cash' | 'qris' | 'split',
   cartTotal: 50000,
   discountTotal: 0,
   appliedDiscount: null,
@@ -308,9 +308,10 @@ describe('PosService', () => {
 
   describe('processPayment', () => {
     beforeEach(() => {
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
       mockPosStore.cart = [
-        { id: 'p1', quantity: 2, base_price: 10000, selectedModifiers: [], cartItemId: 'cart-1' },
-      ];
+        { id: 'p1', quantity: 2, base_price: 10000, is_out_of_stock: false, modifier_groups: [] as any[], selectedModifiers: [] as any[], cartItemId: 'cart-1' },
+      ] as any;
       mockPosStore.cartTotal = 20000;
       mockPosStore.paymentMethod = 'cash';
       mockPosStore.isProcessing = false;

@@ -15,9 +15,11 @@ import {
 /**
  * TINGGI-05: Sanitize body to redact sensitive fields
  */
-function sanitizeBody(obj: any): any {
-  if (!obj || typeof obj !== 'object') return obj;
-  const clean: any = { ...obj };
+function sanitizeBody(obj: unknown): Record<string, unknown> {
+  if (!obj || typeof obj !== 'object') return {};
+  const clean: Record<string, unknown> = {
+    ...(obj as Record<string, unknown>),
+  };
   const sensitiveFields = [
     'pin',
     'password',
