@@ -223,15 +223,20 @@ export class FinanceService {
         const orders = ordersByCashier.get(cashierId) || [];
         const sales = orders.reduce((s, o) => s + Number(o.total_amount), 0);
 
-        const existing = cashierMap.get(cashier.id);
+        const existing = cashierMap.get(cashierId);
         if (existing) {
           existing.totalSales += sales;
           existing.totalOrders += orders.length;
           existing.shiftCount += 1;
         } else {
-          cashierMap.set(cashier.id, {
-            cashierId: cashier.id,
-            cashierName: cashier.name,
+          // Get cashier name from shift if available, otherwise use cashierId
+          const cashierName =
+            'cashier' in shift && (shift as { cashier?: { name: string } }).cashier?.name
+              ? (shift as { cashier?: { name: string } }).cashier!.name
+              : cashierId;
+          cashierMap.set(cashierId, {
+            cashierId,
+            cashierName,
             totalSales: sales,
             totalOrders: orders.length,
             shiftCount: 1,
