@@ -5,7 +5,7 @@ import { Request } from 'express';
 import {
   AUTH_REPOSITORY,
   type AuthRepositoryInterface,
-} from '../../domain/interfaces/auth.repository.interface';
+} from '../domain/interfaces/auth.repository.interface';
 
 @Injectable()
 export class JwtStrategy extends PassportStrategy(Strategy) {

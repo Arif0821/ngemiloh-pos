@@ -17,9 +17,13 @@ export class CreateCashierDto {
   username: string;
 
   @IsString()
-  @MinLength(6)
+  @MinLength(4)
   @MaxLength(6)
   pin: string;
+
+  @IsString()
+  @MaxLength(1)
+  cashier_letter: string;  // A-Z, unique per kasir
 }
 
 export class ResetPinDto {

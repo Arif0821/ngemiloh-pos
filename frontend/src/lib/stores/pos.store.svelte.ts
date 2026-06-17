@@ -34,14 +34,13 @@ export class PosStore {
 	show_modifier_modal: boolean = $state(false);
 	show_success_modal: boolean = $state(false);
 	show_history_modal: boolean = $state(false);
-	show_open_shift_modal = $state(false);
-	show_close_shift_modal = $state(false);
+	show_close_shift_modal: boolean = $state(false);
 
 	// Shift Logic
-	has_open_shift = $state(true);
-	opening_balance = $state(DEFAULT_OPENING_BALANCE);
-	closing_balance = $state(0);
-	is_checking_shift = $state(true);
+	has_open_shift: boolean = $state(true);
+	opening_balance: number = $state(DEFAULT_OPENING_BALANCE);
+	closing_balance: number = $state(0);
+	is_checking_shift: boolean = $state(true);
 
 	// Modifier Logic
 	selected_product_for_modifier: LocalProduct | null = $state(null);

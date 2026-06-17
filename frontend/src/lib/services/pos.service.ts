@@ -57,7 +57,6 @@ export class PosService {
 			const res = await api.post(`/cash/open`, { opening_balance });
 			if (res.ok) {
 				pos_store.has_open_shift = true;
-				pos_store.show_open_shift_modal = false;
 				toast.success('Shift berhasil dibuka');
 				return true;
 			} else {

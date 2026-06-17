@@ -23,9 +23,12 @@ const mock_pos_store = {
 	cart: [],
 	is_offline: false,
 	has_open_shift: false,
-	show_open_shift_modal: false,
+	is_checking_shift: false,
 	show_close_shift_modal: false,
 	show_history_modal: false,
+	show_modifier_modal: false,
+	show_payment_modal: false,
+	show_success_modal: false,
 	payment_method: 'cash' as 'cash' | 'qris' | 'split',
 	cart_total: 50000,
 	discount_total: 0,
@@ -33,9 +36,14 @@ const mock_pos_store = {
 	is_processing: false,
 	is_waiting_qris: false,
 	qris_countdown: 900,
-	is_checking_shift: false,
-	show_payment_modal: false,
 	qris_order_info: null,
+	opening_balance: 500000,
+	closing_balance: 0,
+	cash_amount: 0,
+	split_cash_amount: 0,
+	split_qris_amount: 0,
+	cash_change: 0,
+	last_order_details: null,
 	reset_cart: vi.fn()
 };
 
@@ -174,7 +182,6 @@ describe('PosService', () => {
 
 			expect(mock_api.post).toHaveBeenCalledWith('/cash/open', { opening_balance: 500000 });
 			expect(mock_pos_store.has_open_shift).toBe(true);
-			expect(mock_pos_store.show_open_shift_modal).toBe(false);
 			expect(result).toBe(true);
 		});
 

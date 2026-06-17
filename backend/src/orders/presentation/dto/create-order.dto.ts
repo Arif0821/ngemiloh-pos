@@ -71,6 +71,11 @@ export class CreateOrderDto {
   @Min(0)
   cash_received?: number;
 
+  // For internal use (sync-batch): mark QRIS offline orders as pending_sync
+  @IsOptional()
+  @IsString()
+  status?: string;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
