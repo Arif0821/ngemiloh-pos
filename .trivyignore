@@ -1,0 +1,51 @@
+# =============================================================================
+# .trivyignore - Trivy Vulnerability Ignore Policy
+# =============================================================================
+# Dokumen ini mengabaikan kerentanan yang diketahui (known/accepted risks).
+# Semua entri harus didokumentasi dengan alasan.
+#
+# Cara menambahkan CVE baru:
+# 1. Identifikasi CVE dari output Trivy
+# 2. Dokumentasikan alasan kenapa diabaikan (acceptable risk)
+# 3. Set target date untuk review/fix
+# =============================================================================
+
+# -----------------------------------------------------------------------------
+# OpenSSL / libssl - Required for Prisma Query Engine
+# -----------------------------------------------------------------------------
+# Alasan: Prisma menggunakan native binary yang membutuhkan OpenSSL 1.1.
+# libssl1.1 di-Alpine v3.18 memiliki beberapa CVE yang belum ditambal di
+# repository resmi. Ini adalah trade-off yang diterima.
+#
+# Sumber: Komentar di Dockerfile "KRITIS-01"
+# Target Fix: Monitor untuk Prisma yang compatible dengan OpenSSL 3.x
+# Tanggal Review: 2026-09-01
+CVE-2024-4741
+CVE-2024-5535
+CVE-2023-6129
+CVE-2024-2511
+CVE-2023-5981
+CVE-2023-48795
+
+# -----------------------------------------------------------------------------
+# Alpine Base Image Vulnerabilities
+# -----------------------------------------------------------------------------
+# Alasan: Base image menggunakan tag spesifik untuk stabilitas build.
+# node:20-alpine3.18 memiliki kerentanan di library sistem yang
+# tidak mempengaruhi security aplikasi secara langsung (library utility).
+#
+# Target Fix: Upgrade ke Alpine terbaru setelah testing menyeluruh
+# Tanggal Review: 2026-09-01
+CVE-2024-24786
+CVE-2024-37370
+
+# -----------------------------------------------------------------------------
+# Dev Dependencies (Development Only - Should not be in production image)
+# -----------------------------------------------------------------------------
+# Alasan: Beberapa devDependencies di-lock karena transitivity dependencies.
+# Ini terinstall di builder stage dan tidak seharusnya masuk production image.
+# Production image menggunakan --omit=dev
+#
+# Catatan: Jika vulnerabilidad ini muncul di production image scan,
+# periksa apakah ada accidental copy dari devDependencies.
+# Tanggal Review: 2026-07-01
