@@ -149,6 +149,8 @@ export class FinanceController {
     const data = await this.financeService.openShift(
       req.user.id,
       body.opening_balance,
+      body.planned_close_at,
+      body.carry_over_from_shift_id,
     );
     return { status: 'success', data };
   }
@@ -162,7 +164,8 @@ export class FinanceController {
   ) {
     const data = await this.financeService.closeShift(
       req.user.id,
-      body.closing_balance,
+      body.actual_cash,
+      body.notes,
     );
     return { status: 'success', data };
   }

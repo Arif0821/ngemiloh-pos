@@ -86,9 +86,10 @@ export class PrismaFinanceRepository implements IFinanceRepository {
   }
 
   async findManyCashRegisters(
+    where?: Prisma.CashRegisterWhereInput,
     orderBy?: Prisma.CashRegisterOrderByWithRelationInput,
     include?: Prisma.CashRegisterInclude,
   ) {
-    return this.prisma.cashRegister.findMany({ orderBy, include });
+    return this.prisma.cashRegister.findMany({ where, orderBy, include });
   }
 }

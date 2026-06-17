@@ -53,6 +53,7 @@ export interface IFinanceRepository {
     data: Prisma.CashRegisterUncheckedUpdateInput,
   ): Promise<CashRegister>;
   findManyCashRegisters(
+    where?: Prisma.CashRegisterWhereInput,
     orderBy?: Prisma.CashRegisterOrderByWithRelationInput,
     include?: Prisma.CashRegisterInclude,
   ): Promise<CashRegister[]>;

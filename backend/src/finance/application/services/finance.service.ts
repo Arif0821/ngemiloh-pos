@@ -426,7 +426,12 @@ export class FinanceService {
     return shift;
   }
 
-  async openShift(cashierId: string, openingBalance: number) {
+  async openShift(
+    cashierId: string,
+    openingBalance: number,
+    plannedCloseAt?: string,
+    carryOverFromShiftId?: string,
+  ) {
     const existing = await this.financeRepository.findFirstCashRegister({
       cashier_id: cashierId,
       status: 'open',
@@ -434,15 +439,44 @@ export class FinanceService {
     if (existing)
       throw new BadRequestException('Kasir masih memiliki shift aktif.');
 
+    // Calculate shift_number: count closed shifts for this cashier + 1
+    const closedShifts = await this.financeRepository.findManyCashRegisters(
+      { cashier_id: cashierId },
+    );
+    const shiftNumber = closedShifts.filter(
+      (s) => s.status === 'closed',
+    ).length + 1;
+
+    // Default planned_close_at: 04:00 WIB next day (or next 04:00 if before 04:00)
+    let plannedClose: Date;
+    if (plannedCloseAt) {
+      plannedClose = new Date(plannedCloseAt);
+    } else {
+      const now = new Date();
+      plannedClose = new Date(now);
+      plannedClose.setHours(4, 0, 0, 0); // 04:00 today
+      if (plannedClose <= now) {
+        plannedClose.setDate(plannedClose.getDate() + 1); // next day if past 04:00
+      }
+    }
+
     return this.financeRepository.createCashRegister({
       cashier_id: cashierId,
       shift_date: new Date(),
       opening_balance: openingBalance,
+      shift_number: shiftNumber,
+      carry_over_from_shift_id: carryOverFromShiftId ?? null,
+      planned_close_at: plannedClose,
       status: 'open',
     });
   }
 
-  async closeShift(cashierId: string, closingBalance: number) {
+  async closeShift(
+    cashierId: string,
+    actualCash: number,
+    notes?: string,
+    isAutoClosed = false,
+  ) {
     const shift = await this.financeRepository.findFirstCashRegister(
       { cashier_id: cashierId, status: 'open' },
       { shift_start: 'desc' },
@@ -470,13 +504,15 @@ export class FinanceService {
     }, 0);
 
     const expectedBalance = Number(shift.opening_balance) + totalCashSales;
-    const discrepancy = closingBalance - expectedBalance;
+    const discrepancy = actualCash - expectedBalance;
 
     const closed = await this.financeRepository.updateCashRegister(shift.id, {
-      shift_end: new Date(),
-      closing_balance: closingBalance,
+      actual_close_at: new Date(),
+      closing_balance: actualCash,
       system_cash_total: expectedBalance,
       discrepancy: discrepancy,
+      is_auto_closed: isAutoClosed,
+      notes: notes ?? null,
       status: 'closed',
     });
 
@@ -502,9 +538,10 @@ export class FinanceService {
       entity_type: 'CashRegister',
       entity_id: shift.id,
       new_value: {
-        closing_balance: closingBalance,
+        closing_balance: actualCash,
         discrepancy: discrepancy,
         system_cash_total: expectedBalance,
+        is_auto_closed: isAutoClosed,
       },
     });
 
@@ -513,6 +550,7 @@ export class FinanceService {
 
   async getShifts() {
     return this.financeRepository.findManyCashRegisters(
+      undefined,
       { shift_date: 'desc' },
       { cashier: { select: { name: true } } },
     );

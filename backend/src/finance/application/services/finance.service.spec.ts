@@ -15,6 +15,7 @@ const mockFinanceRepository = {
   createAuditLog: jest.fn(),
   findOperationalExpenses: jest.fn(),
   findAssets: jest.fn(),
+  findManyCashRegisters: jest.fn(),
 };
 
 const mockEmailService = {
@@ -54,6 +55,9 @@ describe('FinanceService', () => {
 
     it('should create new shift when no open shift exists', async () => {
       mockFinanceRepository.findFirstCashRegister.mockResolvedValue(null);
+      mockFinanceRepository.findManyCashRegisters.mockResolvedValue([
+        { id: 'shift-old', status: 'closed' },
+      ]);
       mockFinanceRepository.createCashRegister.mockResolvedValue({
         id: 'shift-new',
         cashier_id: 'cashier-1',

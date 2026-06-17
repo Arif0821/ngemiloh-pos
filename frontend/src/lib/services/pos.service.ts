@@ -72,7 +72,7 @@ export class PosService {
 
 	async handle_close_shift(closing_balance: number) {
 		try {
-			const res = await api.post(`/cash/close`, { closing_balance });
+			const res = await api.post(`/cash/close`, { actual_cash: closing_balance });
 			if (res.ok) {
 				pos_store.has_open_shift = false;
 				pos_store.show_close_shift_modal = false;

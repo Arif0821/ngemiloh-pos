@@ -20,7 +20,7 @@ const mock_pos_store = {
 		applicable_days?: number[];
 	}>,
 	history_orders: [],
-	cart: [],
+	cart: [] as any[],
 	is_offline: false,
 	has_open_shift: false,
 	is_checking_shift: false,
@@ -80,7 +80,7 @@ describe('PosService', () => {
 			products: [],
 			active_discounts: [],
 			history_orders: [],
-			cart: [],
+			cart: [] as any[],
 			is_offline: false,
 			has_open_shift: false,
 			is_checking_shift: false,
@@ -212,7 +212,7 @@ describe('PosService', () => {
 
 			const result = await pos_service.handle_close_shift(600000);
 
-			expect(mock_api.post).toHaveBeenCalledWith('/cash/close', { closing_balance: 600000 });
+			expect(mock_api.post).toHaveBeenCalledWith('/cash/close', { actual_cash: 600000 });
 			expect(mock_pos_store.has_open_shift).toBe(false);
 			expect(mock_pos_store.show_close_shift_modal).toBe(false);
 			expect(result).toBe(true);

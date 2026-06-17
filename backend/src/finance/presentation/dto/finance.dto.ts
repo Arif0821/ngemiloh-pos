@@ -102,11 +102,24 @@ export class OpenShiftDto {
   @IsNumber()
   @Min(0)
   opening_balance: number;
+
+  @IsOptional()
+  @IsDateString()
+  planned_close_at?: string;
+
+  @IsOptional()
+  @IsString()
+  carry_over_from_shift_id?: string;
 }
 
 export class CloseShiftDto {
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  closing_balance: number;
+  actual_cash: number;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(500)
+  notes?: string;
 }

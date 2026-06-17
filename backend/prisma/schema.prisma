@@ -89,6 +89,8 @@ model User {
 
   cashier_letter     String?   @unique @db.Char(1)
 
+  profit_share_details ProfitShareDetail[]
+
   @@index([role])
 }
 
@@ -287,8 +289,15 @@ model CashRegister {
   discrepancy       Decimal?       @db.Decimal(12, 2)
   status            RegisterStatus @default(open)
   notes             String?        @db.Text
+  shift_number      Int            @default(0)
+  carry_over_from_shift_id String? @db.Uuid
+  is_auto_closed    Boolean        @default(false)
+  planned_close_at  DateTime?      @db.Timestamptz
+  actual_close_at   DateTime?      @db.Timestamptz  // renamed from shift_end for clarity
 
-  cashier User @relation(fields: [cashier_id], references: [id])
+  cashier          User           @relation(fields: [cashier_id], references: [id])
+  carry_over_from CashRegister?  @relation("ShiftCarryOver", fields: [carry_over_from_shift_id], references: [id])
+  carry_over_to   CashRegister[] @relation("ShiftCarryOver")
 
   @@index([cashier_id, shift_date(sort: Desc)])
   @@index([status])
@@ -341,6 +350,27 @@ model ProfitShareLog {
   notes               String?   @db.Text
 
   payer User? @relation(fields: [cashier_paid_by], references: [id])
+  details ProfitShareDetail[]
+}
+
+model ProfitShareDetail {
+  id                 String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  profit_share_log_id String  @db.Uuid
+  cashier_id         String   @db.Uuid
+  cashier_name       String   @db.VarChar(100)
+  total_sales        Decimal  @default(0) @db.Decimal(14, 2)
+  total_orders       Int      @default(0)
+  shift_count        Int      @default(0)
+  share_amount       Decimal  @default(0) @db.Decimal(14, 2)
+  is_paid            Boolean  @default(false)
+  paid_at            DateTime? @db.Timestamptz
+  notes              String? @db.Text
+
+  profitShareLog ProfitShareLog @relation(fields: [profit_share_log_id], references: [id])
+  cashier        User            @relation(fields: [cashier_id], references: [id])
+
+  @@unique([profit_share_log_id, cashier_id])
+  @@index([cashier_id])
 }
 
 model FeatureFlag {
