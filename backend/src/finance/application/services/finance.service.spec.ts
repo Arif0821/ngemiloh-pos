@@ -172,7 +172,8 @@ describe('FinanceService', () => {
       const result = await service.getProfitShare(6, 2026);
 
       expect(result.revenue).toBe(1500000);
-      expect(result.netProfit).toBe(900000);
+      // netProfit = revenue - totalOpex(0) - totalDepreciation(0) = 1500000
+      expect(result.netProfit).toBe(1500000);
     });
 
     it('should return existing log if already calculated', async () => {

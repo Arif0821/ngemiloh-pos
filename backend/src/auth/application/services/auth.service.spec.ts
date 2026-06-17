@@ -8,6 +8,7 @@ import {
 import { AuthService } from './auth.service';
 import { AUTH_REPOSITORY } from '../../domain/interfaces/auth.repository.interface';
 import { EmailService } from '../../../email/email.service';
+import { RedisService } from '../../../common/redis/redis.service';
 import { createMockUser, createMockIpLockout } from '../../../test/mocks';
 import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
@@ -23,10 +24,14 @@ describe('AuthService', () => {
   let mockAuthRepository: any;
   let mockJwtService: any;
   let mockEmailService: any;
+  let mockRedisService: any;
 
   beforeEach(async () => {
     // Reset bcrypt mock before each test
     (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
+    // Set required environment variable for AuthService
+    process.env.PIN_PEPPER_SECRET = 'test-pepper-secret-for-testing';
 
     // Create mock implementations for all repository methods
     mockAuthRepository = {
@@ -54,12 +59,19 @@ describe('AuthService', () => {
       sendAlert: jest.fn().mockResolvedValue(undefined),
     };
 
+    mockRedisService = {
+      get: jest.fn(),
+      set: jest.fn(),
+      del: jest.fn(),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthService,
         { provide: AUTH_REPOSITORY, useValue: mockAuthRepository },
         { provide: JwtService, useValue: mockJwtService },
         { provide: EmailService, useValue: mockEmailService },
+        { provide: RedisService, useValue: mockRedisService },
       ],
     }).compile();
 
