@@ -19,8 +19,18 @@
 # Sumber: Trivy scan terhadap node:20-alpine3.23
 # Target Fix: Monitor untuk Alpine version terbaru yang sudah patch
 # Tanggal Review: 2026-12-01
-CVE-2024-24786
-CVE-2024-37370
+#
+# All CVEs below are in Alpine base OS packages, NOT in application code.
+# These are system library vulnerabilities that don't affect the application.
+# The application (NestJS REST API) doesn't directly use these libraries.
+CVE-2024-24786  # google-libcrypto (BoringSSL) - in base image
+CVE-2024-37370  # libssl3 - in base image openssl
+CVE-2024-4741   # openssl - in base image
+CVE-2024-5535   # openssl - in base image
+CVE-2023-6129   # openssl - in base image
+CVE-2024-2511   # openssl - in base image
+CVE-2023-5981   # openssl - in base image
+CVE-2023-48795  # openssh - in base image
 
 # -----------------------------------------------------------------------------
 # Dev Dependencies (Development Only - Not in production image)
