@@ -11,10 +11,10 @@ ENV NODE_OPTIONS="--max-old-space-size=512"
 ENV PRISMA_SKIP_POSTINSTALL_GENERATE=1
 ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
 
-# CI/CD: Install curl + OpenSSL 1.1 (required by Prisma CLI binary detection)
-# libssl1.1 from v3.18 community repo (Alpine 3.19 removed it from main)
-RUN echo 'http://dl-cdn.alpinelinux.org/alpine/v3.18/community' >> /etc/apk/repositories && \
-    apk add --no-cache curl libssl1.1
+# CI/CD: Install curl for healthchecks and debugging
+# OpenSSL 3.x is already included in Alpine base image (node:20-alpine)
+# Prisma 5.22 with linux-musl-openssl-3.0.x target uses OpenSSL 3.x
+RUN apk add --no-cache curl
 
 WORKDIR /app
 
@@ -43,10 +43,9 @@ FROM mirror.gcr.io/library/node:20-alpine AS production
 ENV NODE_ENV=production
 WORKDIR /app
 
-# KRITIS-01: Install curl and OpenSSL 1.1 (required by Prisma query engine for linux-musl binary)
-# libssl1.1 from v3.18 community repo (Alpine 3.19 removed it from main)
-RUN echo 'http://dl-cdn.alpinelinux.org/alpine/v3.18/community' >> /etc/apk/repositories && \
-    apk add --no-cache curl libssl1.1
+# OpenSSL 3.x is already included in Alpine base image (node:20-alpine)
+# Prisma 5.22 with linux-musl-openssl-3.0.x target uses OpenSSL 3.x
+RUN apk add --no-cache curl
 
 # Copy package files
 COPY package.json package-lock.json* ./
