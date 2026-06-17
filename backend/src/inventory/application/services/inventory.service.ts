@@ -226,7 +226,10 @@ export class InventoryService {
       // Restore stock for each raw material
       for (const [rawMaterialId, qty] of Object.entries(restorations)) {
         // Find the stock movement that deducted this quantity
-        const stockMovement = await repo.findStockMovementByOrderId(orderId, rawMaterialId);
+        const stockMovement = await repo.findStockMovementByOrderId(
+          orderId,
+          rawMaterialId,
+        );
 
         if (stockMovement) {
           // Restore from the original stock movement reference

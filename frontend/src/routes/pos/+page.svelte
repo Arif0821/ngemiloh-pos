@@ -22,7 +22,7 @@
 	// Save cart to Dexie whenever cart changes (after initial load)
 	$effect(() => {
 		// Only save after we've loaded from Dexie and user has cart data
-		if (cart_initialized && pos_store.cart.length >= 0) {
+		if (cart_initialized && pos_store.cart.length > 0) {
 			db.cart.put({ id: 'current_cart', items: [...pos_store.cart] }).catch((e) => {
 				console.error('Failed to save cart to Dexie:', e);
 			});

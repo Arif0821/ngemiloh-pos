@@ -130,7 +130,7 @@ export class OrdersService {
       hash *= 16777619n; // FNV prime
     }
     // Ensure positive and within PostgreSQL bigint range
-    return (hash & 0x7FFFFFFFFFFFFFFFn);
+    return hash & 0x7fffffffffffffffn;
   }
 
   async createOrder(data: CreateOrderDto, kasirId: string) {

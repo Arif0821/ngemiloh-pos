@@ -96,8 +96,8 @@
 			if (res.ok) {
 				fetchData();
 			}
-		} catch {
-			console.error(e);
+		} catch (err) {
+			console.error(err);
 		}
 	}
 </script>

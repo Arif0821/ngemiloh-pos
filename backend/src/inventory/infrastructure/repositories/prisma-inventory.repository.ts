@@ -230,9 +230,9 @@ export class PrismaInventoryRepository implements IInventoryRepository {
   ): Promise<StockMovement | null> {
     return this.client.stockMovement.findFirst({
       where: {
-        reference_id: orderId,
+        reference_order_id: orderId,
         raw_material_id: rawMaterialId,
-        transaction_type: 'out',
+        type: 'out',
       },
       orderBy: { created_at: 'desc' },
     });

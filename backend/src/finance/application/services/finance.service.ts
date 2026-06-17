@@ -190,7 +190,23 @@ export class FinanceService {
           end,
         );
 
-      // Aggregate sales + orders per cashier across their closed shifts in this period
+      // F19 FIX: Batch fetch all orders to avoid N+1
+      const cashierIds = [...new Set(closedShifts.map((s) => s.cashier_id))];
+      const allOrders = await this.financeRepository.findOrders({
+        cashier_id: { in: cashierIds },
+        status: { not: 'voided' },
+        created_at: { gte: start, lte: end },
+      });
+
+      // Group orders by cashier_id
+      const ordersByCashier = new Map<string, typeof allOrders>();
+      for (const order of allOrders) {
+        const existing = ordersByCashier.get(order.cashier_id) || [];
+        existing.push(order);
+        ordersByCashier.set(order.cashier_id, existing);
+      }
+
+      // Aggregate sales + orders per cashier from pre-fetched data
       const cashierMap = new Map<
         string,
         {
@@ -203,13 +219,8 @@ export class FinanceService {
       >();
 
       for (const shift of closedShifts) {
-        const { cashier } = shift;
-        const shiftEnd = shift.shift_end || end;
-        const orders = await this.financeRepository.findOrders({
-          cashier_id: cashier.id,
-          status: { not: 'voided' },
-          created_at: { gte: shift.shift_start, lte: shiftEnd },
-        });
+        const cashierId = shift.cashier_id;
+        const orders = ordersByCashier.get(cashierId) || [];
         const sales = orders.reduce((s, o) => s + Number(o.total_amount), 0);
 
         const existing = cashierMap.get(cashier.id);
@@ -545,12 +556,12 @@ export class FinanceService {
     if (existing)
       throw new BadRequestException('Kasir masih memiliki shift aktif.');
 
-    // Calculate shift_number: count closed shifts for this cashier + 1
+    // Count closed shifts in single query
     const closedShifts = await this.financeRepository.findManyCashRegisters({
       cashier_id: cashierId,
+      status: 'closed',
     });
-    const shiftNumber =
-      closedShifts.filter((s) => s.status === 'closed').length + 1;
+    const shiftNumber = closedShifts.length + 1;
 
     // Default planned_close_at: 04:00 WIB next day (or next 04:00 if before 04:00)
     let plannedClose: Date;
