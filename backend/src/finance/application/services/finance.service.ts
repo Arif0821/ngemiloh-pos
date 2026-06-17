@@ -152,6 +152,10 @@ export class FinanceService {
 
     const periodMonth = new Date(year, month - 1, 1);
 
+    // F19: Define period boundaries for cashier aggregation
+    const start = new Date(year, month - 1, 1);
+    const end = new Date(year, month, 0, 23, 59, 59, 999);
+
     const existing =
       await this.financeRepository.findProfitShareLogByPeriod(periodMonth);
 
@@ -170,6 +174,93 @@ export class FinanceService {
       cashier_share: share.cashierShare,
       is_hpp_actual: true,
     });
+
+    // F19: Build per-cashier ProfitShareDetail breakdown
+    if (share.netProfit > 0) {
+      const closedShifts = await this.financeRepository.findClosedCashRegistersForPeriod(start, end);
+
+      // Aggregate sales + orders per cashier across their closed shifts in this period
+      const cashierMap = new Map<string, {
+        cashierId: string;
+        cashierName: string;
+        totalSales: number;
+        totalOrders: number;
+        shiftCount: number;
+      }>();
+
+      for (const shift of closedShifts) {
+        const { cashier } = shift;
+        const shiftEnd = shift.shift_end || end;
+        const orders = await this.financeRepository.findOrders({
+          cashier_id: cashier.id,
+          status: { not: 'voided' },
+          created_at: { gte: shift.shift_start, lte: shiftEnd },
+        });
+        const sales = orders.reduce((s, o) => s + Number(o.total_amount), 0);
+
+        const existing = cashierMap.get(cashier.id);
+        if (existing) {
+          existing.totalSales += sales;
+          existing.totalOrders += orders.length;
+          existing.shiftCount += 1;
+        } else {
+          cashierMap.set(cashier.id, {
+            cashierId: cashier.id,
+            cashierName: cashier.name,
+            totalSales: sales,
+            totalOrders: orders.length,
+            shiftCount: 1,
+          });
+        }
+      }
+
+      if (cashierMap.size > 0) {
+        // Calculate proportional share per cashier
+        // Proportional: (cashier_sales / total_revenue) * cashier_share
+        // If revenue is 0 (edge case), fall back to equal split
+        const details: Array<{
+          profit_share_log_id: string;
+          cashier_id: string;
+          cashier_name: string;
+          total_sales: number;
+          total_orders: number;
+          shift_count: number;
+          share_amount: number;
+        }> = [];
+
+        for (const [, data] of cashierMap) {
+          let shareAmount: number;
+          if (share.revenue > 0) {
+            shareAmount = (data.totalSales / share.revenue) * share.cashierShare;
+          } else {
+            shareAmount = share.cashierShare / cashierMap.size;
+          }
+          details.push({
+            profit_share_log_id: log.id,
+            cashier_id: data.cashierId,
+            cashier_name: data.cashierName,
+            total_sales: Math.round(data.totalSales),
+            total_orders: data.totalOrders,
+            shift_count: data.shiftCount,
+            share_amount: Math.round(shareAmount),
+          });
+        }
+
+        // Sum-equals check: accumulate rounding error on the first record
+        const sumOfShares = details.reduce((s, d) => s + d.share_amount, 0);
+        const diff = Math.round(share.cashierShare) - sumOfShares;
+        if (diff !== 0 && details.length > 0) {
+          details[0].share_amount += diff;
+        }
+
+        const verifiedSum = details.reduce((s, d) => s + d.share_amount, 0);
+        this.logger.debug(
+          `[F19] ProfitShareDetail verification: sum=${verifiedSum} vs cashier_share=${Math.round(share.cashierShare)}`,
+        );
+
+        await this.financeRepository.createManyProfitShareDetails(details);
+      }
+    }
 
     if (share.netProfit <= 0) {
       this.logger.warn(

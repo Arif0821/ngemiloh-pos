@@ -505,12 +505,15 @@ export class OrdersService {
     kasirId: string,
     products: ProductWithModifiers[],
   ): Promise<Order | null> {
-    const existingOrder = await this.orderRepository.findOrderByClientUuid(
-      data.client_uuid,
-    );
+    // F16: Use SELECT FOR UPDATE for idempotency to prevent race conditions
+    // If two requests with same client_uuid arrive simultaneously, the FOR UPDATE lock
+    // ensures only one passes the existence check. The other gets the existing order.
+    const existingOrder = await this.prisma.$queryRaw<
+      Array<{ id: string; client_uuid: string }>
+    >`SELECT id, "client_uuid" FROM "Order" WHERE "client_uuid" = ${data.client_uuid} FOR UPDATE`;
 
-    if (existingOrder) {
-      return existingOrder;
+    if (existingOrder.length > 0) {
+      return this.orderRepository.findOrderByClientUuid(data.client_uuid);
     }
 
     // Generate order number using cashier's letter

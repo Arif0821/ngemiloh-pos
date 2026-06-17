@@ -92,4 +92,29 @@ export class PrismaFinanceRepository implements IFinanceRepository {
   ) {
     return this.prisma.cashRegister.findMany({ where, orderBy, include });
   }
+
+  async createProfitShareDetail(
+    data: Prisma.ProfitShareDetailUncheckedCreateInput,
+  ) {
+    return this.prisma.profitShareDetail.create({ data });
+  }
+
+  async createManyProfitShareDetails(
+    data: Prisma.ProfitShareDetailUncheckedCreateInput[],
+  ) {
+    // F19: Use createManyAndReturn for PostgreSQL to get created records with IDs
+    return this.prisma.profitShareDetail.createManyAndReturn({ data }) as any;
+  }
+
+  async findClosedCashRegistersForPeriod(start: Date, end: Date) {
+    return this.prisma.cashRegister.findMany({
+      where: {
+        status: 'closed',
+        shift_start: { gte: start, lte: end },
+      },
+      include: {
+        cashier: { select: { id: true, name: true } },
+      },
+    });
+  }
 }

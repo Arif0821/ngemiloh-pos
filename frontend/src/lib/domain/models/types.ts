@@ -272,7 +272,7 @@ export interface LocalOrder {
 
 export interface LocalCartItem {
 	id: string;
-	items: unknown[];
+	items: CartItem[];
 }
 
 // ============================================

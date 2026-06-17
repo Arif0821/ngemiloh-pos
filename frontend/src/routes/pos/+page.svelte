@@ -11,6 +11,7 @@
 
 	// Track interval references for cleanup
 	let flag_interval: ReturnType<typeof setInterval> | undefined;
+	let shift_interval: ReturnType<typeof setInterval> | undefined;
 	let handle_online: (() => void) | undefined;
 	let handle_offline: (() => void) | undefined;
 
@@ -33,6 +34,11 @@
 		if (flag_interval) {
 			clearInterval(flag_interval);
 			flag_interval = undefined;
+		}
+		// Clear shift polling interval
+		if (shift_interval) {
+			clearInterval(shift_interval);
+			shift_interval = undefined;
 		}
 		// Remove event listeners
 		if (handle_online) {
@@ -71,6 +77,7 @@
 			pos_service.fetch_flags();
 			flag_interval = setInterval(() => pos_service.fetch_flags(), FLAG_REFRESH_INTERVAL_MS);
 			await pos_service.check_shift();
+			shift_interval = setInterval(() => pos_service.check_shift(), FLAG_REFRESH_INTERVAL_MS);
 			await pos_service.fetch_products_from_api();
 			await pos_service.fetch_discounts();
 			await pos_service.sync_pending_orders();

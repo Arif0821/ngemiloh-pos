@@ -4,6 +4,7 @@ import {
   OperationalExpense,
   Asset,
   ProfitShareLog,
+  ProfitShareDetail,
   AuditLog,
   CashRegister,
 } from '@prisma/client';
@@ -57,4 +58,20 @@ export interface IFinanceRepository {
     orderBy?: Prisma.CashRegisterOrderByWithRelationInput,
     include?: Prisma.CashRegisterInclude,
   ): Promise<CashRegister[]>;
+  createProfitShareDetail(
+    data: Prisma.ProfitShareDetailUncheckedCreateInput,
+  ): Promise<ProfitShareDetail>;
+  createManyProfitShareDetails(
+    data: Prisma.ProfitShareDetailUncheckedCreateInput[],
+  ): Promise<Prisma.BatchPayload>;
+  findClosedCashRegistersForPeriod(
+    start: Date,
+    end: Date,
+  ): Promise<
+    Array<
+      CashRegister & {
+        cashier: { id: string; name: string };
+      }
+    >
+  >;
 }
