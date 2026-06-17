@@ -37,7 +37,9 @@ export class AuthService {
   ) {
     const configuredPepper = process.env.PIN_PEPPER_SECRET;
     if (!configuredPepper) {
-      throw new Error('FATAL: PIN_PEPPER_SECRET environment variable is required');
+      throw new Error(
+        'FATAL: PIN_PEPPER_SECRET environment variable is required',
+      );
     }
     this.pepper = configuredPepper;
   }
@@ -217,8 +219,7 @@ export class AuthService {
     if (!user || user.role !== 'superadmin') {
       throw new UnauthorizedException('Invalid credentials');
     }
-    if (!user.is_active)
-      throw new UnauthorizedException('Account is inactive');
+    if (!user.is_active) throw new UnauthorizedException('Account is inactive');
     if (user.locked_until && user.locked_until > new Date()) {
       throw new HttpException(
         'Account temporarily locked.',
@@ -247,16 +248,17 @@ export class AuthService {
 
     const isValid = await bcrypt.compare(password, user.password_hash || '');
     if (!isValid) {
-      await this.authRepository.incrementUserFailedLogin(user.id);
-      await this.authRepository.incrementIpLockout(ipAddress);
-      const updatedUser = await this.authRepository.incrementUserFailedLogin(user.id);
+      // FIX: Only increment once, not twice
+      const updatedUser = await this.authRepository.incrementUserFailedLogin(
+        user.id,
+      );
+      const updatedIp = await this.authRepository.incrementIpLockout(ipAddress);
       if (updatedUser.failed_login_count >= LOCKOUT_THRESHOLD) {
         await this.authRepository.lockUser(
           user.id,
           new Date(Date.now() + LOCKOUT_DURATION_MS),
         );
       }
-      const updatedIp = await this.authRepository.incrementIpLockout(ipAddress);
       if (updatedIp.failed_count >= LOCKOUT_THRESHOLD) {
         await this.authRepository.lockIpAddress(
           ipAddress,
@@ -271,6 +273,11 @@ export class AuthService {
     return { userId: user.id, email: user.email, name: user.name };
   }
 
+  // FIX H8/H9/H10: Add rate limiting, audit logging, and improved OTP security
+  private readonly OTP_REQUEST_COOLDOWN_MS = 60000; // 1 minute between OTP requests
+  private readonly OTP_MAX_ATTEMPTS = 3; // Max failed verifications before lockout
+  private readonly OTP_LOCKOUT_MS = 300000; // 5 minute lockout after max attempts
+
   async sendOtp(email: string): Promise<void> {
     const user = await this.authRepository.findUserByUsernameOrEmail(
       email.toLowerCase(),
@@ -278,7 +285,26 @@ export class AuthService {
     if (!user || user.role !== 'superadmin')
       throw new UnauthorizedException('Admin not found');
 
-    const otpCode = crypto.randomInt(10000000, 99999999).toString();
+    // FIX H8: Check for rate limiting on OTP requests
+    const rateLimitKey = `otp:ratelimit:${email.toLowerCase()}`;
+    const lastRequest = await this.redisService.get(rateLimitKey);
+    if (lastRequest) {
+      const elapsed = Date.now() - parseInt(lastRequest, 10);
+      if (elapsed < this.OTP_REQUEST_COOLDOWN_MS) {
+        const remaining = Math.ceil(
+          (this.OTP_REQUEST_COOLDOWN_MS - elapsed) / 1000,
+        );
+        throw new BadRequestException(
+          `Please wait ${remaining} seconds before requesting another OTP.`,
+        );
+      }
+    }
+
+    // FIX H10: Audit log OTP request
+    this.logger.log(`OTP requested for admin: ${user.email}`);
+
+    // FIX H9: Use 6-digit OTP instead of 8-digit (standard practice, reduces brute-force space)
+    const otpCode = crypto.randomInt(100000, 999999).toString();
     const otpHash = await bcrypt.hash(otpCode, 10);
 
     await this.redisService.set(
@@ -291,6 +317,8 @@ export class AuthService {
       user.id,
       600,
     );
+    // Set rate limit for OTP requests
+    await this.redisService.set(rateLimitKey, Date.now().toString(), 60);
 
     // Call EmailService.sendOtp (different method name to avoid confusion)
     await this.emailService.sendOtp(user.email || email, otpCode);
@@ -304,6 +332,20 @@ export class AuthService {
     );
     if (!userId)
       throw new BadRequestException('No pending OTP. Please login again.');
+
+    // FIX H9: Check for OTP lockout
+    const lockoutKey = `otp:lockout:${email.toLowerCase()}`;
+    const lockoutUntil = await this.redisService.get(lockoutKey);
+    if (lockoutUntil) {
+      const remaining = Math.ceil(
+        (parseInt(lockoutUntil, 10) - Date.now()) / 1000,
+      );
+      if (remaining > 0) {
+        throw new UnauthorizedException(
+          `Too many failed attempts. Please try again in ${remaining} seconds.`,
+        );
+      }
+    }
 
     const otpDataStr = await this.redisService.get(`otp:admin:${userId}`);
     if (!otpDataStr)
@@ -319,23 +361,41 @@ export class AuthService {
     const isValid = await bcrypt.compare(otpCode, otpData.code_hash);
     if (!isValid) {
       otpData.attempts += 1;
-      if (otpData.attempts >= 5) {
+
+      // FIX H9: Lockout after max failed attempts
+      if (otpData.attempts >= this.OTP_MAX_ATTEMPTS) {
+        const lockoutExpiry = Date.now() + this.OTP_LOCKOUT_MS;
+        await this.redisService.set(lockoutKey, lockoutExpiry.toString(), 300);
         await this.redisService.del(`otp:admin:${userId}`);
         await this.redisService.del(`otp:email:${email.toLowerCase()}`);
+        this.logger.warn(`OTP lockout triggered for: ${email}`);
         throw new UnauthorizedException(
-          'Too many OTP attempts. Please login again.',
+          'Too many failed attempts. Please request a new OTP.',
         );
       }
+
       await this.redisService.set(
         `otp:admin:${userId}`,
         JSON.stringify(otpData),
         600,
       );
-      throw new UnauthorizedException('Invalid OTP code');
+
+      // FIX H10: Audit log failed OTP attempt
+      this.logger.warn(
+        `Failed OTP attempt ${otpData.attempts}/${this.OTP_MAX_ATTEMPTS} for: ${email}`,
+      );
+
+      throw new UnauthorizedException(
+        `Invalid OTP code. ${this.OTP_MAX_ATTEMPTS - otpData.attempts} attempts remaining.`,
+      );
     }
 
     await this.redisService.del(`otp:admin:${userId}`);
     await this.redisService.del(`otp:email:${email.toLowerCase()}`);
+    await this.redisService.del(lockoutKey);
+
+    // FIX H10: Audit log successful OTP verification
+    this.logger.log(`OTP verified successfully for admin: ${email}`);
 
     const user = await this.authRepository.findUserById(userId);
     if (!user) throw new UnauthorizedException('User not found');
@@ -374,10 +434,8 @@ export class AuthService {
 
       // Store the JWT's jti claim as the revocation key so validate()
       // can efficiently look it up by jti instead of re-hashing the token.
-      const jti = payload.jti ?? crypto
-          .createHash('sha256')
-          .update(token)
-          .digest('hex');
+      const jti =
+        payload.jti ?? crypto.createHash('sha256').update(token).digest('hex');
       await this.authRepository.revokeToken(jti, payload.sub, expiresAt);
     } catch {
       // Ignore invalid token during logout
@@ -392,8 +450,7 @@ export class AuthService {
 
     if (!user.pin_hash) throw new BadRequestException('PIN not set');
     const isValid = await this.verifyPin(currentPin, user.pin_hash);
-    if (!isValid)
-      throw new UnauthorizedException('Current PIN incorrect');
+    if (!isValid) throw new UnauthorizedException('Current PIN incorrect');
 
     const newPinHash = await this.hashPin(newPin);
 

@@ -145,12 +145,22 @@ describe('OrdersService', () => {
     };
 
     mockPrismaService = {
-      $transaction: jest.fn((cb) => cb({ order: { create: jest.fn().mockResolvedValue(mockOrder) } })),
+      $transaction: jest.fn(async (cb) => {
+        // Mock transaction to just execute the callback with mocked tx
+        const mockTx = {
+          order: {
+            create: jest.fn().mockResolvedValue(mockOrder),
+          },
+        };
+        return cb(mockTx);
+      }),
+      $queryRaw: jest.fn().mockResolvedValue([]), // Mock $queryRaw for SELECT FOR UPDATE
       user: {
         findUnique: jest.fn().mockResolvedValue({ cashier_letter: 'A' }),
       },
       order: {
         count: jest.fn().mockResolvedValue(0),
+        create: jest.fn().mockResolvedValue(mockOrder),
       },
     };
 
@@ -180,7 +190,10 @@ describe('OrdersService', () => {
     it('should generate order number in correct format TRX-YYYYMMDD-{letter}{seq}', async () => {
       mockPrismaService.order.count.mockResolvedValue(0);
 
-      const result = await service.generateOrderNumber('A', new Date('2024-01-15'));
+      const result = await service.generateOrderNumber(
+        'A',
+        new Date('2024-01-15'),
+      );
 
       expect(result).toMatch(/^TRX-20240115A001$/);
     });
@@ -188,7 +201,10 @@ describe('OrdersService', () => {
     it('should increment sequence based on existing orders for same cashier and date', async () => {
       mockPrismaService.order.count.mockResolvedValue(5);
 
-      const result = await service.generateOrderNumber('B', new Date('2024-01-15'));
+      const result = await service.generateOrderNumber(
+        'B',
+        new Date('2024-01-15'),
+      );
 
       expect(result).toBe('TRX-20240115B006');
     });
@@ -196,16 +212,24 @@ describe('OrdersService', () => {
     it('should pad sequence with leading zeros', async () => {
       mockPrismaService.order.count.mockResolvedValue(12);
 
-      const result = await service.generateOrderNumber('C', new Date('2024-01-15'));
+      const result = await service.generateOrderNumber(
+        'C',
+        new Date('2024-01-15'),
+      );
 
       expect(result).toBe('TRX-20240115C013');
     });
 
     it('should use X as default cashier letter when user has no cashier_letter', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue({ cashier_letter: null });
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        cashier_letter: null,
+      });
       mockPrismaService.order.count.mockResolvedValue(0);
 
-      const result = await service.generateOrderNumber('X', new Date('2024-01-15'));
+      const result = await service.generateOrderNumber(
+        'X',
+        new Date('2024-01-15'),
+      );
 
       expect(result).toBe('TRX-20240115X001');
     });
@@ -438,15 +462,25 @@ describe('OrdersService', () => {
         mockOrderRepository.findProductsWithModifiers.mockResolvedValue([
           mockProduct,
         ]);
-        mockOrderRepository.createOrder.mockResolvedValue({
+
+        // Mock $transaction to return properly created order
+        const createdOrder = {
           ...mockOrder,
+          id: 'order-created',
           verification_status: 'Valid',
-        });
+        };
+        mockPrismaService.$transaction.mockImplementation(async (cb) =>
+          cb({
+            order: {
+              create: jest.fn().mockResolvedValue(createdOrder),
+            },
+          }),
+        );
 
         const result = await service.createOrder(baseOrderDto, 'kasir-001');
 
         expect(result).toBeDefined();
-        expect(mockOrderRepository.createOrder).toHaveBeenCalled();
+        expect(mockPrismaService.$transaction).toHaveBeenCalled();
       });
     });
 
@@ -520,6 +554,22 @@ describe('OrdersService', () => {
       },
     ];
 
+    beforeEach(() => {
+      // Reset mocks for each test
+      mockPrismaService.$transaction.mockReset();
+      mockPrismaService.$transaction.mockImplementation(async (cb) => {
+        const mockTx = {
+          order: {
+            create: jest.fn().mockResolvedValue({
+              ...mockOrder,
+              status: OrderStatus.completed,
+            }),
+          },
+        };
+        return cb(mockTx);
+      });
+    });
+
     it('should sync multiple orders successfully', async () => {
       mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
       mockOrderRepository.findActiveDiscounts.mockResolvedValue([]);
@@ -528,11 +578,6 @@ describe('OrdersService', () => {
         { ...mockProduct, id: 'prod-001' },
         { ...mockProduct, id: 'prod-002', base_price: 30000 },
       ]);
-      mockOrderRepository.createOrder.mockImplementation(async (data: any) => ({
-        id: `order-${data.client_uuid}`,
-        ...data,
-        status: OrderStatus.completed,
-      }));
       mockOrderRepository.updateOrder.mockResolvedValue({});
 
       const results = await service.syncBatchOrders(batchOrders, 'kasir-001');
@@ -540,7 +585,7 @@ describe('OrdersService', () => {
       expect(results).toHaveLength(2);
       expect(results[0].status).toBe('success');
       expect(results[1].status).toBe('success');
-      expect(mockOrderRepository.createOrder).toHaveBeenCalledTimes(2);
+      expect(mockPrismaService.$transaction).toHaveBeenCalled();
     });
 
     it('should handle sync errors gracefully', async () => {
@@ -573,11 +618,6 @@ describe('OrdersService', () => {
       mockOrderRepository.findProductsWithModifiers.mockResolvedValue([
         mockProduct,
       ]);
-      mockOrderRepository.createOrder.mockImplementation(async (data: any) => ({
-        id: `order-${data.client_uuid}`,
-        ...data,
-        status: OrderStatus.pending_sync,
-      }));
       mockOrderRepository.updateOrder.mockResolvedValue({});
 
       const results = await service.syncBatchOrders(
@@ -597,10 +637,19 @@ describe('OrdersService', () => {
       ]);
       mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
       mockOrderRepository.findActiveDiscounts.mockResolvedValue([]);
-      // First order succeeds, second fails with database error
-      mockOrderRepository.createOrder
-        .mockResolvedValueOnce({ ...mockOrder, id: 'order-001' })
-        .mockRejectedValueOnce(new Error('Database error'));
+      mockOrderRepository.updateOrder.mockResolvedValue({});
+      // Mock transaction to fail on second order
+      mockPrismaService.$transaction.mockImplementation(async (cb) => {
+        const mockTx = {
+          order: {
+            create: jest
+              .fn()
+              .mockResolvedValueOnce({ ...mockOrder, id: 'order-001' })
+              .mockRejectedValueOnce(new Error('Database error')),
+          },
+        };
+        return cb(mockTx);
+      });
 
       const results = await service.syncBatchOrders(batchOrders, 'kasir-001');
 

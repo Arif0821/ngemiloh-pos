@@ -10,7 +10,6 @@ import { AUTH_REPOSITORY } from './domain/interfaces/auth.repository.interface';
 import { JwtAuthGuard } from './guards/jwt-auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { RedisModule } from '../common/redis/redis.module';
-import { EmailModule } from '../email/email.module';
 
 @Module({
   imports: [

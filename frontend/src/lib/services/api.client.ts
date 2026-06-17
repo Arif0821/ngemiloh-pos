@@ -3,9 +3,16 @@
 // Using snake_case naming convention
 // ============================================
 
+// SECURITY FIX: Use VITE_ prefix for environment variables (Vite requirement)
+// Fallback to localhost for development, MUST be set in production via VITE_API_URL
 const BASE_URL =
 	(typeof import.meta !== 'undefined' && import.meta.env?.VITE_API_URL) ||
-	'https://103-150-227-117.nip.io';
+	(typeof import.meta !== 'undefined' && import.meta.env?.DEV && 'http://localhost:3000') ||
+	'';
+
+if (!BASE_URL) {
+	console.error('[ApiClient] FATAL: VITE_API_URL environment variable is not set');
+}
 const REQUEST_TIMEOUT_MS = 30000; // 30 seconds
 
 /**

@@ -44,7 +44,14 @@ export class FinanceService {
       0,
     );
     const laba = revenue - hpp;
-    const targetProgress = Math.min(100, Math.round((revenue / 5000000) * 100));
+    // FIX: Use environment variable instead of hardcoded target
+    const dailyRevenueTarget = Number(
+      process.env.DAILY_REVENUE_TARGET || 5000000,
+    );
+    const targetProgress = Math.min(
+      100,
+      Math.round((revenue / dailyRevenueTarget) * 100),
+    );
 
     const transactions = orders.length;
     const avg = transactions > 0 ? revenue / transactions : 0;
@@ -177,16 +184,23 @@ export class FinanceService {
 
     // F19: Build per-cashier ProfitShareDetail breakdown
     if (share.netProfit > 0) {
-      const closedShifts = await this.financeRepository.findClosedCashRegistersForPeriod(start, end);
+      const closedShifts =
+        await this.financeRepository.findClosedCashRegistersForPeriod(
+          start,
+          end,
+        );
 
       // Aggregate sales + orders per cashier across their closed shifts in this period
-      const cashierMap = new Map<string, {
-        cashierId: string;
-        cashierName: string;
-        totalSales: number;
-        totalOrders: number;
-        shiftCount: number;
-      }>();
+      const cashierMap = new Map<
+        string,
+        {
+          cashierId: string;
+          cashierName: string;
+          totalSales: number;
+          totalOrders: number;
+          shiftCount: number;
+        }
+      >();
 
       for (const shift of closedShifts) {
         const { cashier } = shift;
@@ -231,7 +245,8 @@ export class FinanceService {
         for (const [, data] of cashierMap) {
           let shareAmount: number;
           if (share.revenue > 0) {
-            shareAmount = (data.totalSales / share.revenue) * share.cashierShare;
+            shareAmount =
+              (data.totalSales / share.revenue) * share.cashierShare;
           } else {
             shareAmount = share.cashierShare / cashierMap.size;
           }
@@ -531,12 +546,11 @@ export class FinanceService {
       throw new BadRequestException('Kasir masih memiliki shift aktif.');
 
     // Calculate shift_number: count closed shifts for this cashier + 1
-    const closedShifts = await this.financeRepository.findManyCashRegisters(
-      { cashier_id: cashierId },
-    );
-    const shiftNumber = closedShifts.filter(
-      (s) => s.status === 'closed',
-    ).length + 1;
+    const closedShifts = await this.financeRepository.findManyCashRegisters({
+      cashier_id: cashierId,
+    });
+    const shiftNumber =
+      closedShifts.filter((s) => s.status === 'closed').length + 1;
 
     // Default planned_close_at: 04:00 WIB next day (or next 04:00 if before 04:00)
     let plannedClose: Date;
@@ -568,6 +582,14 @@ export class FinanceService {
     notes?: string,
     isAutoClosed = false,
   ) {
+    // FIX: Validate actualCash is a valid number and non-negative
+    if (typeof actualCash !== 'number' || isNaN(actualCash)) {
+      throw new BadRequestException('Actual cash must be a valid number');
+    }
+    if (actualCash < 0) {
+      throw new BadRequestException('Actual cash cannot be negative');
+    }
+
     const shift = await this.financeRepository.findFirstCashRegister(
       { cashier_id: cashierId, status: 'open' },
       { shift_start: 'desc' },

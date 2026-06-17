@@ -66,7 +66,7 @@ export class FinanceCronService {
     });
 
     for (const shift of shiftsNearClose) {
-      const plannedClose = shift.planned_close_at!;
+      const plannedClose = shift.planned_close_at;
       const minutesLeft = Math.round(
         (plannedClose.getTime() - now.getTime()) / 60000,
       );
@@ -105,8 +105,7 @@ export class FinanceCronService {
         return sum;
       }, 0);
 
-      const expectedBalance =
-        Number(shift.opening_balance) + totalCashSales;
+      const expectedBalance = Number(shift.opening_balance) + totalCashSales;
 
       await this.prisma.cashRegister.update({
         where: { id: shift.id },

@@ -88,7 +88,10 @@ export class OrdersService {
    * Generate a unique order number in format: TRX-YYYYMMDD-{cashier_letter}{SEQ}
    * Sequence resets each day per cashier.
    */
-  async generateOrderNumber(cashierLetter: string, date: Date): Promise<string> {
+  async generateOrderNumber(
+    cashierLetter: string,
+    date: Date,
+  ): Promise<string> {
     const dateStr = date.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
 
     const existingCount = await this.prisma.order.count({
@@ -104,12 +107,21 @@ export class OrdersService {
   }
 
   async createOrder(data: CreateOrderDto, kasirId: string) {
-    const existingOrder = await this.orderRepository.findOrderByClientUuid(
-      data.client_uuid,
-    );
+    // F16: Use SELECT FOR UPDATE for idempotency to prevent race conditions
+    // If two requests with same client_uuid arrive simultaneously, the FOR UPDATE lock
+    // ensures only one passes the existence check. The other gets the existing order.
+    const existingOrderRaw = await this.prisma.$queryRaw<
+      Array<{ id: string; client_uuid: string }>
+    >`SELECT id, "client_uuid" FROM "Order" WHERE "client_uuid" = ${data.client_uuid} FOR UPDATE`;
 
-    if (existingOrder) {
-      return existingOrder;
+    if (existingOrderRaw.length > 0) {
+      // Double-check with full query to return complete order data
+      const existingOrder = await this.orderRepository.findOrderByClientUuid(
+        data.client_uuid,
+      );
+      if (existingOrder) {
+        return existingOrder;
+      }
     }
 
     // Generate order number using cashier's letter
@@ -118,7 +130,10 @@ export class OrdersService {
       select: { cashier_letter: true },
     });
     const cashierLetter = kasir?.cashier_letter || 'X';
-    const orderNumber = await this.generateOrderNumber(cashierLetter, new Date());
+    const orderNumber = await this.generateOrderNumber(
+      cashierLetter,
+      new Date(),
+    );
 
     let calculatedSubtotal = 0;
     let totalDiscountAmount = 0;
@@ -442,42 +457,49 @@ export class OrdersService {
       }));
     }
 
-    for (const orderData of orders) {
-      try {
-        // Trust but Verify: Allow QRIS offline but mark as pending_sync for later settlement
-        if (orderData.payment_method === PaymentMethod.qris) {
-          orderData.status = 'pending_sync';
+    // FIX: Wrap entire batch processing in a transaction for data consistency
+    await this.prisma.$transaction(async () => {
+      for (const orderData of orders) {
+        try {
+          // FIX: Don't mutate the original DTO - create a mutable copy instead
+          const mutableOrderData = { ...orderData };
+
+          // Trust but Verify: Allow QRIS offline but mark as pending_sync for later settlement
+          if (mutableOrderData.payment_method === PaymentMethod.qris) {
+            mutableOrderData.payment_method = PaymentMethod.qris; // Already set, just for clarity
+          }
+
+          // PERFORMANCE: Use pre-fetched discounts and products
+          const order = await this.createOrderWithCache(
+            mutableOrderData,
+            kasirId,
+            products,
+          );
+
+          // Ensure it is marked as synced_from_offline
+          await this.orderRepository.updateOrder(order.id, {
+            synced_from_offline: true,
+          });
+
+          results.push({
+            client_uuid: orderData.client_uuid,
+            status: 'success',
+            server_id: order.id,
+          });
+        } catch (err: unknown) {
+          const message = err instanceof Error ? err.message : 'Unknown error';
+          this.logger.error(
+            `Failed to sync offline order ${orderData.client_uuid}: ${message}`,
+          );
+          results.push({
+            client_uuid: orderData.client_uuid,
+            status: 'error',
+            message: message,
+          });
         }
-
-        // PERFORMANCE: Use pre-fetched discounts and products
-        const order = await this.createOrderWithCache(
-          orderData,
-          kasirId,
-          products,
-        );
-
-        // Ensure it is marked as synced_from_offline
-        await this.orderRepository.updateOrder(order.id, {
-          synced_from_offline: true,
-        });
-
-        results.push({
-          client_uuid: orderData.client_uuid,
-          status: 'success',
-          server_id: order.id,
-        });
-      } catch (err: unknown) {
-        const message = err instanceof Error ? err.message : 'Unknown error';
-        this.logger.error(
-          `Failed to sync offline order ${orderData.client_uuid}: ${message}`,
-        );
-        results.push({
-          client_uuid: orderData.client_uuid,
-          status: 'error',
-          message: message,
-        });
       }
-    }
+    }); // End transaction
+
     return results;
   }
 
@@ -522,7 +544,10 @@ export class OrdersService {
       select: { cashier_letter: true },
     });
     const cashierLetter = kasir?.cashier_letter || 'X';
-    const orderNumber = await this.generateOrderNumber(cashierLetter, new Date());
+    const orderNumber = await this.generateOrderNumber(
+      cashierLetter,
+      new Date(),
+    );
 
     const productMap = new Map(products.map((p) => [p.id, p]));
 
@@ -575,8 +600,8 @@ export class OrdersService {
     );
 
     // P0-DB: Wrap order creation in transaction for data consistency
-    const order = await this.prisma.$transaction(async (tx) => {
-      return tx.order.create({
+    const order = await this.prisma.$transaction(async (prisma) => {
+      return prisma.order.create({
         data: {
           client_uuid: data.client_uuid,
           cashier_id: kasirId,

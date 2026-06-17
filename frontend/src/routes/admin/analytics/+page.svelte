@@ -8,11 +8,11 @@
 	let analytics_data: AnalyticsResponse | null = $state(null);
 	let is_loading = $state(true);
 
-	let trend_canvas: HTMLCanvasElement;
-	let qty_canvas: HTMLCanvasElement;
-	let revenue_canvas: HTMLCanvasElement;
-	let payment_canvas: HTMLCanvasElement;
-	let peak_hours_canvas: HTMLCanvasElement;
+	let trend_canvas = $state<HTMLCanvasElement | null>(null);
+	let qty_canvas = $state<HTMLCanvasElement | null>(null);
+	let revenue_canvas = $state<HTMLCanvasElement | null>(null);
+	let payment_canvas = $state<HTMLCanvasElement | null>(null);
+	let peak_hours_canvas = $state<HTMLCanvasElement | null>(null);
 
 	let trend_chart: any;
 	let qty_chart: any;
@@ -61,70 +61,78 @@
 
 		// Top Qty
 		if (qty_chart) qty_chart.destroy();
-		qty_chart = new Chart(qty_canvas, {
-			type: 'bar',
-			data: {
-				labels: analytics_data.top_products.by_qty.map((t) => t.name),
-				datasets: [
-					{
-						label: 'Kuantitas',
-						data: analytics_data.top_products.by_qty.map((t) => t.qty),
-						backgroundColor: '#3b82f6'
-					}
-				]
-			}
-		});
+		if (qty_canvas) {
+			qty_chart = new Chart(qty_canvas, {
+				type: 'bar',
+				data: {
+					labels: analytics_data.top_products.by_qty.map((t) => t.name),
+					datasets: [
+						{
+							label: 'Kuantitas',
+							data: analytics_data.top_products.by_qty.map((t) => t.qty),
+							backgroundColor: '#3b82f6'
+						}
+					]
+				}
+			});
+		}
 
 		// Top Revenue
 		if (rev_chart) rev_chart.destroy();
-		rev_chart = new Chart(revenue_canvas, {
-			type: 'bar',
-			data: {
-				labels: analytics_data.top_products.by_revenue.map((t) => t.name),
-				datasets: [
-					{
-						label: 'Pendapatan',
-						data: analytics_data.top_products.by_revenue.map((t) => t.revenue),
-						backgroundColor: '#10b981'
-					}
-				]
-			}
-		});
+		if (revenue_canvas) {
+			rev_chart = new Chart(revenue_canvas, {
+				type: 'bar',
+				data: {
+					labels: analytics_data.top_products.by_revenue.map((t) => t.name),
+					datasets: [
+						{
+							label: 'Pendapatan',
+							data: analytics_data.top_products.by_revenue.map((t) => t.revenue),
+							backgroundColor: '#10b981'
+						}
+					]
+				}
+			});
+		}
 
 		// Payment Distribution
 		if (pay_chart) pay_chart.destroy();
-		pay_chart = new Chart(payment_canvas, {
-			type: 'pie',
-			data: {
-				labels: ['Tunai', 'QRIS', 'Split'],
-				datasets: [
-					{
-						data: [
-							analytics_data.payment_distribution.values.cash,
-							analytics_data.payment_distribution.values.qris,
-							analytics_data.payment_distribution.values.split
-						],
-						backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6']
-					}
-				]
-			}
-		});
+		if (payment_canvas) {
+			pay_chart = new Chart(payment_canvas, {
+				type: 'pie',
+				data: {
+					labels: ['Tunai', 'QRIS', 'Split'],
+					datasets: [
+						{
+							data: [
+								analytics_data.payment_distribution.values.cash,
+								analytics_data.payment_distribution.values.qris,
+								analytics_data.payment_distribution.values.split
+							],
+							backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6']
+						}
+					]
+				}
+			});
+		}
 
 		// Peak Hours
 		if (peak_chart) peak_chart.destroy();
-		peak_chart = new Chart(peak_hours_canvas, {
-			type: 'bar',
-			data: {
-				labels: analytics_data.peak_hours.map((t) => `${t.hour}:00`),
-				datasets: [
-					{
-						label: 'Jumlah Transaksi',
-						data: analytics_data.peak_hours.map((t) => t.count),
-						backgroundColor: '#f59e0b'
-					}
-				]
-			}
-		});
+		if (peak_hours_canvas) {
+			peak_chart = new Chart(peak_hours_canvas, {
+				type: 'bar',
+				data: {
+					labels: analytics_data.peak_hours.map((t) => `${t.hour}:00`),
+					datasets: [
+						{
+							label: 'Jumlah Transaksi',
+							data: analytics_data.peak_hours.map((t) => t.count),
+							backgroundColor: '#f59e0b'
+						}
+					]
+				}
+			});
+		}
 	}
 
 	// Track `period` to re-run when it changes (Svelte 5 auto-tracks reactive reads)

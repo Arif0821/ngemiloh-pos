@@ -273,10 +273,11 @@
 
 			<form onsubmit={saveAsset} class="space-y-4 p-6">
 				<div>
-					<label class="mb-1 block text-sm font-bold text-slate-700"
+					<label for="asset-name" class="mb-1 block text-sm font-bold text-slate-700"
 						>Nama Aset <span class="text-red-500">*</span></label
 					>
 					<input
+						id="asset-name"
 						type="text"
 						bind:value={formName}
 						required
@@ -287,10 +288,11 @@
 
 				<div class="grid grid-cols-2 gap-4">
 					<div>
-						<label class="mb-1 block text-sm font-bold text-slate-700"
+						<label for="asset-value" class="mb-1 block text-sm font-bold text-slate-700"
 							>Nilai Aset (Rp) <span class="text-red-500">*</span></label
 						>
 						<input
+							id="asset-value"
 							type="number"
 							min="0"
 							bind:value={formValue}
@@ -300,10 +302,11 @@
 						/>
 					</div>
 					<div>
-						<label class="mb-1 block text-sm font-bold text-slate-700"
+						<label for="asset-lifespan" class="mb-1 block text-sm font-bold text-slate-700"
 							>Umur Pakai (Bulan) <span class="text-red-500">*</span></label
 						>
 						<input
+							id="asset-lifespan"
 							type="number"
 							min="1"
 							bind:value={formLifespan}
@@ -315,10 +318,11 @@
 				</div>
 
 				<div>
-					<label class="mb-1 block text-sm font-bold text-slate-700"
+					<label for="asset-date" class="mb-1 block text-sm font-bold text-slate-700"
 						>Tanggal Beli <span class="text-red-500">*</span></label
 					>
 					<input
+						id="asset-date"
 						type="date"
 						bind:value={formPurchaseDate}
 						required

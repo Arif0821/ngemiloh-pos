@@ -15,10 +15,7 @@ import { setupSwagger } from './common/swagger/swagger.setup';
 
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
-  const requiredEnvVars = [
-    'JWT_ACCESS_SECRET',
-    'PIN_PEPPER_SECRET',
-  ];
+  const requiredEnvVars = ['JWT_ACCESS_SECRET', 'PIN_PEPPER_SECRET'];
   const missingVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
 
   if (missingVars.length > 0) {

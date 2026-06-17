@@ -1,4 +1,5 @@
 import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { db } from '$lib/db';
 
 // Mock the api client
 const mock_api = {
@@ -437,15 +438,18 @@ describe('PosService', () => {
 
 			await pos_service.process_payment(vi.fn(), vi.fn());
 
-			expect(mock_api.post).toHaveBeenCalledWith('/orders', expect.objectContaining({
-				client_uuid: expect.any(String),
-				payment_method: 'cash',
-				client_final_price: 20000,
-				discount_total: 0,
-				cash_amount: 50000,
-				qris_amount: 0,
-				items: [{ product_id: 'p1', quantity: 2, modifiers: [] }]
-			}));
+			expect(mock_api.post).toHaveBeenCalledWith(
+				'/orders',
+				expect.objectContaining({
+					client_uuid: expect.any(String),
+					payment_method: 'cash',
+					client_final_price: 20000,
+					discount_total: 0,
+					cash_amount: 50000,
+					qris_amount: 0,
+					items: [{ product_id: 'p1', quantity: 2, modifiers: [] }]
+				})
+			);
 		});
 
 		it('should send correct payload for split payment', async () => {
@@ -470,11 +474,14 @@ describe('PosService', () => {
 			const on_qris_wait = vi.fn();
 			await pos_service.process_payment(on_qris_wait, vi.fn());
 
-			expect(mock_api.post).toHaveBeenCalledWith('/orders', expect.objectContaining({
-				payment_method: 'split',
-				cash_amount: 15000,
-				qris_amount: 5000
-			}));
+			expect(mock_api.post).toHaveBeenCalledWith(
+				'/orders',
+				expect.objectContaining({
+					payment_method: 'split',
+					cash_amount: 15000,
+					qris_amount: 5000
+				})
+			);
 		});
 
 		it('should handle payment success and call on_success callback', async () => {
@@ -558,7 +565,7 @@ describe('PosService', () => {
 
 	describe('sync_pending_orders – offline sync integration', () => {
 		it('should send correct batch payload and update sync_status on success', async () => {
-			const db = require('$lib/db').db;
+			const dbMock = db;
 
 			const pendingOrders = [
 				{
@@ -579,6 +586,7 @@ describe('PosService', () => {
 				}
 			];
 
+			// @ts-expect-error - Dexie mock for testing
 			db.orders = {
 				where: vi.fn().mockReturnValue({
 					equals: vi.fn().mockReturnValue({
@@ -611,8 +619,9 @@ describe('PosService', () => {
 		});
 
 		it('should skip sync when no pending orders exist', async () => {
-			const db = require('$lib/db').db;
+			const dbMock = db;
 
+			// @ts-expect-error - Dexie mock for testing
 			db.orders = {
 				where: vi.fn().mockReturnValue({
 					equals: vi.fn().mockReturnValue({
@@ -627,8 +636,9 @@ describe('PosService', () => {
 		});
 
 		it('should not update sync_status for failed orders in batch', async () => {
-			const db = require('$lib/db').db;
+			const dbMock = db;
 
+			// @ts-expect-error - Dexie mock for testing
 			db.orders = {
 				where: vi.fn().mockReturnValue({
 					equals: vi.fn().mockReturnValue({
@@ -659,3 +669,4 @@ describe('PosService', () => {
 			expect(db.orders.update).not.toHaveBeenCalled();
 		});
 	});
+});

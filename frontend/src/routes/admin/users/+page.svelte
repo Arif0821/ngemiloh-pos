@@ -250,8 +250,9 @@
 			</div>
 			<form onsubmit={handleAddCashier} class="space-y-4 p-6">
 				<div>
-					<label class="mb-1 block text-sm font-medium text-slate-700">Nama Lengkap</label>
+					<label for="user-name" class="mb-1 block text-sm font-medium text-slate-700">Nama Lengkap</label>
 					<input
+						id="user-name"
 						type="text"
 						bind:value={newName}
 						required
@@ -259,9 +260,10 @@
 					/>
 				</div>
 				<div>
-					<label class="mb-1 block text-sm font-medium text-slate-700">Username (untuk login)</label
+					<label for="user-username" class="mb-1 block text-sm font-medium text-slate-700">Username (untuk login)</label
 					>
 					<input
+						id="user-username"
 						type="text"
 						bind:value={newUsername}
 						required
@@ -269,10 +271,11 @@
 					/>
 				</div>
 				<div>
-					<label class="mb-1 block text-sm font-medium text-slate-700"
+					<label for="user-pin" class="mb-1 block text-sm font-medium text-slate-700"
 						>PIN Akses (4 Digit Angka)</label
 					>
 					<input
+						id="user-pin"
 						type="text"
 						pattern="[0-9]{4}"
 						maxlength="4"
@@ -312,10 +315,11 @@
 			</div>
 			<form onsubmit={handleResetPin} class="space-y-4 p-6">
 				<div>
-					<label class="mb-1 block text-sm font-medium text-slate-700"
+					<label for="reset-pin" class="mb-1 block text-sm font-medium text-slate-700"
 						>PIN Baru (4 Digit Angka)</label
 					>
 					<input
+						id="reset-pin"
 						type="text"
 						pattern="[0-9]{4}"
 						maxlength="4"

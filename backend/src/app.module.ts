@@ -8,7 +8,6 @@ import { AuthModule } from './auth/auth.module';
 import { ProductsModule } from './products/products.module';
 import { OrdersModule } from './orders/orders.module';
 import { InventoryModule } from './inventory/inventory.module';
-import { EmailModule } from './email/email.module';
 import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
 import { APP_GUARD } from '@nestjs/core';
 import { DiscountsModule } from './discounts/discounts.module';
@@ -21,6 +20,9 @@ import { AuditModule } from './audit/audit.module';
 import { BullModule } from '@nestjs/bullmq';
 import { APP_INTERCEPTOR } from '@nestjs/core';
 import { AuditInterceptor } from './audit/presentation/audit.interceptor';
+import { ReceiptsModule } from './receipts/receipts.module';
+import { JobsModule } from './jobs/jobs.module';
+import { PaymentModule } from './payment/payment.module';
 
 @Module({
   imports: [
@@ -86,8 +88,10 @@ import { AuditInterceptor } from './audit/presentation/audit.interceptor';
     InventoryModule,
     FinanceModule,
     DiscountsModule,
-    EmailModule,
     UsersModule,
+    ReceiptsModule,
+    JobsModule,
+    PaymentModule,
   ],
   controllers: [AppController],
   providers: [

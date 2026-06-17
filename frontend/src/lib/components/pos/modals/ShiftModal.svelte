@@ -90,10 +90,11 @@
 			<form onsubmit={handle_submit} class="p-6">
 				<div class="space-y-4">
 					<div>
-						<label class="mb-1 block text-sm font-bold text-slate-700 dark:text-slate-300"
+						<label for="opening-balance" class="mb-1 block text-sm font-bold text-slate-700 dark:text-slate-300"
 							>Kas Awal (Rp)</label
 						>
 						<input
+							id="opening-balance"
 							type="number"
 							bind:value={pos_store.opening_balance}
 							required
@@ -134,6 +135,7 @@
 					onclick={handle_close}
 					data-modal-close
 					class="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300"
+					aria-label="Tutup modal"
 				>
 					<svg class="h-6 w-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"
 						><path
@@ -153,10 +155,11 @@
 					dengan sistem.
 				</p>
 				<div>
-					<label class="mb-1 block text-sm font-bold text-slate-700 dark:text-slate-300"
+					<label for="closing-balance" class="mb-1 block text-sm font-bold text-slate-700 dark:text-slate-300"
 						>Kas Akhir Laci (Fisik)</label
 					>
 					<input
+						id="closing-balance"
 						type="number"
 						bind:value={pos_store.closing_balance}
 						required

@@ -370,10 +370,11 @@
 
 			<form onsubmit={save_product} class="space-y-5 p-6">
 				<div>
-					<label class="mb-1 block text-sm font-bold text-slate-700"
+					<label for="product-name" class="mb-1 block text-sm font-bold text-slate-700"
 						>Nama Produk <span class="text-red-500">*</span></label
 					>
 					<input
+						id="product-name"
 						type="text"
 						bind:value={p_name}
 						required
@@ -382,10 +383,11 @@
 					/>
 				</div>
 				<div>
-					<label class="mb-1 block text-sm font-bold text-slate-700"
+					<label for="product-base-price" class="mb-1 block text-sm font-bold text-slate-700"
 						>Harga Dasar (Rp) <span class="text-red-500">*</span></label
 					>
 					<input
+						id="product-base-price"
 						type="number"
 						min="0"
 						bind:value={p_base_price}
@@ -576,8 +578,9 @@
 					<h4 class="mb-3 text-sm font-bold text-slate-700">Buat Grup Varian Baru</h4>
 					<div class="flex items-end gap-3">
 						<div class="flex-1">
-							<label class="mb-1 block text-xs text-slate-500">Nama Grup</label>
+							<label for="group-name" class="mb-1 block text-xs text-slate-500">Nama Grup</label>
 							<input
+								id="group-name"
 								type="text"
 								bind:value={new_group_name}
 								placeholder="cth: Pilih Level Pedas"

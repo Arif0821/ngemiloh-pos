@@ -135,8 +135,9 @@
 				<form onsubmit={saveSettings} class="space-y-6 p-6">
 					<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 						<div>
-							<label class="mb-1 block text-sm font-bold text-slate-700">Nama Toko</label>
+							<label for="store-name" class="mb-1 block text-sm font-bold text-slate-700">Nama Toko</label>
 							<input
+								id="store-name"
 								type="text"
 								bind:value={storeName}
 								required
@@ -144,9 +145,10 @@
 							/>
 						</div>
 						<div>
-							<label class="mb-1 block text-sm font-bold text-slate-700">Sertifikat Halal MUI</label
+							<label for="halal-number" class="mb-1 block text-sm font-bold text-slate-700">Sertifikat Halal MUI</label
 							>
 							<input
+								id="halal-number"
 								type="text"
 								bind:value={halalNumber}
 								class="w-full rounded-lg border-slate-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
@@ -154,18 +156,20 @@
 							/>
 						</div>
 						<div class="md:col-span-2">
-							<label class="mb-1 block text-sm font-bold text-slate-700">Alamat Outlet</label>
+							<label for="store-address" class="mb-1 block text-sm font-bold text-slate-700">Alamat Outlet</label>
 							<textarea
+								id="store-address"
 								bind:value={storeAddress}
 								rows="2"
 								class="w-full rounded-lg border-slate-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"
 							></textarea>
 						</div>
 						<div class="md:col-span-2">
-							<label class="mb-1 block text-sm font-bold text-slate-700"
+							<label for="receipt-footer" class="mb-1 block text-sm font-bold text-slate-700"
 								>Pesan Penutup (Footer) Struk</label
 							>
 							<input
+								id="receipt-footer"
 								type="text"
 								bind:value={receiptFooter}
 								class="w-full rounded-lg border-slate-300 text-sm focus:border-indigo-500 focus:ring-indigo-500"

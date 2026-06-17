@@ -137,7 +137,7 @@ export class PosStore {
 		if (!this.active_discounts || this.active_discounts.length === 0) return null;
 
 		const today = new Date().getDay() || 7;
-		let applicable_discounts: Discount[] = [];
+		const applicable_discounts: Discount[] = [];
 
 		for (const d of this.active_discounts) {
 			// Check if discount is applicable today

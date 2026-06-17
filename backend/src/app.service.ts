@@ -40,7 +40,11 @@ export class AppService {
 
   async getStoreInfo() {
     const settings = await this.prisma.setting.findMany({
-      where: { key: { in: ['store_name', 'store_address', 'store_phone', 'store_whatsapp'] } },
+      where: {
+        key: {
+          in: ['store_name', 'store_address', 'store_phone', 'store_whatsapp'],
+        },
+      },
     });
     const result: Record<string, string> = {};
     for (const s of settings) {

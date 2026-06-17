@@ -82,7 +82,8 @@
 
 	// Check if confirm button should be disabled
 	let is_disabled = $derived(
-		(pos_store.payment_method === 'cash' && (pos_store.cash_change < 0 || pos_store.cash_amount <= 0)) ||
+		(pos_store.payment_method === 'cash' &&
+			(pos_store.cash_change < 0 || pos_store.cash_amount <= 0)) ||
 			(pos_store.payment_method === 'split' && !is_split_valid()) ||
 			pos_store.is_processing
 	);
@@ -112,6 +113,7 @@
 				class="bg-surface-200 dark:bg-surface-700 text-surface-500 hover:text-surface-700 flex h-10 w-10 items-center justify-center rounded-full transition-colors"
 				onclick={handle_close}
 				data-modal-close
+				aria-label="Tutup modal"
 			>
 				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
 					><path
@@ -185,7 +187,7 @@
 					<!-- Cash Payment Form -->
 					<div class="animate-in slide-in-from-left-4 space-y-5 duration-300">
 						<div>
-							<label class="text-surface-600 dark:text-surface-400 mb-2 block text-sm font-medium"
+							<label for="cash-amount" class="text-surface-600 dark:text-surface-400 mb-2 block text-sm font-medium"
 								>Nominal Diterima</label
 							>
 							<div class="relative">
@@ -194,6 +196,7 @@
 									>Rp</span
 								>
 								<input
+									id="cash-amount"
 									type="number"
 									bind:value={pos_store.cash_amount}
 									class="bg-surface-50 dark:bg-surface-900 border-surface-200 dark:border-surface-700 focus:ring-brand-500/20 focus:border-brand-500 w-full rounded-2xl border-2 py-4 pr-4 pl-14 text-2xl font-bold transition-all outline-none focus:ring-4"
@@ -245,7 +248,7 @@
 					<!-- Split Payment Form -->
 					<div class="animate-in slide-in-from-bottom-4 space-y-4 duration-300">
 						<div>
-							<label class="text-surface-600 mb-1 block text-sm font-medium"
+							<label for="split-cash-amount" class="text-surface-600 mb-1 block text-sm font-medium"
 								>Uang Tunai Diterima</label
 							>
 							<div class="relative">
@@ -254,6 +257,7 @@
 									>Rp</span
 								>
 								<input
+									id="split-cash-amount"
 									type="number"
 									bind:value={pos_store.split_cash_amount}
 									class="bg-surface-50 border-surface-200 focus:ring-brand-500/20 focus:border-brand-500 w-full rounded-2xl border-2 py-4 pr-4 pl-14 text-2xl font-bold transition-all outline-none focus:ring-4"

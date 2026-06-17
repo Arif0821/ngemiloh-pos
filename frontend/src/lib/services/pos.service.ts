@@ -154,44 +154,62 @@ export class PosService {
 		}
 	}
 
-	async sync_pending_orders() {
+	async sync_pending_orders(maxRetries = 3, baseDelayMs = 1000) {
 		const pending = await db.orders.where('sync_status').equals('pending').toArray();
 		if (pending.length === 0) return;
 
-		try {
-			const payload = {
-				orders: pending.map((order) => ({
-					client_uuid: order.client_uuid,
-					payment_method: order.payment_method,
-					client_final_price: order.final_price,
-					items: order.items,
-					customer_name: order.customer_name
-				}))
-			};
+		// FIX: Add retry logic with exponential backoff for offline sync
+		let lastError: Error | null = null;
 
-			const res = await api.post(`/orders/sync-batch`, payload);
+		for (let attempt = 0; attempt < maxRetries; attempt++) {
+			try {
+				const payload = {
+					orders: pending.map((order) => ({
+						client_uuid: order.client_uuid,
+						payment_method: order.payment_method,
+						client_final_price: order.final_price,
+						items: order.items,
+						customer_name: order.customer_name
+					}))
+				};
 
-			if (res.ok) {
-				const json = await res.json();
-				if (json.success && json.data) {
-					for (const result of json.data) {
-						if (result.status === 'success') {
-							await db.orders.update(result.client_uuid, { sync_status: 'synced' });
+				const res = await api.post(`/orders/sync-batch`, payload);
+
+				if (res.ok) {
+					const json = await res.json();
+					if (json.success && json.data) {
+						for (const result of json.data) {
+							if (result.status === 'success') {
+								await db.orders.update(result.client_uuid, { sync_status: 'synced' });
+							}
+						}
+						const synced_count = json.data.filter((r: any) => r.status === 'success').length;
+						if (synced_count > 0) {
+							toast.success(`${synced_count} pesanan berhasil di-sync`);
 						}
 					}
-					const synced_count = json.data.filter((r: any) => r.status === 'success').length;
-					if (synced_count > 0) {
-						toast.success(`${synced_count} pesanan berhasil di-sync`);
-					}
+					return; // Success - exit retry loop
+				} else {
+					// Non-OK response, will retry
+					lastError = new Error(`Sync failed with status: ${res.status}`);
 				}
-			} else {
-				console.warn('Batch sync failed:', res.status);
-				toast.error('Gagal sync pesanan offline');
+			} catch (e) {
+				lastError = e instanceof Error ? e : new Error('Unknown sync error');
 			}
-		} catch (e) {
-			console.warn('Batch sync failed (network error)');
-			toast.error('Gagal sync pesanan offline');
+
+			// Exponential backoff: wait before retry (skip on last attempt)
+			if (attempt < maxRetries - 1) {
+				const delay = baseDelayMs * Math.pow(2, attempt);
+				console.log(
+					`[sync_pending_orders] Retry ${attempt + 1}/${maxRetries} failed, waiting ${delay}ms...`
+				);
+				await new Promise((resolve) => setTimeout(resolve, delay));
+			}
 		}
+
+		// All retries exhausted
+		console.error('[sync_pending_orders] All retries failed:', lastError?.message);
+		toast.error('Gagal sync pesanan offline setelah beberapa percobaan');
 	}
 
 	// Polling states (using snake_case)

@@ -23,7 +23,7 @@ export class CreateCashierDto {
 
   @IsString()
   @MaxLength(1)
-  cashier_letter: string;  // A-Z, unique per kasir
+  cashier_letter: string; // A-Z, unique per kasir
 }
 
 export class ResetPinDto {

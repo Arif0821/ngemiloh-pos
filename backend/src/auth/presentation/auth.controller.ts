@@ -23,9 +23,7 @@ import type { AuthenticatedRequest } from '../../types/express';
 
 @Controller('api/v1/auth')
 export class AuthController {
-  constructor(
-    private readonly authService: AuthService,
-  ) {}
+  constructor(private readonly authService: AuthService) {}
 
   private getClientIp(req: Request): string {
     const forwardedFor = req.headers['x-forwarded-for'];
@@ -91,7 +89,8 @@ export class AuthController {
     }
 
     // Admin: validate credentials first, then send OTP (AUTH-02/03)
-    const result = await this.authService.validateAdminCredentials(
+    // Validate credentials (throws if invalid)
+    await this.authService.validateAdminCredentials(
       loginIdentifier,
       loginSecret,
       this.getClientIp(req),
@@ -136,7 +135,11 @@ export class AuthController {
     const userId = req.user?.id;
     if (!userId) throw new BadRequestException('User not authenticated');
 
-    const result = await this.authService.changePin(userId, dto.current_pin, dto.new_pin);
+    const result = await this.authService.changePin(
+      userId,
+      dto.current_pin,
+      dto.new_pin,
+    );
 
     // Re-issue tokens with updated must_change_pin flag
     response.cookie('access_token', result.accessToken, {
@@ -186,7 +189,11 @@ export class AuthController {
     @Body() dto: VerifyOtpDto,
     @Res({ passthrough: true }) response: Response,
   ) {
-    const result = await this.authService.verifyOtp(dto.email, dto.otp, this.getClientIp(req));
+    const result = await this.authService.verifyOtp(
+      dto.email,
+      dto.otp,
+      this.getClientIp(req),
+    );
 
     this.setAuthCookies(response, result.accessToken, result.csrfToken);
     return { success: true, data: result.user };

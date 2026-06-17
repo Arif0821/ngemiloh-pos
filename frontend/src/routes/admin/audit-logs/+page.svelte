@@ -101,8 +101,9 @@
 		class="dark:bg-surface-800 dark:border-surface-700 flex flex-wrap items-end gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
 	>
 		<div>
-			<label class="mb-1 block text-xs font-bold text-slate-500">Aksi / Event Type</label>
+			<label for="filter-action" class="mb-1 block text-xs font-bold text-slate-500">Aksi / Event Type</label>
 			<select
+				id="filter-action"
 				bind:value={filterAction}
 				class="dark:border-surface-600 dark:bg-surface-900 focus:border-brand-500 w-48 rounded-lg border border-slate-200 bg-slate-50 p-2 text-sm outline-none"
 			>
@@ -113,16 +114,18 @@
 			</select>
 		</div>
 		<div>
-			<label class="mb-1 block text-xs font-bold text-slate-500">Mulai Tanggal</label>
+			<label for="filter-date-from" class="mb-1 block text-xs font-bold text-slate-500">Mulai Tanggal</label>
 			<input
+				id="filter-date-from"
 				type="date"
 				bind:value={filterDateFrom}
 				class="dark:border-surface-600 dark:bg-surface-900 focus:border-brand-500 w-40 rounded-lg border border-slate-200 bg-slate-50 p-2 text-sm outline-none"
 			/>
 		</div>
 		<div>
-			<label class="mb-1 block text-xs font-bold text-slate-500">Sampai Tanggal</label>
+			<label for="filter-date-to" class="mb-1 block text-xs font-bold text-slate-500">Sampai Tanggal</label>
 			<input
+				id="filter-date-to"
 				type="date"
 				bind:value={filterDateTo}
 				class="dark:border-surface-600 dark:bg-surface-900 focus:border-brand-500 w-40 rounded-lg border border-slate-200 bg-slate-50 p-2 text-sm outline-none"

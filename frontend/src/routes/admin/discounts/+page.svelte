@@ -251,10 +251,11 @@
 
 			<form onsubmit={saveDiscount} class="space-y-5 p-6">
 				<div>
-					<label class="mb-1 block text-sm font-bold text-slate-700"
+					<label for="discount-name" class="mb-1 block text-sm font-bold text-slate-700"
 						>Nama Promo <span class="text-red-500">*</span></label
 					>
 					<input
+						id="discount-name"
 						type="text"
 						bind:value={dName}
 						required
@@ -265,10 +266,11 @@
 
 				<div class="grid grid-cols-2 gap-4">
 					<div>
-						<label class="mb-1 block text-sm font-bold text-slate-700"
+						<label for="discount-type" class="mb-1 block text-sm font-bold text-slate-700"
 							>Tipe Diskon <span class="text-red-500">*</span></label
 						>
 						<select
+							id="discount-type"
 							bind:value={dType}
 							class="w-full rounded-lg border-slate-300 font-medium focus:border-indigo-500 focus:ring-indigo-500"
 						>
@@ -277,10 +279,11 @@
 						</select>
 					</div>
 					<div>
-						<label class="mb-1 block text-sm font-bold text-slate-700"
+						<label for="discount-value" class="mb-1 block text-sm font-bold text-slate-700"
 							>Nilai Potongan <span class="text-red-500">*</span></label
 						>
 						<input
+							id="discount-value"
 							type="number"
 							bind:value={dValue}
 							required
@@ -292,10 +295,11 @@
 				</div>
 
 				<div>
-					<label class="mb-1 block text-sm font-bold text-slate-700"
+					<label for="discount-valid-from" class="mb-1 block text-sm font-bold text-slate-700"
 						>Tanggal Mulai Berlaku <span class="text-red-500">*</span></label
 					>
 					<input
+						id="discount-valid-from"
 						type="date"
 						bind:value={dValidFrom}
 						required
@@ -304,7 +308,7 @@
 				</div>
 
 				<div>
-					<label class="mb-2 block text-sm font-bold text-slate-700"
+					<label for="discount-applicable-days" class="mb-2 block text-sm font-bold text-slate-700"
 						>Hari Berlaku <span class="text-red-500">*</span></label
 					>
 					<div class="flex flex-wrap gap-2">

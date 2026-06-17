@@ -100,6 +100,7 @@
 				class="bg-surface-200 dark:bg-surface-700 text-surface-500 hover:text-surface-700 flex h-10 w-10 items-center justify-center rounded-full"
 				onclick={handle_close}
 				data-modal-close
+				aria-label="Tutup modal"
 			>
 				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
 					><path

@@ -114,6 +114,7 @@
 									vibrate();
 									pos_store.update_quantity(item.cart_item_id, 1);
 								}}
+								aria-label="Tambah jumlah item"
 							>
 								<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
 									><path

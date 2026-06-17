@@ -523,10 +523,11 @@
 					</div>
 				{/if}
 				<div>
-					<label class="mb-1 block text-sm font-bold text-slate-700"
+					<label for="void-reason" class="mb-1 block text-sm font-bold text-slate-700"
 						>Alasan Void <span class="text-red-500">*</span></label
 					>
 					<textarea
+						id="void-reason"
 						bind:value={voidReason}
 						required
 						minlength="10"
