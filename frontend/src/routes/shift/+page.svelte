@@ -1,19 +1,21 @@
 <script lang="ts">
 	import { api } from '$lib/services/api.client';
+	import { format_rp } from '$lib/utils/format';
 	import { onMount } from 'svelte';
 
-	let shiftData: any = $state(null);
+	let shift_data: any = $state(null);
 	let error: string = $state('');
 
 	onMount(async () => {
 		try {
-			const res = await api.request(`/api/v1/orders/shift`, {
+			// Endpoint sesuai PRD v5.0 - laporan shift
+			const res = await api.request(`/cash/shift-summary`, {
 				credentials: 'include'
 			});
 			if (res.ok) {
 				const json = await res.json();
 				if (json.success) {
-					shiftData = json.data;
+					shift_data = json.data;
 				} else {
 					error = json.message || 'Gagal mengambil data shift.';
 				}
@@ -24,14 +26,6 @@
 			error = 'Gagal terhubung ke server.';
 		}
 	});
-
-	function formatRp(amount: number) {
-		return new Intl.NumberFormat('id-ID', {
-			style: 'currency',
-			currency: 'IDR',
-			minimumFractionDigits: 0
-		}).format(amount);
-	}
 </script>
 
 <div class="bg-surface-100 flex min-h-screen flex-col items-center p-8">
@@ -50,17 +44,17 @@
 		<div class="p-8">
 			{#if error}
 				<p class="text-red-500">{error}</p>
-			{:else if !shiftData}
+			{:else if !shift_data}
 				<p class="text-surface-500 animate-pulse">Memuat laporan...</p>
 			{:else}
 				<div class="mb-8 grid grid-cols-2 gap-6">
 					<div class="bg-surface-50 border-surface-200 rounded-2xl border p-6">
 						<p class="text-surface-500 mb-1 font-medium">Total Pesanan</p>
-						<p class="text-brand-600 text-3xl font-black">{shiftData.total_orders}</p>
+						<p class="text-brand-600 text-3xl font-black">{shift_data.total_orders}</p>
 					</div>
 					<div class="bg-surface-50 border-surface-200 rounded-2xl border p-6">
 						<p class="text-surface-500 mb-1 font-medium">Pendapatan Kotor</p>
-						<p class="text-brand-600 text-3xl font-black">{formatRp(shiftData.grand_total)}</p>
+						<p class="text-brand-600 text-3xl font-black">{format_rp(shift_data.grand_total)}</p>
 					</div>
 				</div>
 
@@ -84,7 +78,7 @@
 							</div>
 							<span class="text-surface-800 font-bold">Tunai (Cash)</span>
 						</div>
-						<span class="text-xl font-bold">{formatRp(shiftData.total_cash)}</span>
+						<span class="text-xl font-bold">{format_rp(shift_data.total_cash)}</span>
 					</div>
 
 					<div
@@ -105,7 +99,7 @@
 							</div>
 							<span class="text-surface-800 font-bold">QRIS Midtrans</span>
 						</div>
-						<span class="text-xl font-bold">{formatRp(shiftData.total_qris)}</span>
+						<span class="text-xl font-bold">{format_rp(shift_data.total_qris)}</span>
 					</div>
 				</div>
 			{/if}

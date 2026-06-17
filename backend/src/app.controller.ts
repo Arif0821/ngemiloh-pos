@@ -40,6 +40,14 @@ export class AppController {
     return res.status(statusCode).json(health);
   }
 
+  // Public: info toko untuk struk (nama, alamat, WA) — tidak perlu auth
+  @SkipThrottle()
+  @Get('api/v1/store-info')
+  async getStoreInfo() {
+    const data = await this.appService.getStoreInfo();
+    return { success: true, data };
+  }
+
   @Get('api/v1/admin/settings')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)

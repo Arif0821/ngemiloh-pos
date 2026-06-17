@@ -1,6 +1,12 @@
 import type { OrderResponse } from '../domain/models/types';
 
-// Web Bluetooth API type declarations (available in Chrome/Edge, not in lib.dom.d.ts by default)
+// ============================================
+// PRINTER SERVICE - Hybrid Printer Support
+// Web Bluetooth + HTML Print fallback
+// Using snake_case naming convention
+// ============================================
+
+// Web Bluetooth API type declarations
 declare global {
 	interface Navigator {
 		bluetooth: Bluetooth;
@@ -40,18 +46,28 @@ export class PrinterService {
 	private device: BluetoothDevice | null = null;
 	private characteristic: BluetoothRemoteGATTCharacteristic | null = null;
 
-	async connectAndPrint(receiptData: string) {
+	/**
+	 * Connect to Bluetooth printer and print receipt
+	 * @returns true if print successful, false if Bluetooth unavailable/failed
+	 */
+	async connect_and_print(receipt_data: string): Promise<boolean> {
 		try {
+			// Check if Web Bluetooth API is available
+			if (!navigator.bluetooth) {
+				console.warn('Web Bluetooth API not available');
+				return false;
+			}
+
 			if (!this.device || !this.device.gatt?.connected) {
-				// Request bluetooth device. Filtering by common ESC/POS generic thermal printer UUIDs
+				// Request Bluetooth device with common thermal printer filters
 				this.device = await navigator.bluetooth.requestDevice({
 					filters: [
-						{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] }, // Generic thermal printer service UUID
+						{ services: ['000018f0-0000-1000-8000-00805f9b34fb'] },
 						{ namePrefix: 'MPT' },
 						{ namePrefix: 'Blue' },
 						{ namePrefix: 'Inner' }
 					],
-					optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb'] // Needs to match typical BLE printer
+					optionalServices: ['000018f0-0000-1000-8000-00805f9b34fb']
 				});
 
 				const server = await this.device.gatt?.connect();
@@ -66,12 +82,11 @@ export class PrinterService {
 			if (!this.characteristic) throw new Error('Characteristic not found');
 
 			// Generate ESC/POS commands
-			// ESC @ (Initialize printer)
 			const encoder = new TextEncoder();
-			const escPosCommands = new Uint8Array([
+			const esc_pos_commands = new Uint8Array([
 				0x1b,
 				0x40, // Init
-				...encoder.encode(receiptData),
+				...encoder.encode(receipt_data),
 				0x0a,
 				0x0a,
 				0x0a, // Feed lines
@@ -81,25 +96,27 @@ export class PrinterService {
 				0x00 // Cut paper
 			]);
 
-			// Write in chunks of 512 bytes max to BLE
-			const chunkSize = 512;
-			for (let i = 0; i < escPosCommands.length; i += chunkSize) {
-				const chunk = escPosCommands.slice(i, i + chunkSize);
+			// Write in chunks of 512 bytes (BLE limitation)
+			const chunk_size = 512;
+			for (let i = 0; i < esc_pos_commands.length; i += chunk_size) {
+				const chunk = esc_pos_commands.slice(i, i + chunk_size);
 				await this.characteristic.writeValue(chunk);
 			}
 
-			console.log('Receipt printed successfully');
+			console.log('Receipt printed via Bluetooth');
 			return true;
 		} catch (e: unknown) {
-			const errorMessage = e instanceof Error ? e.message : String(e);
-			console.error('Bluetooth printing error:', errorMessage);
+			const error_message = e instanceof Error ? e.message : String(e);
+			console.error('Bluetooth printing error:', error_message);
 			return false;
 		}
 	}
 
-	// Utility to format standard receipts
-	formatReceipt(order: OrderResponse, storeName: string, footer: string) {
-		let text = `\n${storeName}\n`;
+	/**
+	 * Format standard receipt text for Bluetooth printing
+	 */
+	format_receipt(order: OrderResponse, store_name: string, footer: string): string {
+		let text = `\n${store_name}\n`;
 		text += `================================\n`;
 		text += `ID: ${order.client_uuid.split('-')[0].toUpperCase()}\n`;
 		text += `Tanggal: ${new Date().toLocaleString('id-ID')}\n`;
@@ -107,8 +124,8 @@ export class PrinterService {
 
 		const items = order.items || [];
 		for (const item of items) {
-			const itemName = (item.product_name_snapshot || 'Produk') + ' x' + item.quantity;
-			text += `${itemName.padEnd(20)} ${item.subtotal.toString().padStart(11)}\n`;
+			const item_name = (item.product_name_snapshot || 'Produk') + ' x' + item.quantity;
+			text += `${item_name.padEnd(20)} ${item.subtotal.toString().padStart(11)}\n`;
 		}
 
 		text += `--------------------------------\n`;
@@ -119,4 +136,4 @@ export class PrinterService {
 	}
 }
 
-export const printerService = new PrinterService();
+export const printer_service = new PrinterService();

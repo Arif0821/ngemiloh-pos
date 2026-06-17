@@ -104,4 +104,35 @@ export class EmailService {
       this.logger.error('Failed to send reminder email', error);
     }
   }
+
+  async sendOtp(recipientEmail: string, otpCode: string) {
+    const smtpPass = process.env.EMAIL_APP_PASSWORD || process.env.SMTP_PASS;
+    if (smtpPass === 'GANTI_DENGAN_APP_PASSWORD_GMAIL' || !smtpPass) {
+      this.logger.warn(`OTP email skipped (App password not configured)`);
+      return;
+    }
+
+    try {
+      await this.transporter.sendMail({
+        from: `"Ngemiloh POS" <${process.env.EMAIL_USER || process.env.SMTP_USER}>`,
+        to: recipientEmail,
+        subject: 'Kode OTP Login Ngemiloh POS',
+        html: `
+          <div style="font-family: Arial, sans-serif; padding: 24px; border: 1px solid #e5e7eb; border-radius: 12px; max-width: 400px; margin: 0 auto;">
+            <h2 style="color: #4f46e5; margin-bottom: 16px;">Kode OTP Login</h2>
+            <p style="color: #374151; margin-bottom: 20px;">Gunakan kode berikut untuk login ke Ngemiloh POS Admin:</p>
+            <div style="background: #f3f4f6; border-radius: 8px; padding: 20px; text-align: center; margin-bottom: 20px;">
+              <span style="font-size: 32px; font-weight: bold; letter-spacing: 8px; color: #4f46e5;">${otpCode}</span>
+            </div>
+            <p style="color: #6b7280; font-size: 12px;">Kode ini berlaku selama 10 menit. Jangan bagikan kode ini kepada siapapun.</p>
+          </div>
+        `,
+        text: `Kode OTP Login Ngemiloh POS: ${otpCode}. Berlaku 10 menit. Jangan bagikan.`,
+      });
+      this.logger.log(`OTP sent to ${recipientEmail}`);
+    } catch (error) {
+      this.logger.error('Failed to send OTP email', error);
+      throw error;
+    }
+  }
 }

@@ -126,4 +126,11 @@ export class PrismaAuthRepository implements AuthRepositoryInterface {
       },
     });
   }
+
+  async updateUserPin(userId: string, pinHash: string): Promise<void> {
+    await this.prisma.user.update({
+      where: { id: userId },
+      data: { pin_hash: pinHash, must_change_pin: false },
+    });
+  }
 }

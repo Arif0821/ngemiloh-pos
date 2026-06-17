@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { api } from '$lib/services/api.client';
+	import { toast } from '$lib/stores/toast.store.svelte';
 	import { onMount } from 'svelte';
 	import type { OrderResponse } from '$lib/domain/models/types';
 
@@ -25,7 +26,7 @@
 			const hostname = window.location.hostname;
 			// Note: Ideally the backend has filters query params. For MVP we'll fetch all and filter in client if needed, or better, pass query params.
 			// Let's assume the Orders controller has basic fetch with query params.
-			let url = `/api/v1/orders?date=${filterDate}&page=${currentPage}`;
+			let url = `/orders?date=${filterDate}&page=${currentPage}`;
 			if (filterStatus) url += `&status=${filterStatus}`;
 			if (filterMethod) url += `&method=${filterMethod}`;
 
@@ -53,11 +54,14 @@
 
 	async function handleVoid(e: Event) {
 		e.preventDefault();
-		if (voidReason.length < 10) return alert('Alasan void minimal 10 karakter');
+		if (voidReason.length < 10) {
+			toast.warning('Alasan void minimal 10 karakter');
+			return;
+		}
 		if (!selectedOrder) return;
 
 		try {
-			const res = await api.request(`/api/v1/admin/transactions/${selectedOrder.id}/void`, {
+			const res = await api.request(`/admin/transactions/${selectedOrder.id}/void`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				credentials: 'include',
@@ -66,19 +70,20 @@
 			if (res.ok) {
 				showVoidModal = false;
 				showDetailModal = false;
+				toast.success('Transaksi berhasil dibatalkan (void)');
 				fetchOrders();
 			} else {
-				alert('Gagal void transaksi');
+				toast.error('Gagal void transaksi');
 			}
 		} catch (e) {
-			alert('Error pada server');
+			toast.error('Gagal void transaksi. Cek koneksi Anda.');
 		}
 	}
 
 	async function flagTransaction(status: string) {
 		if (!selectedOrder) return;
 		try {
-			const res = await api.request(`/api/v1/admin/transactions/${selectedOrder.id}/flag`, {
+			const res = await api.request(`/admin/transactions/${selectedOrder.id}/flag`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
 				credentials: 'include',
@@ -86,13 +91,14 @@
 			});
 
 			if (res.ok) {
+				toast.success('Transaksi berhasil ditandai');
 				showDetailModal = false;
 				fetchOrders();
 			} else {
-				alert('Gagal menandai transaksi');
+				toast.error('Gagal menandai transaksi');
 			}
 		} catch (e) {
-			alert('Error pada server');
+			toast.error('Gagal menandai transaksi. Cek koneksi Anda.');
 		}
 	}
 

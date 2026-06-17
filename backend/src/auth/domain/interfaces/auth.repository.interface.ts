@@ -36,4 +36,6 @@ export interface AuthRepositoryInterface {
     userId: string,
     expiresAt: Date,
   ): Promise<RevokedToken>;
+
+  updateUserPin(userId: string, pinHash: string): Promise<void>;
 }

@@ -1,6 +1,6 @@
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "linux-musl-openssl-3.0.x"]
+  binaryTargets = ["native", "linux-musl-openssl-3.0.x", "linux-musl"]
 }
 
 datasource db {
@@ -86,6 +86,8 @@ model User {
   revoked_tokens     RevokedToken[]
   stock_movements    StockMovement[]
   price_histories    RawMaterialPriceHistory[]
+
+  cashier_letter     String?   @unique @db.Char(1)
 
   @@index([role])
 }
@@ -198,7 +200,11 @@ model Order {
   synced_from_offline  Boolean       @default(false)
   verification_status  String?       @db.VarChar(20) // 'Perlu Cek', 'Valid'
   client_created_at    DateTime      @db.Timestamptz
-  created_at           DateTime      @default(now()) @db.Timestamptz
+  order_number        String?       @unique @db.VarChar(30)
+  customer_name       String?       @db.VarChar(50)
+  cash_received       Decimal?      @db.Decimal(12, 0)
+  cash_change         Decimal?      @db.Decimal(12, 0)
+  created_at          DateTime      @default(now()) @db.Timestamptz
 
   cashier     User          @relation("CashierOrders", fields: [cashier_id], references: [id])
   voider      User?         @relation("VoidedOrders", fields: [voided_by], references: [id])
@@ -480,4 +486,16 @@ model IpLockout {
   updated_at      DateTime @updatedAt @db.Timestamptz
 
   @@index([updated_at])
+}
+
+model SystemLog {
+  id         BigInt   @id @default(autoincrement())
+  level      String   @db.VarChar(10)
+  source     String   @db.VarChar(100)
+  message    String   @db.Text
+  metadata   Json?    @db.JsonB
+  created_at DateTime @default(now()) @db.Timestamptz
+
+  @@index([level, created_at(sort: Desc)])
+  @@index([source, created_at(sort: Desc)])
 }

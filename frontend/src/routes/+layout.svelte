@@ -6,6 +6,7 @@
 
 <svelte:head>
 	<title>Ngemiloh POS</title>
+	<link rel="icon" type="image/svg+xml" href="/favicon.svg" />
 	<meta
 		name="viewport"
 		content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0"

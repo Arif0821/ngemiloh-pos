@@ -286,16 +286,10 @@ export class OrdersController {
     // SECURITY: Verify webhook signature from Midtrans
     const signatureKey = body.signature_key || body.signature;
 
-    // P1-SECURITY: Always require signature in production, skip only in sandbox for development
-    if (!signatureKey && process.env.MIDTRANS_ENV === 'production') {
-      throw new ForbiddenException('Invalid webhook: missing signature');
-    }
-
+    // P1-SECURITY: Always verify signature — do not skip in sandbox
     if (!signatureKey) {
-      this.logger.warn(
-        'Midtrans webhook without signature (sandbox mode - this should be fixed before production)',
-      );
-      // In sandbox, we still try to process but log warning
+      this.logger.warn('Midtrans webhook missing signature — rejecting');
+      throw new ForbiddenException('Invalid webhook: missing signature');
     }
 
     try {

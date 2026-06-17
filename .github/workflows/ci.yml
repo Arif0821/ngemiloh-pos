@@ -137,9 +137,7 @@ jobs:
           DIRECT_URL: "postgresql://postgres:test@localhost:5432/ngemiloh_test"
           REDIS_URL: "redis://localhost:6379"
           JWT_ACCESS_SECRET: "test-secret"
-          JWT_REFRESH_SECRET: "test-refresh-secret"
           JWT_ACCESS_EXPIRES: "1h"
-          JWT_REFRESH_EXPIRES: "7d"
           PIN_PEPPER_SECRET: "test-pepper"
           NODE_ENV: "test"
 

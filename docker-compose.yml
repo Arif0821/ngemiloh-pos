@@ -40,20 +40,20 @@ services:
   redis:
     image: 'mirror.gcr.io/library/redis:7-alpine'
     container_name: ngemiloh_redis
-    command: redis-server --appendonly yes --maxmemory 128mb --maxmemory-policy allkeys-lru
+    command: redis-server --appendonly yes
     volumes:
       - redis_data:/data
     deploy:
       resources:
         limits:
-          memory: 128M
+          memory: 256M
           cpus: '0.25'
     healthcheck:
-      test: ["CMD", "redis-cli", "-n0", "ping"]
-      interval: 5s
-      timeout: 3s
-      retries: 10
-      start_period: 15s
+      test: ["CMD-SHELL", "redis-cli ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 30s
     restart: unless-stopped
 
   # ============================================================
@@ -66,18 +66,17 @@ services:
       dockerfile: Dockerfile
       args:
         - NODE_ENV=development
+        - ALPINE_VERSION=3.18
     environment:
       # Direct connection to postgres (no pgbouncer for simplicity)
       - DATABASE_URL=postgresql://ngemiloh:${DB_PASSWORD}@postgres:5432/ngemiloh_db
       - DIRECT_URL=postgresql://ngemiloh:${DB_PASSWORD}@postgres:5432/ngemiloh_db
       - REDIS_URL=redis://redis:6379
       - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
-      - JWT_REFRESH_SECRET=${JWT_REFRESH_SECRET}
       - PIN_PEPPER_SECRET=${PIN_PEPPER_SECRET}
       - NODE_ENV=${NODE_ENV:-production}
       - STORAGE_PATH=/var/storage/ngemiloh
       - JWT_ACCESS_EXPIRES=8h
-      - JWT_REFRESH_EXPIRES=7d
       - FRONTEND_URL=${FRONTEND_URL:-https://pos.yourdomain.com}
       - MIDTRANS_ENV=${MIDTRANS_ENV:-sandbox}
       - MIDTRANS_SERVER_KEY_SANDBOX=${MIDTRANS_SERVER_KEY_SANDBOX}
@@ -92,13 +91,15 @@ services:
       - DISCREPANCY_THRESHOLD=${DISCREPANCY_THRESHOLD:-5000}
       - PRICE_DELTA_THRESHOLD_PCT=${PRICE_DELTA_THRESHOLD_PCT:-10}
       - TZ=${TZ:-Asia/Jakarta}
+      # Force Prisma to use OpenSSL 3.0.x binary (Alpine's default OpenSSL detection fails)
+      - PRISMA_CLIENT_FORCE_LIBQUERY_ENGINE_BINARY=/app/node_modules/.prisma/client/libquery_engine-linux-musl-openssl-3.0.x.so.node
     volumes:
       - storage_data:/var/storage/ngemiloh
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy
+        condition: service_started
     deploy:
       resources:
         limits:

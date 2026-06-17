@@ -1,9 +1,15 @@
+// ============================================
+// SHARED TYPES - Single Source of Truth
+// Using snake_case naming convention
+// ============================================
+
 export interface ApiResponse<T> {
 	success: boolean;
 	data: T;
 	message?: string;
 }
 
+// Product Types
 export interface ProductItem {
 	id: string;
 	name: string;
@@ -31,6 +37,7 @@ export interface ModifierOption {
 	is_active?: boolean;
 }
 
+// Discount Types
 export interface Discount {
 	id: string;
 	name: string;
@@ -42,8 +49,11 @@ export interface Discount {
 	valid_from?: string;
 	valid_until?: string;
 	applicable_days?: number[];
+	// Extended properties (computed in frontend)
+	calculated_amount?: number;
 }
 
+// Order Types
 export interface OrderItem {
 	product_id: string;
 	quantity: number;
@@ -58,6 +68,7 @@ export interface CreateOrderPayload {
 	discount_id?: string;
 	cash_amount?: number;
 	qris_amount?: number;
+	customer_name?: string;
 	items: OrderItem[];
 }
 
@@ -88,10 +99,13 @@ export interface OrderResponse {
 	payment_method?: 'cash' | 'qris' | 'split';
 	cash_amount?: number;
 	qris_amount?: number;
+	cash_received?: number;
+	cash_change?: number;
 	qr_string?: string;
 	midtrans_transaction_id?: string;
 	items?: OrderItemResponse[];
 	cashier?: { id: string; name: string };
+	customer_name?: string;
 	void_reason?: string;
 	voider?: string;
 	client_created_at?: string;
@@ -99,6 +113,7 @@ export interface OrderResponse {
 	verification_status?: string;
 }
 
+// Shift Types
 export interface ShiftInfo {
 	id: string;
 	cashier_id: string;
@@ -113,6 +128,7 @@ export interface ShiftInfo {
 	status: string;
 }
 
+// Analytics Types
 export interface AnalyticsTrend {
 	label: string;
 	value: number;
@@ -120,29 +136,31 @@ export interface AnalyticsTrend {
 
 export interface AnalyticsResponse {
 	trend: AnalyticsTrend[];
-	topProducts: {
-		byQty: { name: string; qty: number; revenue: number }[];
-		byRevenue: { name: string; qty: number; revenue: number }[];
+	top_products: {
+		by_qty: { name: string; qty: number; revenue: number }[];
+		by_revenue: { name: string; qty: number; revenue: number }[];
 	};
-	paymentDistribution: {
+	payment_distribution: {
 		counts: { cash: number; qris: number; split: number };
 		values: { cash: number; qris: number; split: number };
 	};
-	peakHours: { hour: number; count: number }[];
+	peak_hours: { hour: number; count: number }[];
 }
 
+// Asset Types
 export interface Asset {
 	id: string;
 	name: string;
 	purchase_price: number | string;
-	value?: number | string; // alias for purchase_price
+	value?: number | string;
 	useful_life_months: number;
-	lifespan_months?: number; // alias for useful_life_months
+	lifespan_months?: number;
 	monthly_depreciation: number | string;
 	purchase_date: string;
 	is_active: boolean;
 }
 
+// Audit Types
 export interface AuditLog {
 	id: string;
 	actor_id: string;
@@ -155,20 +173,22 @@ export interface AuditLog {
 	actor?: { name: string; username?: string; role: string };
 }
 
+// Operational Expense Types
 export interface OperationalExpense {
 	id: string;
 	category: string;
-	description?: string | null; // name shown from description
+	description?: string | null;
 	amount: number | string;
-	expense_date: string; // date alias
+	expense_date: string;
 	date?: string;
 }
 
+// Raw Material Types
 export interface RawMaterial {
 	id: string;
 	name: string;
 	unit?: string;
-	stock?: number; // alias for current_stock used in inventory page
+	stock?: number;
 	current_stock: number;
 	stock_level?: number;
 	min_stock?: number;
@@ -182,17 +202,19 @@ export interface RawMaterial {
 	is_active?: boolean;
 }
 
+// Profit Share Types
 export interface ProfitShareData {
 	period: string;
 	revenue: number;
-	totalHpp: number;
-	totalOpex: number;
-	totalDepreciation: number;
-	netProfit: number;
-	ownerShare: number;
-	cashierShare: number;
+	total_hpp: number;
+	total_opex: number;
+	total_depreciation: number;
+	net_profit: number;
+	owner_share: number;
+	cashier_share: number;
 }
 
+// Feature Flag Types
 export interface FeatureFlag {
 	id: string;
 	name: string;
@@ -200,6 +222,7 @@ export interface FeatureFlag {
 	is_enabled: boolean;
 }
 
+// User Types
 export interface User {
 	id: string;
 	name: string;
@@ -211,5 +234,53 @@ export interface User {
 	failed_login_count?: number;
 }
 
-// Re-export LocalProduct from db.ts for backward compatibility
-export type { LocalProduct } from '$lib/db';
+// ============================================
+// LOCAL TYPES (Dexie/Offline Storage)
+// Using snake_case for consistency
+// ============================================
+
+export interface LocalProduct {
+	id: string;
+	name: string;
+	base_price: number;
+	category_id?: string;
+	image_url?: string;
+	is_out_of_stock: boolean;
+	modifier_groups: ModifierGroup[];
+}
+
+export interface LocalOrderItem {
+	product_id: string;
+	quantity: number;
+	price?: number;
+	modifiers?: { option_id: string }[];
+}
+
+export interface LocalOrder {
+	client_uuid: string;
+	kasir_id: string;
+	subtotal: number;
+	tax_total: number;
+	final_price: number;
+	payment_method: 'cash' | 'qris' | 'split';
+	status: string;
+	items: LocalOrderItem[];
+	sync_status: 'pending' | 'synced';
+	created_at: number;
+	customer_name?: string;
+}
+
+export interface LocalCartItem {
+	id: string;
+	items: unknown[];
+}
+
+// ============================================
+// CART TYPES
+// ============================================
+
+export type CartItem = LocalProduct & {
+	quantity: number;
+	cart_item_id: string;
+	selected_modifiers: ModifierOption[];
+};

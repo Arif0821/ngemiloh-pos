@@ -9,9 +9,10 @@ export class CsrfMiddleware implements NestMiddleware {
     );
 
     if (isMutatingRequest) {
-      // Exclude login, refresh, and webhooks from CSRF
+      // Exclude login, logout, refresh, and webhooks from CSRF
       const excludedRoutes = [
         '/api/v1/auth/login',
+        '/api/v1/auth/logout',
         '/api/v1/auth/refresh',
         '/api/v1/webhooks/midtrans',
       ];

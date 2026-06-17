@@ -2,55 +2,55 @@
 	import { api } from '$lib/services/api.client';
 	import { onMount } from 'svelte';
 	import Chart from 'chart.js/auto';
+	import type { AnalyticsResponse } from '$lib/domain/models/types';
 
 	let period = $state('daily');
-	import type { AnalyticsResponse } from '$lib/domain/models/types';
-	let analyticsData: AnalyticsResponse | null = $state(null);
-	let isLoading = $state(true);
+	let analytics_data: AnalyticsResponse | null = $state(null);
+	let is_loading = $state(true);
 
-	let trendCanvas: HTMLCanvasElement;
-	let qtyCanvas: HTMLCanvasElement;
-	let revenueCanvas: HTMLCanvasElement;
-	let paymentCanvas: HTMLCanvasElement;
-	let peakHoursCanvas: HTMLCanvasElement;
+	let trend_canvas: HTMLCanvasElement;
+	let qty_canvas: HTMLCanvasElement;
+	let revenue_canvas: HTMLCanvasElement;
+	let payment_canvas: HTMLCanvasElement;
+	let peak_hours_canvas: HTMLCanvasElement;
 
-	let trendChart: any;
-	let qtyChart: any;
-	let revChart: any;
-	let payChart: any;
-	let peakChart: any;
+	let trend_chart: any;
+	let qty_chart: any;
+	let rev_chart: any;
+	let pay_chart: any;
+	let peak_chart: any;
 
-	async function fetchAnalytics() {
-		isLoading = true;
+	async function fetch_analytics() {
+		is_loading = true;
 		try {
-			const res = await api.request(`/api/v1/admin/finance/analytics?period=${period}`, {
+			const res = await api.request(`/admin/analytics?period=${period}`, {
 				credentials: 'include'
 			});
 			if (res.ok) {
 				const json = await res.json();
-				analyticsData = json.data;
-				updateCharts();
+				analytics_data = json.data;
+				update_charts();
 			}
 		} catch (e) {
 			console.error('Fetch analytics error', e);
 		} finally {
-			isLoading = false;
+			is_loading = false;
 		}
 	}
 
-	function updateCharts() {
-		if (!analyticsData || !trendCanvas) return;
+	function update_charts() {
+		if (!analytics_data || !trend_canvas) return;
 
 		// Trend
-		if (trendChart) trendChart.destroy();
-		trendChart = new Chart(trendCanvas, {
+		if (trend_chart) trend_chart.destroy();
+		trend_chart = new Chart(trend_canvas, {
 			type: 'line',
 			data: {
-				labels: analyticsData.trend.map((t) => t.label),
+				labels: analytics_data.trend.map((t) => t.label),
 				datasets: [
 					{
 						label: 'Pendapatan Harian',
-						data: analyticsData.trend.map((t) => t.value),
+						data: analytics_data.trend.map((t) => t.value),
 						borderColor: '#f43f5e',
 						backgroundColor: 'rgba(244, 63, 94, 0.1)',
 						fill: true
@@ -60,49 +60,49 @@
 		});
 
 		// Top Qty
-		if (qtyChart) qtyChart.destroy();
-		qtyChart = new Chart(qtyCanvas, {
+		if (qty_chart) qty_chart.destroy();
+		qty_chart = new Chart(qty_canvas, {
 			type: 'bar',
 			data: {
-				labels: analyticsData.topProducts.byQty.map((t) => t.name),
+				labels: analytics_data.top_products.by_qty.map((t) => t.name),
 				datasets: [
 					{
 						label: 'Kuantitas',
-						data: analyticsData.topProducts.byQty.map((t) => t.qty),
+						data: analytics_data.top_products.by_qty.map((t) => t.qty),
 						backgroundColor: '#3b82f6'
 					}
 				]
 			}
 		});
 
-		// Top Rev
-		if (revChart) revChart.destroy();
-		revChart = new Chart(revenueCanvas, {
+		// Top Revenue
+		if (rev_chart) rev_chart.destroy();
+		rev_chart = new Chart(revenue_canvas, {
 			type: 'bar',
 			data: {
-				labels: analyticsData.topProducts.byRevenue.map((t) => t.name),
+				labels: analytics_data.top_products.by_revenue.map((t) => t.name),
 				datasets: [
 					{
 						label: 'Pendapatan',
-						data: analyticsData.topProducts.byRevenue.map((t) => t.revenue),
+						data: analytics_data.top_products.by_revenue.map((t) => t.revenue),
 						backgroundColor: '#10b981'
 					}
 				]
 			}
 		});
 
-		// Payment
-		if (payChart) payChart.destroy();
-		payChart = new Chart(paymentCanvas, {
+		// Payment Distribution
+		if (pay_chart) pay_chart.destroy();
+		pay_chart = new Chart(payment_canvas, {
 			type: 'pie',
 			data: {
 				labels: ['Tunai', 'QRIS', 'Split'],
 				datasets: [
 					{
 						data: [
-							analyticsData.paymentDistribution.values.cash,
-							analyticsData.paymentDistribution.values.qris,
-							analyticsData.paymentDistribution.values.split
+							analytics_data.payment_distribution.values.cash,
+							analytics_data.payment_distribution.values.qris,
+							analytics_data.payment_distribution.values.split
 						],
 						backgroundColor: ['#10b981', '#3b82f6', '#8b5cf6']
 					}
@@ -110,16 +110,16 @@
 			}
 		});
 
-		// Peak hours
-		if (peakChart) peakChart.destroy();
-		peakChart = new Chart(peakHoursCanvas, {
+		// Peak Hours
+		if (peak_chart) peak_chart.destroy();
+		peak_chart = new Chart(peak_hours_canvas, {
 			type: 'bar',
 			data: {
-				labels: analyticsData.peakHours.map((t) => `${t.hour}:00`),
+				labels: analytics_data.peak_hours.map((t) => `${t.hour}:00`),
 				datasets: [
 					{
 						label: 'Jumlah Transaksi',
-						data: analyticsData.peakHours.map((t) => t.count),
+						data: analytics_data.peak_hours.map((t) => t.count),
 						backgroundColor: '#f59e0b'
 					}
 				]
@@ -127,8 +127,10 @@
 		});
 	}
 
+	// Track `period` to re-run when it changes (Svelte 5 auto-tracks reactive reads)
 	$effect(() => {
-		fetchAnalytics();
+		void period;
+		fetch_analytics();
 	});
 </script>
 
@@ -148,9 +150,9 @@
 		</select>
 	</div>
 
-	{#if isLoading && !analyticsData}
+	{#if is_loading && !analytics_data}
 		<div class="flex h-64 items-center justify-center">
-			<p class="animate-pulse text-slate-500">Loading analytics data...</p>
+			<p class="animate-pulse text-slate-500">Memuat data analytics...</p>
 		</div>
 	{:else}
 		<div class="mb-6 grid grid-cols-1 gap-6 lg:grid-cols-2">
@@ -158,7 +160,9 @@
 				class="dark:bg-surface-800 border-surface-200 dark:border-surface-700 rounded-2xl border bg-white p-6 shadow-sm"
 			>
 				<h3 class="text-surface-800 dark:text-surface-100 mb-4 text-lg font-bold">Tren Revenue</h3>
-				<div class="h-64"><canvas bind:this={trendCanvas}></canvas></div>
+				<div class="h-64">
+					<canvas bind:this={trend_canvas}></canvas>
+				</div>
 			</div>
 			<div
 				class="dark:bg-surface-800 border-surface-200 dark:border-surface-700 rounded-2xl border bg-white p-6 shadow-sm"
@@ -166,7 +170,9 @@
 				<h3 class="text-surface-800 dark:text-surface-100 mb-4 text-lg font-bold">
 					Peak Hours (Transaksi Per Jam)
 				</h3>
-				<div class="h-64"><canvas bind:this={peakHoursCanvas}></canvas></div>
+				<div class="h-64">
+					<canvas bind:this={peak_hours_canvas}></canvas>
+				</div>
 			</div>
 		</div>
 
@@ -177,7 +183,9 @@
 				<h3 class="text-surface-800 dark:text-surface-100 mb-4 text-lg font-bold">
 					Top 5 (Kuantitas)
 				</h3>
-				<div class="h-64"><canvas bind:this={qtyCanvas}></canvas></div>
+				<div class="h-64">
+					<canvas bind:this={qty_canvas}></canvas>
+				</div>
 			</div>
 			<div
 				class="dark:bg-surface-800 border-surface-200 dark:border-surface-700 rounded-2xl border bg-white p-6 shadow-sm"
@@ -185,7 +193,9 @@
 				<h3 class="text-surface-800 dark:text-surface-100 mb-4 text-lg font-bold">
 					Top 5 (Revenue)
 				</h3>
-				<div class="h-64"><canvas bind:this={revenueCanvas}></canvas></div>
+				<div class="h-64">
+					<canvas bind:this={revenue_canvas}></canvas>
+				</div>
 			</div>
 			<div
 				class="dark:bg-surface-800 border-surface-200 dark:border-surface-700 rounded-2xl border bg-white p-6 shadow-sm"
@@ -193,7 +203,9 @@
 				<h3 class="text-surface-800 dark:text-surface-100 mb-4 text-lg font-bold">
 					Distribusi Metode Bayar
 				</h3>
-				<div class="flex h-64 justify-center"><canvas bind:this={paymentCanvas}></canvas></div>
+				<div class="flex h-64 justify-center">
+					<canvas bind:this={payment_canvas}></canvas>
+				</div>
 			</div>
 		</div>
 	{/if}

@@ -1,4 +1,5 @@
 import { Module, MiddlewareConsumer, RequestMethod } from '@nestjs/common';
+import { RedisModule } from './common/redis/redis.module';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
@@ -52,6 +53,7 @@ import { AuditInterceptor } from './audit/presentation/audit.interceptor';
       name: 'SYNC_OFFLINE',
     }),
     ScheduleModule.forRoot(),
+    RedisModule, // Global Redis for OTP caching
     FlagsModule,
     AuditModule,
     ThrottlerModule.forRoot([

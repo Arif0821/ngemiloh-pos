@@ -1,7 +1,8 @@
 import { db, type LocalProduct } from '$lib/db';
-import { posStore } from '../stores/pos.store.svelte';
+import { pos_store } from '../stores/pos.store.svelte';
 import { api } from '$lib/services/api.client';
 import { toast } from '$lib/stores/toast.store.svelte';
+import { goto } from '$app/navigation';
 import type {
 	ApiResponse,
 	Discount,
@@ -10,51 +11,53 @@ import type {
 	ShiftInfo
 } from '../domain/models/types';
 
+// ============================================
+// POS SERVICE - Business Logic Layer
+// Using snake_case naming convention
+// ============================================
+
 export class PosService {
-	async fetchFlags() {
+	async fetch_flags() {
 		try {
 			const res = await api.get(`/flags`);
 			if (res.ok) {
 				const json: ApiResponse<any> = await res.json();
-				posStore.featureFlags = json.data;
+				pos_store.feature_flags = json.data;
 			} else {
 				console.warn('Failed to fetch feature flags:', res.status);
-				// Don't alert user - flags are optional
 			}
 		} catch (e) {
 			console.warn('Failed to fetch feature flags (offline or network error)');
-			// Silent failure is acceptable for flags
 		}
 	}
 
-	async checkShift() {
-		posStore.isCheckingShift = true;
+	async check_shift() {
+		pos_store.is_checking_shift = true;
 		try {
 			const res = await api.get(`/cash/current`);
 			if (res.ok) {
 				const json: ApiResponse<ShiftInfo | null> = await res.json();
-				posStore.hasOpenShift = !!json.data;
+				pos_store.has_open_shift = !!json.data;
 			} else if (res.status === 401) {
-				// Redirect to login handled by api client
-				posStore.hasOpenShift = false;
+				pos_store.has_open_shift = false;
 			} else {
 				console.warn('Failed to check shift:', res.status);
-				posStore.hasOpenShift = false;
+				pos_store.has_open_shift = false;
 			}
 		} catch (e) {
 			console.warn('Failed to check shift (offline or network error)');
-			posStore.hasOpenShift = false;
+			pos_store.has_open_shift = false;
 		} finally {
-			posStore.isCheckingShift = false;
+			pos_store.is_checking_shift = false;
 		}
 	}
 
-	async handleOpenShift(openingBalance: number) {
+	async handle_open_shift(opening_balance: number) {
 		try {
-			const res = await api.post(`/cash/open`, { opening_balance: openingBalance });
+			const res = await api.post(`/cash/open`, { opening_balance });
 			if (res.ok) {
-				posStore.hasOpenShift = true;
-				posStore.showOpenShiftModal = false;
+				pos_store.has_open_shift = true;
+				pos_store.show_open_shift_modal = false;
 				toast.success('Shift berhasil dibuka');
 				return true;
 			} else {
@@ -68,12 +71,12 @@ export class PosService {
 		}
 	}
 
-	async handleCloseShift(closingBalance: number) {
+	async handle_close_shift(closing_balance: number) {
 		try {
-			const res = await api.post(`/cash/close`, { closing_balance: closingBalance });
+			const res = await api.post(`/cash/close`, { closing_balance });
 			if (res.ok) {
-				posStore.hasOpenShift = false;
-				posStore.showCloseShiftModal = false;
+				pos_store.has_open_shift = false;
+				pos_store.show_close_shift_modal = false;
 				toast.success('Shift berhasil ditutup');
 				return true;
 			} else {
@@ -87,16 +90,16 @@ export class PosService {
 		}
 	}
 
-	async loadProductsFromDb() {
+	async load_products_from_db() {
 		try {
-			posStore.products = await db.products.toArray();
+			pos_store.products = await db.products.toArray();
 		} catch (e) {
 			console.error('Failed to load products from local DB:', e);
 			toast.error('Gagal memuat data produk lokal');
 		}
 	}
 
-	async fetchProductsFromApi() {
+	async fetch_products_from_api() {
 		try {
 			const res = await api.get(`/products?include_modifiers=true`);
 			if (res.ok) {
@@ -104,47 +107,44 @@ export class PosService {
 				if (json.success) {
 					await db.products.clear();
 					await db.products.bulkAdd(json.data);
-					await this.loadProductsFromDb();
+					await this.load_products_from_db();
 				}
 			} else if (res.status === 401) {
-				window.location.href = '/login';
+				goto('/login');
 			} else {
 				console.warn('Failed to fetch products:', res.status);
 				toast.warning('Gagal memuat produk dari server');
 			}
 		} catch (e) {
 			console.warn('Failed to fetch products (offline or network error)');
-			// Products will load from local DB instead
-			await this.loadProductsFromDb();
+			await this.load_products_from_db();
 		}
 	}
 
-	async fetchDiscounts() {
+	async fetch_discounts() {
 		try {
 			const res = await api.get(`/admin/discounts`);
 			if (res.ok) {
 				const json: ApiResponse<Discount[]> = await res.json();
 				if (json.success) {
-					posStore.activeDiscounts = json.data.filter((d) => d.is_active);
+					pos_store.active_discounts = json.data.filter((d) => d.is_active);
 				}
 			} else {
 				console.warn('Failed to fetch discounts:', res.status);
-				// Silent - discounts are optional
 			}
 		} catch (e) {
 			console.warn('Failed to fetch discounts (offline or network error)');
-			// Silent - discounts are optional
 		}
 	}
 
-	async fetchHistory() {
+	async fetch_history() {
 		try {
 			const res = await api.get(`/orders`);
 			if (res.ok) {
 				const json = await res.json();
-				if (json.success) posStore.historyOrders = json.data;
+				if (json.success) pos_store.history_orders = json.data;
 			} else if (res.status === 401) {
-				window.location.href = '/login';
+				goto('/login');
 			} else {
 				console.warn('Failed to fetch history:', res.status);
 				toast.warning('Gagal memuat riwayat transaksi');
@@ -155,7 +155,7 @@ export class PosService {
 		}
 	}
 
-	async syncPendingOrders() {
+	async sync_pending_orders() {
 		const pending = await db.orders.where('sync_status').equals('pending').toArray();
 		if (pending.length === 0) return;
 
@@ -165,7 +165,8 @@ export class PosService {
 					client_uuid: order.client_uuid,
 					payment_method: order.payment_method,
 					client_final_price: order.final_price,
-					items: order.items
+					items: order.items,
+					customer_name: order.customer_name
 				}))
 			};
 
@@ -179,9 +180,9 @@ export class PosService {
 							await db.orders.update(result.client_uuid, { sync_status: 'synced' });
 						}
 					}
-					const syncedCount = json.data.filter((r: any) => r.status === 'success').length;
-					if (syncedCount > 0) {
-						toast.success(`${syncedCount} pesanan berhasil di-sync`);
+					const synced_count = json.data.filter((r: any) => r.status === 'success').length;
+					if (synced_count > 0) {
+						toast.success(`${synced_count} pesanan berhasil di-sync`);
 					}
 				}
 			} else {
@@ -194,70 +195,66 @@ export class PosService {
 		}
 	}
 
-	// Polling states
-	qrisTimer: ReturnType<typeof setInterval> | null = null;
-	pollingInterval: ReturnType<typeof setInterval> | null = null;
-	sseEventSource: EventSource | null = null;
-	private isOrderCompleted = false;
-	private qrisStartTime: number = 0;
-	private qrisTotalSeconds: number = 900;
+	// Polling states (using snake_case)
+	qris_timer: ReturnType<typeof setInterval> | null = null;
+	polling_interval: ReturnType<typeof setInterval> | null = null;
+	sse_event_source: EventSource | null = null;
+	private is_order_completed = false;
+	private qris_start_time: number = 0;
+	private qris_total_seconds: number = 900;
 
-	startQrisWaiting(orderData: OrderResponse, onSuccess: () => void) {
-		posStore.isWaitingQris = true;
-		posStore.showPaymentModal = false;
-		posStore.qrisOrderInfo = orderData;
-		this.qrisStartTime = Date.now();
-		this.qrisTotalSeconds = 900;
-		posStore.qrisCountdown = this.qrisTotalSeconds;
-		this.isOrderCompleted = false;
+	start_qris_waiting(order_data: OrderResponse, on_success: () => void) {
+		pos_store.is_waiting_qris = true;
+		pos_store.show_payment_modal = false;
+		pos_store.qris_order_info = order_data;
+		this.qris_start_time = Date.now();
+		this.qris_total_seconds = 900;
+		pos_store.qris_countdown = this.qris_total_seconds;
+		this.is_order_completed = false;
 
-		if (this.qrisTimer) clearInterval(this.qrisTimer);
-		// P2-PERF: Use timestamp-based countdown that doesn't pause when tab is hidden
-		this.qrisTimer = setInterval(() => {
-			const elapsed = Math.floor((Date.now() - this.qrisStartTime) / 1000);
-			posStore.qrisCountdown = Math.max(0, this.qrisTotalSeconds - elapsed);
-			if (posStore.qrisCountdown <= 0) {
-				this.cancelQrisWaiting();
+		if (this.qris_timer) clearInterval(this.qris_timer);
+		// Use timestamp-based countdown that doesn't pause when tab is hidden
+		this.qris_timer = setInterval(() => {
+			const elapsed = Math.floor((Date.now() - this.qris_start_time) / 1000);
+			pos_store.qris_countdown = Math.max(0, this.qris_total_seconds - elapsed);
+			if (pos_store.qris_countdown <= 0) {
+				this.cancel_qris_waiting();
 				toast.warning('Waktu pembayaran QRIS habis');
 			}
 		}, 1000);
 
-		this.sseEventSource = new EventSource(`/api/v1/orders/${orderData.id}/sse`, {
+		this.sse_event_source = new EventSource(`/api/v1/orders/${order_data.id}/sse`, {
 			withCredentials: true
 		});
-		this.sseEventSource.onmessage = (event) => {
-			// P2-PERF: Prevent double execution from SSE + polling race condition
-			if (this.isOrderCompleted) return;
+		this.sse_event_source.onmessage = (event) => {
+			if (this.is_order_completed) return;
 			try {
 				const data = JSON.parse(event.data);
 				if (data.status === 'completed') {
-					this.isOrderCompleted = true;
-					onSuccess();
+					this.is_order_completed = true;
+					on_success();
 				}
 			} catch (e) {
 				console.warn('Failed to parse SSE message:', e);
 			}
 		};
 
-		// P2-PERF: Handle SSE errors - close and rely on polling
-		this.sseEventSource.onerror = () => {
+		this.sse_event_source.onerror = () => {
 			console.warn('SSE connection error, relying on polling');
-			this.sseEventSource?.close();
-			this.sseEventSource = null;
-			// Don't call cancelQrisWaiting - let polling continue
+			this.sse_event_source?.close();
+			this.sse_event_source = null;
 		};
 
-		if (this.pollingInterval) clearInterval(this.pollingInterval);
-		this.pollingInterval = setInterval(async () => {
-			// HIGH: Prevent double execution from SSE + polling race condition
-			if (this.isOrderCompleted) return;
+		if (this.polling_interval) clearInterval(this.polling_interval);
+		this.polling_interval = setInterval(async () => {
+			if (this.is_order_completed) return;
 			try {
-				const res = await api.get(`/orders/${orderData.id}/status`);
+				const res = await api.get(`/orders/${order_data.id}/status`);
 				if (res.ok) {
 					const json = await res.json();
 					if (json.data?.status === 'completed') {
-						this.isOrderCompleted = true;
-						onSuccess();
+						this.is_order_completed = true;
+						on_success();
 					}
 				}
 			} catch (e) {
@@ -266,96 +263,105 @@ export class PosService {
 		}, 5000);
 	}
 
-	cancelQrisWaiting() {
-		posStore.isWaitingQris = false;
-		this.isOrderCompleted = false;
-		if (this.qrisTimer) clearInterval(this.qrisTimer);
-		if (this.pollingInterval) clearInterval(this.pollingInterval);
-		if (this.sseEventSource) {
-			this.sseEventSource.close();
-			this.sseEventSource = null;
+	cancel_qris_waiting() {
+		pos_store.is_waiting_qris = false;
+		this.is_order_completed = false;
+		if (this.qris_timer) clearInterval(this.qris_timer);
+		if (this.polling_interval) clearInterval(this.polling_interval);
+		if (this.sse_event_source) {
+			this.sse_event_source.close();
+			this.sse_event_source = null;
 		}
 	}
 
-	async processPayment(
-		onQrisWait: (data: OrderResponse) => void,
-		onSuccess: (data: OrderResponse) => void
+	async process_payment(
+		on_qris_wait: (data: OrderResponse) => void,
+		on_success: (data: OrderResponse) => void
 	) {
-		if (posStore.cart.length === 0 || posStore.isProcessing) return;
-		posStore.isProcessing = true;
+		if (pos_store.cart.length === 0 || pos_store.is_processing) return;
+		// Guard: split payment requires cash < total (QRIS needed)
+		if (
+			pos_store.payment_method === 'split' &&
+			pos_store.split_cash_amount >= pos_store.cart_total
+		) {
+			toast.error('Uang tunai harus kurang dari total untuk split payment');
+			pos_store.is_processing = false;
+			return;
+		}
+		pos_store.is_processing = true;
 
-		const clientUuid = crypto.randomUUID();
+		const client_uuid = crypto.randomUUID();
 		const payload = {
-			client_uuid: clientUuid,
-			payment_method: posStore.paymentMethod,
-			client_final_price: posStore.cartTotal,
-			discount_total: posStore.discountTotal,
-			discount_id: posStore.appliedDiscount?.id,
+			client_uuid,
+			payment_method: pos_store.payment_method,
+			client_final_price: pos_store.cart_total,
+			discount_total: pos_store.discount_total,
+			discount_id: pos_store.applied_discount?.id,
 			cash_amount:
-				posStore.paymentMethod === 'cash'
-					? Number(posStore.cashAmount)
-					: posStore.paymentMethod === 'split'
-						? Number(posStore.splitCashAmount)
+				pos_store.payment_method === 'cash'
+					? Number(pos_store.cash_amount)
+					: pos_store.payment_method === 'split'
+						? Number(pos_store.split_cash_amount)
 						: 0,
 			qris_amount:
-				posStore.paymentMethod === 'qris'
-					? posStore.cartTotal
-					: posStore.paymentMethod === 'split'
-						? posStore.splitQrisAmount
+				pos_store.payment_method === 'qris'
+					? pos_store.cart_total
+					: pos_store.payment_method === 'split'
+						? pos_store.split_qris_amount
 						: 0,
-			items: posStore.cart.map((c) => ({
+			items: pos_store.cart.map((c) => ({
 				product_id: c.id,
 				quantity: c.quantity,
-				modifiers: c.selectedModifiers.map((m: any) => ({ option_id: m.id }))
+				modifiers: c.selected_modifiers.map((m: any) => ({ option_id: m.id }))
 			}))
 		} as CreateOrderPayload;
 
 		try {
-			if (posStore.isOffline) {
-				if (posStore.paymentMethod === 'qris' || posStore.paymentMethod === 'split') {
+			if (pos_store.is_offline) {
+				if (pos_store.payment_method === 'qris' || pos_store.payment_method === 'split') {
 					toast.error('QRIS tidak dapat diproses saat offline. Gunakan pembayaran tunai.');
-					posStore.isProcessing = false;
+					pos_store.is_processing = false;
 					return;
 				}
 
 				await db.orders.add({
-					client_uuid: clientUuid,
+					client_uuid,
 					kasir_id: 'offline',
-					subtotal: posStore.cartTotal,
+					subtotal: pos_store.cart_total,
 					tax_total: 0,
-					final_price: posStore.cartTotal,
-					payment_method: posStore.paymentMethod,
+					final_price: pos_store.cart_total,
+					payment_method: pos_store.payment_method,
 					status: 'pending',
 					items: payload.items,
 					sync_status: 'pending',
 					created_at: Date.now()
 				});
 				toast.success('Offline: Pesanan disimpan dan akan di-sync nanti');
-				posStore.resetCart();
+				pos_store.reset_cart();
 			} else {
 				const res = await api.post(`/orders`, payload);
 
 				if (res.ok) {
 					const json: ApiResponse<OrderResponse> = await res.json();
-					if (posStore.paymentMethod === 'qris' || posStore.paymentMethod === 'split') {
-						onQrisWait(json.data);
+					if (pos_store.payment_method === 'qris' || pos_store.payment_method === 'split') {
+						on_qris_wait(json.data);
 					} else {
-						onSuccess(json.data);
+						on_success(json.data);
 					}
 				} else if (res.status === 401) {
-					window.location.href = '/login';
+					goto('/login');
 				} else {
-					const errData = await res.json();
-					toast.error('Gagal: ' + (errData.message || 'Server Error'));
+					const err_data = await res.json();
+					toast.error('Gagal: ' + (err_data.message || 'Server Error'));
 				}
 			}
 		} catch (err) {
 			console.error('Payment error:', err);
 			toast.error('Gagal memproses transaksi. Cek koneksi Anda.');
 		} finally {
-			posStore.isProcessing = false;
+			pos_store.is_processing = false;
 		}
 	}
 }
 
-export const posService = new PosService();
+export const pos_service = new PosService();

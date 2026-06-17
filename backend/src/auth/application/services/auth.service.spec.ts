@@ -97,7 +97,6 @@ describe('AuthService', () => {
 
       // Assert: Verify successful login response
       expect(result).toHaveProperty('accessToken');
-      expect(result).toHaveProperty('refreshToken');
       expect(result).toHaveProperty('csrfToken');
       expect(result.user).toEqual({
         id: mockUser.id,
@@ -369,111 +368,16 @@ describe('AuthService', () => {
     });
   });
 
-  describe('refreshToken', () => {
-    const validToken = 'valid-refresh-token';
-    const tokenPayload = {
-      sub: 'user-123',
-      role: Role.kasir,
-      exp: Math.floor(Date.now() / 1000) + 3600,
-    };
-
-    it('should successfully refresh token with valid token', async () => {
-      // Arrange: Valid token that is not revoked
-      const mockUser = createMockUser();
-
-      mockJwtService.verify.mockReturnValue(tokenPayload);
-      mockAuthRepository.findRevokedToken.mockResolvedValue(null);
-      mockAuthRepository.findUserById.mockResolvedValue(mockUser);
-      mockJwtService.sign.mockReturnValue('new-access-token');
-
-      // Act: Refresh token
-      const result = await service.refreshToken(validToken);
-
-      // Assert: Should return new access token
-      expect(result).toHaveProperty('accessToken');
-      expect(result.accessToken).toBe('new-access-token');
-
-      // Verify repository calls
-      expect(mockAuthRepository.findRevokedToken).toHaveBeenCalled();
-      expect(mockAuthRepository.findUserById).toHaveBeenCalledWith(
-        tokenPayload.sub,
-      );
-    });
-
-    it('should fail refresh with invalid token', async () => {
-      // Arrange: Invalid token throws during verify
-      mockJwtService.verify.mockImplementation(() => {
-        throw new Error('Invalid token');
-      });
-
-      // Act & Assert: Should throw UnauthorizedException
-      await expect(service.refreshToken('invalid-token')).rejects.toThrow(
-        UnauthorizedException,
-      );
-      await expect(service.refreshToken('invalid-token')).rejects.toThrow(
-        'Invalid token',
-      );
-    });
-
-    it('should fail refresh with revoked token', async () => {
-      // Arrange: Token is valid but has been revoked
-      mockJwtService.verify.mockReturnValue(tokenPayload);
-      mockAuthRepository.findRevokedToken.mockResolvedValue({
-        token_hash: 'some-hash',
-      });
-
-      // Act & Assert: Should throw UnauthorizedException with token revoked message
-      await expect(service.refreshToken(validToken)).rejects.toThrow(
-        UnauthorizedException,
-      );
-      await expect(service.refreshToken(validToken)).rejects.toThrow(
-        'Token revoked',
-      );
-    });
-
-    it('should fail refresh when user is not found', async () => {
-      // Arrange: Token is valid but user no longer exists
-      mockJwtService.verify.mockReturnValue(tokenPayload);
-      mockAuthRepository.findRevokedToken.mockResolvedValue(null);
-      mockAuthRepository.findUserById.mockResolvedValue(null);
-
-      // Act & Assert: Should throw UnauthorizedException
-      await expect(service.refreshToken(validToken)).rejects.toThrow(
-        UnauthorizedException,
-      );
-      await expect(service.refreshToken(validToken)).rejects.toThrow(
-        'Invalid or inactive user',
-      );
-    });
-
-    it('should fail refresh when user is inactive', async () => {
-      // Arrange: Token is valid but user is inactive
-      const inactiveUser = createMockUser({ is_active: false });
-
-      mockJwtService.verify.mockReturnValue(tokenPayload);
-      mockAuthRepository.findRevokedToken.mockResolvedValue(null);
-      mockAuthRepository.findUserById.mockResolvedValue(inactiveUser);
-
-      // Act & Assert: Should throw UnauthorizedException
-      await expect(service.refreshToken(validToken)).rejects.toThrow(
-        UnauthorizedException,
-      );
-      await expect(service.refreshToken(validToken)).rejects.toThrow(
-        'Invalid or inactive user',
-      );
-    });
-  });
-
   describe('logout', () => {
-    const validRefreshToken = 'valid-refresh-token';
+    const validAccessToken = 'valid-access-token';
     const tokenPayload = {
       sub: 'user-123',
       role: Role.kasir,
       exp: Math.floor(Date.now() / 1000) + 3600,
     };
 
-    it('should successfully logout with valid refresh token', async () => {
-      // Arrange: Valid refresh token
+    it('should successfully logout with valid access token', async () => {
+      // Arrange: Valid access token
       mockJwtService.verify.mockReturnValue(tokenPayload);
       mockAuthRepository.revokeToken.mockResolvedValue({
         token_hash: 'some-hash',
@@ -482,13 +386,13 @@ describe('AuthService', () => {
       });
 
       // Act: Perform logout
-      await service.logout(validRefreshToken);
+      await service.logout(validAccessToken);
 
       // Assert: Token should be revoked
       expect(mockAuthRepository.revokeToken).toHaveBeenCalled();
     });
 
-    it('should handle logout with empty refresh token gracefully', async () => {
+    it('should handle logout with empty access token gracefully', async () => {
       // Act& Assert: Should not throw, just return
       await expect(service.logout('')).resolves.not.toThrow();
       await expect(service.logout(null as any)).resolves.not.toThrow();
@@ -498,7 +402,7 @@ describe('AuthService', () => {
       expect(mockAuthRepository.revokeToken).not.toHaveBeenCalled();
     });
 
-    it('should handle logout with invalid refresh token gracefully', async () => {
+    it('should handle logout with invalid access token gracefully', async () => {
       // Arrange: Invalid token throws during verify
       mockJwtService.verify.mockImplementation(() => {
         throw new Error('Invalid token');
@@ -510,12 +414,12 @@ describe('AuthService', () => {
     });
 
     it('should revoke token with correct hash and expiration', async () => {
-      // Arrange: Valid refresh token
+      // Arrange: Valid access token
       mockJwtService.verify.mockReturnValue(tokenPayload);
       mockAuthRepository.revokeToken.mockResolvedValue({} as any);
 
       // Act: Perform logout
-      await service.logout(validRefreshToken);
+      await service.logout(validAccessToken);
 
       // Assert: Verify revokeToken was called with correct parameters
       expect(mockAuthRepository.revokeToken).toHaveBeenCalledWith(

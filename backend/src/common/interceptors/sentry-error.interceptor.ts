@@ -19,7 +19,6 @@ export class SentryErrorInterceptor implements NestInterceptor {
     'pin',
     'pin_hash',
     'access_token',
-    'refresh_token',
     'authorization',
     'cookie',
     'secret',

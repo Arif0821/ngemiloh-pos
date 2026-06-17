@@ -6,11 +6,13 @@ import {
   Logger,
   Inject,
   BadRequestException,
+  NotFoundException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
 import * as crypto from 'crypto';
 import { EmailService } from '../../../email/email.service';
+import { RedisService } from '../../../common/redis/redis.service';
 import { Role } from '@prisma/client';
 import {
   AUTH_REPOSITORY,
@@ -31,14 +33,11 @@ export class AuthService {
     @Inject(AUTH_REPOSITORY) private authRepository: AuthRepositoryInterface,
     private jwtService: JwtService,
     private emailService: EmailService,
+    private redisService: RedisService,
   ) {
-    // SECURITY FIX S-01: Throw error immediately if pepper is missing
-    // No fallback allowed - security depends on this being set
     const configuredPepper = process.env.PIN_PEPPER_SECRET;
     if (!configuredPepper) {
-      throw new Error(
-        'FATAL: PIN_PEPPER_SECRET environment variable is required',
-      );
+      throw new Error('FATAL: PIN_PEPPER_SECRET environment variable is required');
     }
     this.pepper = configuredPepper;
   }
@@ -52,8 +51,6 @@ export class AuthService {
     return bcrypt.compare(pin + this.pepper, hash);
   }
 
-  // PRD AUTH-02: Validate password format - should be called at SET/CHANGE time only
-  // Not called during login to prevent brute force bypass
   validatePasswordRequirements(password: string): void {
     const minLength = 16;
     const hasUpperCase = /[A-Z]/.test(password);
@@ -62,7 +59,6 @@ export class AuthService {
     const hasSymbol = /[!@#$%^&*()_+\-={}:;"'<>,.?\\|/-]/.test(password);
 
     if (password.length < minLength) {
-      // SECURITY: Don't leak password length in error message
       throw new BadRequestException('Password must be at least 16 characters');
     }
     if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSymbol) {
@@ -77,7 +73,6 @@ export class AuthService {
     pinOrPassword: string,
     ipAddress: string = 'unknown',
   ) {
-    // AUTH-04: Check IP Lockout first
     const ipLock = await this.authRepository.findIpLockout(ipAddress);
 
     if (ipLock && ipLock.locked_until && ipLock.locked_until > new Date()) {
@@ -86,7 +81,6 @@ export class AuthService {
         HttpStatus.TOO_MANY_REQUESTS,
       );
     }
-    // Check user by username (kasir) or email (superadmin)
     const user =
       await this.authRepository.findUserByUsernameOrEmail(usernameOrEmail);
 
@@ -98,7 +92,6 @@ export class AuthService {
       throw new UnauthorizedException('Account is inactive');
     }
 
-    // Account level lockout check
     if (user.locked_until && user.locked_until > new Date()) {
       throw new HttpException(
         'Account temporarily locked. Try again later.',
@@ -116,9 +109,7 @@ export class AuthService {
       if (!user.password_hash)
         throw new UnauthorizedException('Invalid credentials');
 
-      // Validate password format BEFORE bcrypt compare for clear error messages
       if (pinOrPassword.length < 16) {
-        // Increment brute force counter for weak password attempts
         await this.authRepository.incrementUserFailedLogin(user.id);
         await this.authRepository.incrementIpLockout(ipAddress);
         throw new UnauthorizedException(
@@ -131,7 +122,6 @@ export class AuthService {
       const hasNumber = /[0-9]/.test(pinOrPassword);
       const hasSymbol = /[!@#$%^&*()_+\-={}:;"'<>,.?\\|/-]/.test(pinOrPassword);
       if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSymbol) {
-        // Increment brute force counter for invalid format
         await this.authRepository.incrementUserFailedLogin(user.id);
         await this.authRepository.incrementIpLockout(ipAddress);
         throw new UnauthorizedException(
@@ -143,7 +133,6 @@ export class AuthService {
     }
 
     if (!isValid) {
-      // Increment Account Failures
       const updatedUser = await this.authRepository.incrementUserFailedLogin(
         user.id,
       );
@@ -154,8 +143,6 @@ export class AuthService {
           new Date(Date.now() + LOCKOUT_DURATION_MS),
         );
 
-        // NOTIF-01: Send alert (non-critical, don't fail login on email error)
-        // SECURITY: Escape username to prevent HTML injection in email
         const safeUsername = escapeHtml(user.username);
         this.emailService
           .sendAlert(
@@ -170,7 +157,6 @@ export class AuthService {
           );
       }
 
-      // Increment IP Failures
       const updatedIp = await this.authRepository.incrementIpLockout(ipAddress);
 
       if (updatedIp.failed_count >= LOCKOUT_THRESHOLD) {
@@ -187,27 +173,21 @@ export class AuthService {
       throw new UnauthorizedException('Invalid credentials');
     }
 
-    // Reset failed logins on success
     await this.authRepository.resetUserFailedLogin(user.id);
     await this.authRepository.resetIpLockout(ipAddress);
 
-    // Generate tokens
     const payload = { sub: user.id, role: user.role as string };
+    const jti = crypto.randomUUID();
     const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET ?? '',
-      expiresIn: '8h',
-    });
-
-    const refreshToken = this.jwtService.sign(payload, {
-      secret: process.env.JWT_REFRESH_SECRET ?? '',
-      expiresIn: '7d',
+      expiresIn: '20h',
+      jwtid: jti,
     });
 
     const csrfToken = crypto.randomBytes(32).toString('hex');
 
     return {
       accessToken,
-      refreshToken,
       csrfToken,
       user: {
         id: user.id,
@@ -218,81 +198,224 @@ export class AuthService {
     };
   }
 
-  async refreshToken(token: string) {
-    interface JwtPayload {
-      sub: string;
-      role: string;
-      exp?: number;
-      iat?: number;
+  async validateAdminCredentials(
+    email: string,
+    password: string,
+    ipAddress: string,
+  ) {
+    const ipLock = await this.authRepository.findIpLockout(ipAddress);
+    if (ipLock && ipLock.locked_until && ipLock.locked_until > new Date()) {
+      throw new HttpException(
+        'IP is temporarily locked.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
     }
 
-    let payload: JwtPayload;
+    const user = await this.authRepository.findUserByUsernameOrEmail(
+      email.toLowerCase(),
+    );
+    if (!user || user.role !== 'superadmin') {
+      throw new UnauthorizedException('Invalid credentials');
+    }
+    if (!user.is_active)
+      throw new UnauthorizedException('Account is inactive');
+    if (user.locked_until && user.locked_until > new Date()) {
+      throw new HttpException(
+        'Account temporarily locked.',
+        HttpStatus.TOO_MANY_REQUESTS,
+      );
+    }
+
+    if (password.length < 16) {
+      await this.authRepository.incrementUserFailedLogin(user.id);
+      await this.authRepository.incrementIpLockout(ipAddress);
+      throw new UnauthorizedException(
+        'Password must be at least 16 characters',
+      );
+    }
+    const hasUpperCase = /[A-Z]/.test(password);
+    const hasLowerCase = /[a-z]/.test(password);
+    const hasNumber = /[0-9]/.test(password);
+    const hasSymbol = /[!@#$%^&*()_+\-={}:;"'<>,.?\\|/-]/.test(password);
+    if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSymbol) {
+      await this.authRepository.incrementUserFailedLogin(user.id);
+      await this.authRepository.incrementIpLockout(ipAddress);
+      throw new UnauthorizedException(
+        'Password must contain uppercase, lowercase, number, and symbol',
+      );
+    }
+
+    const isValid = await bcrypt.compare(password, user.password_hash || '');
+    if (!isValid) {
+      await this.authRepository.incrementUserFailedLogin(user.id);
+      await this.authRepository.incrementIpLockout(ipAddress);
+      const updatedUser = await this.authRepository.incrementUserFailedLogin(user.id);
+      if (updatedUser.failed_login_count >= LOCKOUT_THRESHOLD) {
+        await this.authRepository.lockUser(
+          user.id,
+          new Date(Date.now() + LOCKOUT_DURATION_MS),
+        );
+      }
+      const updatedIp = await this.authRepository.incrementIpLockout(ipAddress);
+      if (updatedIp.failed_count >= LOCKOUT_THRESHOLD) {
+        await this.authRepository.lockIpAddress(
+          ipAddress,
+          new Date(Date.now() + LOCKOUT_DURATION_MS),
+        );
+      }
+      throw new UnauthorizedException('Invalid credentials');
+    }
+
+    await this.authRepository.resetUserFailedLogin(user.id);
+    await this.authRepository.resetIpLockout(ipAddress);
+    return { userId: user.id, email: user.email, name: user.name };
+  }
+
+  async sendOtp(email: string): Promise<void> {
+    const user = await this.authRepository.findUserByUsernameOrEmail(
+      email.toLowerCase(),
+    );
+    if (!user || user.role !== 'superadmin')
+      throw new UnauthorizedException('Admin not found');
+
+    const otpCode = crypto.randomInt(10000000, 99999999).toString();
+    const otpHash = await bcrypt.hash(otpCode, 10);
+
+    await this.redisService.set(
+      `otp:admin:${user.id}`,
+      JSON.stringify({ code_hash: otpHash, attempts: 0 }),
+      600,
+    );
+    await this.redisService.set(
+      `otp:email:${email.toLowerCase()}`,
+      user.id,
+      600,
+    );
+
+    // Call EmailService.sendOtp (different method name to avoid confusion)
+    await this.emailService.sendOtp(user.email || email, otpCode);
+  }
+
+  async verifyOtp(email: string, otpCode: string, ipAddress: string) {
+    if (!email) throw new BadRequestException('Email is required');
+
+    const userId = await this.redisService.get(
+      `otp:email:${email.toLowerCase()}`,
+    );
+    if (!userId)
+      throw new BadRequestException('No pending OTP. Please login again.');
+
+    const otpDataStr = await this.redisService.get(`otp:admin:${userId}`);
+    if (!otpDataStr)
+      throw new BadRequestException('OTP expired. Please request a new one.');
+
+    let otpData: { code_hash: string; attempts: number };
     try {
-      payload = this.jwtService.verify(token, {
-        secret: process.env.JWT_REFRESH_SECRET,
-      });
+      otpData = JSON.parse(otpDataStr);
     } catch {
-      throw new UnauthorizedException('Invalid token');
+      throw new BadRequestException('Invalid OTP session');
     }
 
-    // P0-SECURITY: Check if token is revoked
-    const tokenHash = crypto.createHash('sha256').update(token).digest('hex');
-    const isRevoked = await this.authRepository.findRevokedToken(tokenHash);
-    if (isRevoked) {
-      throw new UnauthorizedException('Token revoked');
+    const isValid = await bcrypt.compare(otpCode, otpData.code_hash);
+    if (!isValid) {
+      otpData.attempts += 1;
+      if (otpData.attempts >= 5) {
+        await this.redisService.del(`otp:admin:${userId}`);
+        await this.redisService.del(`otp:email:${email.toLowerCase()}`);
+        throw new UnauthorizedException(
+          'Too many OTP attempts. Please login again.',
+        );
+      }
+      await this.redisService.set(
+        `otp:admin:${userId}`,
+        JSON.stringify(otpData),
+        600,
+      );
+      throw new UnauthorizedException('Invalid OTP code');
     }
 
-    const user = await this.authRepository.findUserById(payload.sub);
-    if (!user) {
-      throw new UnauthorizedException('Invalid or inactive user');
-    }
+    await this.redisService.del(`otp:admin:${userId}`);
+    await this.redisService.del(`otp:email:${email.toLowerCase()}`);
 
-    if (!user.is_active) {
-      throw new UnauthorizedException('Invalid or inactive user');
-    }
+    const user = await this.authRepository.findUserById(userId);
+    if (!user) throw new UnauthorizedException('User not found');
 
-    // P0-SECURITY: Revoke old refresh token (token rotation)
-    const expiresAt = new Date((payload.exp ?? 0) * 1000);
-    await this.authRepository.revokeToken(tokenHash, user.id, expiresAt);
+    await this.authRepository.resetUserFailedLogin(userId);
+    await this.authRepository.resetIpLockout(ipAddress);
 
-    const newPayload = { sub: user.id, role: user.role as string };
-    const newAccessToken = this.jwtService.sign(newPayload, {
+    const payload = { sub: user.id, role: user.role as string };
+    const jti = crypto.randomUUID();
+    const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET ?? '',
-      expiresIn: '8h',
+      expiresIn: '12h',
+      jwtid: jti,
     });
-
-    // P0-SECURITY: Issue new refresh token (rotation)
-    const newRefreshToken = this.jwtService.sign(newPayload, {
-      secret: process.env.JWT_REFRESH_SECRET ?? '',
-      expiresIn: '7d',
-    });
+    const csrfToken = crypto.randomBytes(32).toString('hex');
 
     return {
-      accessToken: newAccessToken,
-      refreshToken: newRefreshToken,
+      accessToken,
+      csrfToken,
+      user: { id: user.id, name: user.name, role: user.role },
     };
   }
 
-  async logout(refreshToken: string) {
-    if (!refreshToken) return;
+  async logout(token: string) {
+    if (!token) return;
     try {
-      const payload = this.jwtService.verify<{ sub: string; exp?: number }>(
-        refreshToken,
-        {
-          secret: process.env.JWT_REFRESH_SECRET,
-        },
-      );
+      const payload = this.jwtService.verify<{
+        sub: string;
+        jti?: string;
+        exp?: number;
+      }>(token, {
+        secret: process.env.JWT_ACCESS_SECRET ?? '',
+      });
 
       const expiresAt = new Date((payload.exp ?? 0) * 1000);
 
-      const tokenHash = crypto
-        .createHash('sha256')
-        .update(refreshToken)
-        .digest('hex');
-      await this.authRepository.revokeToken(tokenHash, payload.sub, expiresAt);
+      // Store the JWT's jti claim as the revocation key so validate()
+      // can efficiently look it up by jti instead of re-hashing the token.
+      const jti = payload.jti ?? crypto
+          .createHash('sha256')
+          .update(token)
+          .digest('hex');
+      await this.authRepository.revokeToken(jti, payload.sub, expiresAt);
     } catch {
       // Ignore invalid token during logout
     }
+  }
+
+  async changePin(userId: string, currentPin: string, newPin: string) {
+    const user = await this.authRepository.findUserById(userId);
+    if (!user) throw new NotFoundException('User not found');
+    if (user.role !== 'kasir')
+      throw new BadRequestException('Only kasir can change PIN');
+
+    if (!user.pin_hash) throw new BadRequestException('PIN not set');
+    const isValid = await this.verifyPin(currentPin, user.pin_hash);
+    if (!isValid)
+      throw new UnauthorizedException('Current PIN incorrect');
+
+    const newPinHash = await this.hashPin(newPin);
+
+    await this.authRepository.updateUserPin(userId, newPinHash);
+
+    const payload = { sub: user.id, role: user.role as string };
+    const jti = crypto.randomUUID();
+    const accessToken = this.jwtService.sign(payload, {
+      secret: process.env.JWT_ACCESS_SECRET ?? '',
+      expiresIn: '20h',
+      jwtid: jti,
+    });
+
+    return {
+      accessToken,
+      user: {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+        must_change_pin: false,
+      },
+    };
   }
 
   async getUserById(userId: string) {
@@ -300,7 +423,6 @@ export class AuthService {
     if (!user) {
       return null;
     }
-    // Return safe user data (exclude sensitive fields)
     // eslint-disable-next-line @typescript-eslint/no-unused-vars
     const { pin_hash, password_hash, ...safeUser } = user;
     return safeUser;

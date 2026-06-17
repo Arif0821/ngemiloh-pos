@@ -49,12 +49,6 @@ All errors follow a consistent format:
       },
       'access-token',
     )
-    .addCookieAuth('refresh_token', {
-      type: 'apiKey',
-      in: 'cookie',
-      name: 'refresh_token',
-      description: 'Refresh token cookie (HttpOnly)',
-    })
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

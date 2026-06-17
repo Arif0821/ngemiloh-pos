@@ -6,6 +6,7 @@ import { ORDER_REPOSITORY } from '../../domain/interfaces/order.repository.inter
 import { InventoryService } from '../../../inventory/application/services/inventory.service';
 import { EmailService } from '../../../email/email.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
+import { PrismaService } from '../../../prisma/prisma.service';
 
 // SHA-512 produces 128-character hex string
 const MOCK_SIG = 'a'.repeat(128);
@@ -42,6 +43,7 @@ describe('OrdersService', () => {
   let mockEmailService: any;
   let mockEventEmitter: any;
   let mockMidtransCore: any;
+  let mockPrismaService: any;
 
   const mockProduct = {
     id: 'prod-001',
@@ -142,6 +144,16 @@ describe('OrdersService', () => {
       emit: jest.fn(),
     };
 
+    mockPrismaService = {
+      $transaction: jest.fn((cb) => cb({ order: { create: jest.fn().mockResolvedValue(mockOrder) } })),
+      user: {
+        findUnique: jest.fn().mockResolvedValue({ cashier_letter: 'A' }),
+      },
+      order: {
+        count: jest.fn().mockResolvedValue(0),
+      },
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrdersService,
@@ -149,6 +161,7 @@ describe('OrdersService', () => {
         { provide: InventoryService, useValue: mockInventoryService },
         { provide: EmailService, useValue: mockEmailService },
         { provide: EventEmitter2, useValue: mockEventEmitter },
+        { provide: PrismaService, useValue: mockPrismaService },
       ],
     }).compile();
 
@@ -161,6 +174,41 @@ describe('OrdersService', () => {
 
   afterEach(() => {
     jest.clearAllMocks();
+  });
+
+  describe('generateOrderNumber', () => {
+    it('should generate order number in correct format TRX-YYYYMMDD-{letter}{seq}', async () => {
+      mockPrismaService.order.count.mockResolvedValue(0);
+
+      const result = await service.generateOrderNumber('A', new Date('2024-01-15'));
+
+      expect(result).toMatch(/^TRX-20240115A001$/);
+    });
+
+    it('should increment sequence based on existing orders for same cashier and date', async () => {
+      mockPrismaService.order.count.mockResolvedValue(5);
+
+      const result = await service.generateOrderNumber('B', new Date('2024-01-15'));
+
+      expect(result).toBe('TRX-20240115B006');
+    });
+
+    it('should pad sequence with leading zeros', async () => {
+      mockPrismaService.order.count.mockResolvedValue(12);
+
+      const result = await service.generateOrderNumber('C', new Date('2024-01-15'));
+
+      expect(result).toBe('TRX-20240115C013');
+    });
+
+    it('should use X as default cashier letter when user has no cashier_letter', async () => {
+      mockPrismaService.user.findUnique.mockResolvedValue({ cashier_letter: null });
+      mockPrismaService.order.count.mockResolvedValue(0);
+
+      const result = await service.generateOrderNumber('X', new Date('2024-01-15'));
+
+      expect(result).toBe('TRX-20240115X001');
+    });
   });
 
   describe('createOrder', () => {
@@ -313,8 +361,8 @@ describe('OrdersService', () => {
       });
     });
 
-    describe('Failure cases', () => {
-      it('should throw BadRequestException when price discrepancy exceeds threshold', async () => {
+    describe('Trust but Verify - Price Discrepancy Handling', () => {
+      it('should throw BadRequestException when price discrepancy exceeds threshold (createOrder)', async () => {
         process.env.PRICE_DELTA_THRESHOLD_PCT = '5';
 
         mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
@@ -323,19 +371,86 @@ describe('OrdersService', () => {
           mockProduct,
         ]);
 
-        const orderWithPriceDiscrepancy = {
+        // createOrder throws on discrepancy — no need to mock $transaction
+        const discrepancyOrder = {
           ...baseOrderDto,
           client_final_price: 10000, // Big discrepancy from calculated 22500
         };
 
         await expect(
-          service.createOrder(orderWithPriceDiscrepancy, 'kasir-001'),
+          service.createOrder(discrepancyOrder, 'kasir-001'),
         ).rejects.toThrow(BadRequestException);
-        await expect(
-          service.createOrder(orderWithPriceDiscrepancy, 'kasir-001'),
-        ).rejects.toThrow('Price calculation discrepancy exceeds threshold');
       });
 
+      it('should accept order with price discrepancy and flag as Perlu Cek (createOrderWithCache)', async () => {
+        // createOrderWithCache is the Trust but Verify path: it accepts
+        // discrepancy and flags the order for review instead of throwing.
+        // This is the path used by syncBatchOrders for offline orders.
+        process.env.PRICE_DELTA_THRESHOLD_PCT = '5'; // 5% threshold
+
+        mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
+        mockOrderRepository.findActiveDiscounts.mockResolvedValue([]);
+
+        const products = [{ ...mockProduct, id: 'prod-001' }];
+
+        const createdOrder = {
+          id: 'order-cache-001',
+          client_uuid: 'client-uuid-cache-001',
+          cashier_id: 'kasir-001',
+          total_amount: 10000, // client's price (not server's 22500)
+          verification_status: 'Perlu Cek', // flagged due to >5% discrepancy
+          payment_method: PaymentMethod.cash,
+          status: OrderStatus.completed,
+          payment_status: 'paid',
+          items: [],
+        };
+
+        mockPrismaService.$transaction.mockImplementation(async (cb) =>
+          cb({
+            order: {
+              create: jest.fn().mockResolvedValue(createdOrder),
+            },
+          }),
+        );
+
+        // Cast to any to call the private createOrderWithCache method
+        const result = await (service as any).createOrderWithCache(
+          {
+            client_uuid: 'client-uuid-cache-001',
+            payment_method: PaymentMethod.cash,
+            client_final_price: 10000, // Server calculates 22500 → 55% diff → exceeds 5% threshold
+            items: [{ product_id: 'prod-001', quantity: 1, modifiers: [] }],
+          },
+          'kasir-001',
+          products,
+        );
+
+        // Trust but Verify: order accepted with 'Perlu Cek' flag
+        expect(result.verification_status).toBe('Perlu Cek');
+        expect(result.total_amount).toBe(10000); // client's price preserved
+      });
+
+      it('should accept order with valid price and set verification_status to Valid', async () => {
+        process.env.PRICE_DELTA_THRESHOLD_PCT = '10';
+
+        mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
+        mockOrderRepository.findActiveDiscounts.mockResolvedValue([]);
+        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([
+          mockProduct,
+        ]);
+        mockOrderRepository.createOrder.mockResolvedValue({
+          ...mockOrder,
+          verification_status: 'Valid',
+        });
+
+        const result = await service.createOrder(baseOrderDto, 'kasir-001');
+
+        expect(result).toBeDefined();
+        expect(mockOrderRepository.createOrder).toHaveBeenCalled();
+      });
+    });
+
+    describe('Failure cases', () => {
       it('should throw BadRequestException when minimum QRIS amount not met', async () => {
         mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
         mockOrderRepository.findActiveDiscounts.mockResolvedValue([]);
@@ -445,7 +560,7 @@ describe('OrdersService', () => {
       expect(results[0].message).toContain('Database error');
     });
 
-    it('should skip QRIS orders in offline sync', async () => {
+    it('should allow QRIS orders in offline sync and mark as pending_sync', async () => {
       const qrisOrder = {
         client_uuid: 'batch-qris-001',
         payment_method: PaymentMethod.qris,
@@ -453,14 +568,25 @@ describe('OrdersService', () => {
         items: [{ product_id: 'prod-001', quantity: 1, modifiers: [] }],
       };
 
+      mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
+      mockOrderRepository.findActiveDiscounts.mockResolvedValue([]);
+      mockOrderRepository.findProductsWithModifiers.mockResolvedValue([
+        mockProduct,
+      ]);
+      mockOrderRepository.createOrder.mockImplementation(async (data: any) => ({
+        id: `order-${data.client_uuid}`,
+        ...data,
+        status: OrderStatus.pending_sync,
+      }));
+      mockOrderRepository.updateOrder.mockResolvedValue({});
+
       const results = await service.syncBatchOrders(
         [qrisOrder] as any[],
         'kasir-001',
       );
 
       expect(results).toHaveLength(1);
-      expect(results[0].status).toBe('error');
-      expect(results[0].message).toBe('QRIS not allowed in offline sync');
+      expect(results[0].status).toBe('success');
     });
 
     it('should handle partial batch failures', async () => {

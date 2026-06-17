@@ -84,6 +84,25 @@ export class OrdersService {
     });
   }
 
+  /**
+   * Generate a unique order number in format: TRX-YYYYMMDD-{cashier_letter}{SEQ}
+   * Sequence resets each day per cashier.
+   */
+  async generateOrderNumber(cashierLetter: string, date: Date): Promise<string> {
+    const dateStr = date.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
+
+    const existingCount = await this.prisma.order.count({
+      where: {
+        order_number: {
+          startsWith: `TRX-${dateStr}-${cashierLetter}`,
+        },
+      },
+    });
+
+    const sequence = String(existingCount + 1).padStart(3, '0');
+    return `TRX-${dateStr}-${cashierLetter}${sequence}`;
+  }
+
   async createOrder(data: CreateOrderDto, kasirId: string) {
     const existingOrder = await this.orderRepository.findOrderByClientUuid(
       data.client_uuid,
@@ -92,6 +111,14 @@ export class OrdersService {
     if (existingOrder) {
       return existingOrder;
     }
+
+    // Generate order number using cashier's letter
+    const kasir = await this.prisma.user.findUnique({
+      where: { id: kasirId },
+      select: { cashier_letter: true },
+    });
+    const cashierLetter = kasir?.cashier_letter || 'X';
+    const orderNumber = await this.generateOrderNumber(cashierLetter, new Date());
 
     let calculatedSubtotal = 0;
     let totalDiscountAmount = 0;
@@ -208,6 +235,7 @@ export class OrdersService {
     const calculatedTax = calculatedSubtotal * taxRate;
     const calculatedFinalPrice = calculatedSubtotal + calculatedTax;
 
+    // Trust but Verify: Accept client's price but flag for review
     const clientFinalPrice = Number(data.client_final_price);
     const thresholdPct = Number(process.env.PRICE_DELTA_THRESHOLD_PCT || '10');
 
@@ -220,19 +248,15 @@ export class OrdersService {
           ? 100
           : 0;
 
+    let vStatus = 'Valid';
     if (diffPct > thresholdPct) {
       this.logger.warn(
-        `Price Discrepancy! Backend: ${calculatedFinalPrice}, Client: ${clientFinalPrice}`,
+        `[createOrder] [Trust but Verify] Discrepancy on Order ${data.client_uuid}. Server: ${calculatedFinalPrice}, Client: ${clientFinalPrice}`,
       );
-      throw new BadRequestException(
-        'Price calculation discrepancy exceeds threshold',
-      );
+      vStatus = 'Perlu Cek';
     }
 
-    if (
-      data.payment_method === PaymentMethod.qris &&
-      calculatedFinalPrice < 1000
-    ) {
+    if (data.payment_method === PaymentMethod.qris && clientFinalPrice < 1000) {
       throw new BadRequestException('Minimum transaksi QRIS adalah Rp 1.000');
     }
 
@@ -240,7 +264,7 @@ export class OrdersService {
     let qrisAmount = Number(data.qris_amount) || 0;
 
     if (data.payment_method === PaymentMethod.split) {
-      if (Math.abs(cashAmount + qrisAmount - calculatedFinalPrice) > 1) {
+      if (Math.abs(cashAmount + qrisAmount - clientFinalPrice) > 1) {
         throw new BadRequestException(
           'Split payment amounts do not match total',
         );
@@ -251,11 +275,11 @@ export class OrdersService {
         );
       }
     } else if (data.payment_method === PaymentMethod.cash) {
-      cashAmount = calculatedFinalPrice;
+      cashAmount = clientFinalPrice;
       qrisAmount = 0;
     } else if (data.payment_method === PaymentMethod.qris) {
       cashAmount = 0;
-      qrisAmount = calculatedFinalPrice;
+      qrisAmount = clientFinalPrice;
     }
 
     // P0-DB: Wrap order creation in transaction for data consistency
@@ -265,9 +289,12 @@ export class OrdersService {
         data: {
           client_uuid: data.client_uuid,
           cashier_id: kasirId,
+          order_number: orderNumber,
           client_created_at: new Date(),
-          total_amount: calculatedFinalPrice,
+          total_amount: clientFinalPrice,
           discount_total: totalDiscountAmount,
+          verification_status: vStatus,
+          customer_name: data.customer_name,
           payment_method: data.payment_method,
           cash_amount: cashAmount,
           qris_amount: qrisAmount,
@@ -321,7 +348,7 @@ export class OrdersService {
         const chargeAmount =
           data.payment_method === PaymentMethod.split
             ? Math.round(qrisAmount)
-            : Math.round(calculatedFinalPrice);
+            : Math.round(clientFinalPrice);
 
         const qrisParams = {
           payment_type: 'qris',
@@ -417,14 +444,9 @@ export class OrdersService {
 
     for (const orderData of orders) {
       try {
-        // The QRIS can't be used offline per BR-O01, but we still handle it
+        // Trust but Verify: Allow QRIS offline but mark as pending_sync for later settlement
         if (orderData.payment_method === PaymentMethod.qris) {
-          results.push({
-            client_uuid: orderData.client_uuid,
-            status: 'error',
-            message: 'QRIS not allowed in offline sync',
-          });
-          continue;
+          orderData.status = 'pending_sync';
         }
 
         // PERFORMANCE: Use pre-fetched discounts and products
@@ -491,6 +513,14 @@ export class OrdersService {
       return existingOrder;
     }
 
+    // Generate order number using cashier's letter
+    const kasir = await this.prisma.user.findUnique({
+      where: { id: kasirId },
+      select: { cashier_letter: true },
+    });
+    const cashierLetter = kasir?.cashier_letter || 'X';
+    const orderNumber = await this.generateOrderNumber(cashierLetter, new Date());
+
     const productMap = new Map(products.map((p) => [p.id, p]));
 
     // Check for missing products
@@ -526,14 +556,20 @@ export class OrdersService {
           ? 100
           : 0;
 
+    // Trust but Verify: Accept client's price but flag for review
+    let vStatus = 'Valid';
     if (diffPct > thresholdPct) {
       this.logger.warn(
-        `[createOrderWithCache] Price Discrepancy! Backend: ${calculatedFinalPrice}, Client: ${clientFinalPrice}`,
+        `[createOrderWithCache] [Trust but Verify] Discrepancy on Order ${data.client_uuid}. Server: ${calculatedFinalPrice}, Client: ${clientFinalPrice}`,
       );
-      throw new BadRequestException(
-        'Price calculation discrepancy exceeds threshold',
-      );
+      vStatus = 'Perlu Cek';
     }
+
+    // Calculate discount_total from order items
+    const discountTotal = orderItemsPayload.reduce(
+      (sum, item) => sum + Number(item.discount_amount || 0),
+      0,
+    );
 
     // P0-DB: Wrap order creation in transaction for data consistency
     const order = await this.prisma.$transaction(async (tx) => {
@@ -541,14 +577,21 @@ export class OrdersService {
         data: {
           client_uuid: data.client_uuid,
           cashier_id: kasirId,
+          order_number: orderNumber,
           client_created_at: new Date(),
-          total_amount: orderItemsPayload.reduce(
-            (sum, item) => sum + Number(item.final_price),
-            0,
-          ),
+          total_amount: clientFinalPrice, // Trust but Verify: use client's price
+          discount_total: discountTotal,
+          verification_status: vStatus, // Flag if discrepancy detected
+          customer_name: data.customer_name,
           payment_method: data.payment_method,
           cash_amount: data.cash_amount || 0,
           qris_amount: data.qris_amount || 0,
+          status:
+            data.payment_method === PaymentMethod.qris
+              ? OrderStatus.pending_sync
+              : OrderStatus.completed,
+          payment_status:
+            data.payment_method === PaymentMethod.qris ? 'unpaid' : 'paid',
           items: { create: orderItemsPayload },
           synced_from_offline: true,
         },

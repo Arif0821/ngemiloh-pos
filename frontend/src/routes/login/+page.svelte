@@ -1,50 +1,51 @@
 <script lang="ts">
 	import { api } from '$lib/services/api.client';
-	import { slide } from 'svelte/transition';
+	import { goto } from '$app/navigation';
 
-	let loginMode: 'kasir' | 'superadmin' = $state('kasir');
-
-	// Kasir Form
-	let kasirUsername: string = $state('');
+	// Kasir Login - Username + PIN (sesuai backend auth.service.ts)
+	// Kasir login dengan username (dari admin) + PIN 4-6 digit
+	let username = $state('');
 	let pin: string = $state('');
-
-	// Superadmin Form
-	let adminEmail: string = $state('');
-	let adminPassword: string = $state('');
-
 	let error: string = $state('');
-	let isLoading: boolean = $state(false);
+	let is_loading: boolean = $state(false);
 
-	function handlePinInput(num: string) {
-		if (pin.length < 4) pin += num;
+	function handle_pin_input(num: string) {
+		if (pin.length < 6) {
+			pin += num;
+		}
 		error = '';
 	}
 
-	function deletePin() {
+	function delete_pin() {
 		pin = pin.slice(0, -1);
 		error = '';
 	}
 
+	function clear_pin() {
+		pin = '';
+		error = '';
+	}
+
 	async function login() {
-		if (loginMode === 'kasir' && (pin.length !== 4 || !kasirUsername)) {
-			error = 'Masukkan username dan 4 digit PIN';
+		// Validasi username
+		if (!username.trim()) {
+			error = 'Masukkan username kasir';
 			return;
 		}
-		if (loginMode === 'superadmin' && (!adminEmail || !adminPassword)) {
-			error = 'Masukkan email dan password';
+		// Validasi PIN 4-6 digit
+		if (pin.length < 4 || pin.length > 6) {
+			error = 'PIN harus 4-6 digit angka';
 			return;
 		}
 
-		isLoading = true;
+		is_loading = true;
 		error = '';
 
 		try {
-			const payload =
-				loginMode === 'kasir'
-					? { username: kasirUsername, pin }
-					: { email: adminEmail, password: adminPassword }; // Ensure backend supports reading email/password
+			// Payload sesuai backend: { username, pin }
+			const payload = { username: username.trim(), pin };
 
-			const res = await api.request(`/api/v1/auth/login`, {
+			const res = await api.request(`/auth/login`, {
 				method: 'POST',
 				credentials: 'include',
 				headers: { 'Content-Type': 'application/json' },
@@ -52,31 +53,51 @@
 			});
 			const data = await res.json();
 
-			if (data.success || data.accessToken) {
-				window.location.href = loginMode === 'kasir' ? '/pos' : '/admin/dashboard';
+			if (data.success || data.accessToken || data.data) {
+				// Login berhasil - cek apakah perlu ganti PIN (AUTH-13)
+				const user_data = data.data || data;
+				if (user_data.must_change_pin) {
+					// Simpan user ke localStorage untuk change-pin page
+					localStorage.setItem('pending_pin_change', JSON.stringify(user_data));
+					goto('/change-pin');
+				} else {
+					// Simpan user info ke localStorage (untuk role guard di layout)
+					localStorage.setItem('user', JSON.stringify(user_data));
+					goto('/pos');
+				}
 			} else {
-				error = data.message || 'Kredensial salah. Silakan coba lagi.';
-				if (loginMode === 'kasir') pin = '';
+				error = data.message || 'Login gagal. Periksa username dan PIN.';
+				clear_pin();
 			}
 		} catch (err) {
-			error = 'Gagal terhubung ke server.';
-			if (loginMode === 'kasir') pin = '';
+			error = 'Gagal terhubung ke server. Pastikan koneksi internet stabil.';
+			clear_pin();
 		} finally {
-			isLoading = false;
+			is_loading = false;
+		}
+	}
+
+	function handle_keydown(e: KeyboardEvent) {
+		if (e.key === 'Enter' && pin.length >= 4) {
+			login();
 		}
 	}
 </script>
 
-<div class="flex min-h-screen items-center justify-center bg-slate-100 p-4 font-sans">
+<svelte:window on:keydown={handle_keydown} />
+
+<div
+	class="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 p-4"
+>
 	<div
-		class="flex w-full max-w-md flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-2xl"
+		class="flex w-full max-w-md flex-col overflow-hidden rounded-3xl border border-slate-700/50 bg-slate-900/80 shadow-2xl backdrop-blur-xl"
 	>
 		<!-- Header -->
 		<div class="p-8 pb-4 text-center">
 			<div
-				class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-indigo-600 shadow-lg shadow-indigo-600/30"
+				class="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-lg shadow-indigo-500/30"
 			>
-				<svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+				<svg class="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"
 					><path
 						stroke-linecap="round"
 						stroke-linejoin="round"
@@ -85,64 +106,90 @@
 					></path></svg
 				>
 			</div>
-			<h1 class="mb-1 text-2xl font-black tracking-tight text-slate-900">Ngemiloh System</h1>
-			<p class="text-sm font-medium text-slate-500">Selamat Datang Kembali</p>
+			<h1 class="mb-2 text-3xl font-black tracking-tight text-white">Ngemiloh</h1>
+			<p class="text-sm font-medium text-slate-400">Masukkan username dan PIN kasir</p>
 		</div>
 
-		<div class="px-8 pb-4">
-			<h2 class="text-center font-bold text-slate-700">LOGIN KASIR</h2>
-		</div>
-
-		<div class="flex-1 px-8 pb-8">
-			<div transition:slide={{ duration: 200 }} class="flex flex-col items-center">
-				<input
-					type="text"
-					bind:value={kasirUsername}
-					placeholder="Username Kasir"
-					class="mb-6 w-full rounded-xl border border-slate-300 bg-slate-50 p-4 text-center text-lg font-bold focus:border-indigo-500 focus:ring-2 focus:ring-indigo-500"
-				/>
-
-				<div class="mb-6">
-					<div class="flex justify-center gap-4">
-						{#each Array(4) as _, i}
-							<div
-								class="flex h-14 w-12 items-center justify-center rounded-xl border-2 text-3xl font-black transition-all {pin.length >
-								i
-									? 'border-indigo-600 bg-indigo-50 text-indigo-600'
-									: 'border-slate-200 bg-slate-50 text-transparent'}"
-							>
-								{pin.length > i ? '•' : ''}
-							</div>
-						{/each}
-					</div>
-					{#if error}
-						<p class="mt-4 text-center text-sm font-bold text-red-500">{error}</p>
-					{:else}
-						<p class="mt-4 text-center text-xs font-medium text-slate-400">
-							Masukkan 4 digit PIN Anda
-						</p>
-					{/if}
+		<!-- Login Form -->
+		<div class="flex-1 px-8 pb-4">
+			<div class="flex flex-col items-center">
+				<!-- Username Input -->
+				<div class="mb-6 w-full max-w-xs">
+					<input
+						type="text"
+						bind:value={username}
+						placeholder="Username Kasir"
+						autocomplete="username"
+						disabled={is_loading}
+						class="w-full rounded-xl border-2 border-slate-600 bg-slate-800/80 px-4 py-3 text-center text-lg font-bold text-white placeholder-slate-500 transition-all focus:border-indigo-400 focus:ring-2 focus:ring-indigo-500/30 focus:outline-none disabled:opacity-50"
+					/>
 				</div>
 
-				<div class="grid w-full max-w-70 grid-cols-3 gap-3">
+				<!-- PIN dots -->
+				<div class="mb-8 flex justify-center gap-4">
+					{#each Array(6) as _, i}
+						<div
+							class="flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all duration-150 {pin.length >
+							i
+								? 'scale-110 border-indigo-400 bg-indigo-500'
+								: 'scale-100 border-slate-600 bg-slate-800'}"
+						>
+							{#if pin.length > i}
+								<div class="h-2 w-2 rounded-full bg-white"></div>
+							{/if}
+						</div>
+					{/each}
+				</div>
+
+				<!-- Error message -->
+				{#if error}
+					<div
+						class="mb-6 rounded-xl border border-red-500/50 bg-red-500/20 px-4 py-3 text-sm font-bold text-red-400"
+					>
+						{error}
+					</div>
+				{:else}
+					<p class="mb-6 text-center text-xs font-medium text-slate-500">
+						Masukkan PIN 4-6 digit Anda
+					</p>
+				{/if}
+
+				<!-- Number pad -->
+				<div class="grid w-full max-w-xs grid-cols-3 gap-3">
 					{#each ['1', '2', '3', '4', '5', '6', '7', '8', '9'] as num}
 						<button
-							class="h-14 rounded-2xl bg-slate-50 text-2xl font-black text-slate-800 transition-colors hover:bg-slate-200 active:scale-95"
-							onclick={() => handlePinInput(num)}
+							class="h-16 rounded-2xl bg-slate-800/80 text-2xl font-bold text-white transition-all hover:bg-slate-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+							onclick={() => handle_pin_input(num)}
+							disabled={is_loading || pin.length >= 6}
 						>
 							{num}
 						</button>
 					{/each}
-					<div class="h-14"></div>
 					<button
-						class="h-14 rounded-2xl bg-slate-50 text-2xl font-black text-slate-800 transition-colors hover:bg-slate-200 active:scale-95"
-						onclick={() => handlePinInput('0')}
+						class="flex h-16 items-center justify-center rounded-2xl bg-slate-800/80 text-xl text-slate-400 transition-all hover:bg-red-500/20 hover:text-red-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+						onclick={clear_pin}
+						disabled={is_loading || pin.length === 0}
+					>
+						<svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+							><path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M6 18L18 6M6 6l12 12"
+							></path></svg
+						>
+					</button>
+					<button
+						class="h-16 rounded-2xl bg-slate-800/80 text-2xl font-bold text-white transition-all hover:bg-slate-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+						onclick={() => handle_pin_input('0')}
+						disabled={is_loading || pin.length >= 6}
 					>
 						0
 					</button>
 					<button
-						class="flex h-14 items-center justify-center rounded-2xl bg-slate-50 text-slate-500 transition-colors hover:bg-slate-200 hover:text-red-500 active:scale-95"
-						onclick={deletePin}
+						class="flex h-16 items-center justify-center rounded-2xl bg-slate-800/80 text-slate-400 transition-all hover:bg-slate-700 hover:text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
+						onclick={delete_pin}
+						disabled={is_loading || pin.length === 0}
 					>
 						<svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"
 							><path
@@ -155,19 +202,50 @@
 					</button>
 				</div>
 
+				<!-- Login button -->
 				<button
-					class="mt-6 h-14 w-full rounded-xl font-black tracking-wide transition-all {pin.length ===
+					class="mt-8 h-14 w-full max-w-xs rounded-xl font-bold tracking-wide transition-all disabled:cursor-not-allowed disabled:opacity-50 {pin.length >=
 						4 &&
-					kasirUsername &&
-					!isLoading
-						? 'bg-indigo-600 text-white shadow-lg hover:bg-indigo-700'
-						: 'cursor-not-allowed bg-slate-200 text-slate-400'}"
-					disabled={pin.length !== 4 || !kasirUsername || isLoading}
+					username.trim() &&
+					!is_loading
+						? 'bg-linear-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30 hover:from-indigo-500 hover:to-purple-500 active:scale-98'
+						: 'bg-slate-700 text-slate-500'}"
+					disabled={pin.length < 4 || !username.trim() || is_loading}
 					onclick={login}
 				>
-					{isLoading ? 'MEMPROSES...' : 'MASUK KE POS'}
+					{#if is_loading}
+						<span class="flex items-center justify-center gap-2">
+							<svg class="h-5 w-5 animate-spin" fill="none" viewBox="0 0 24 24"
+								><circle
+									class="opacity-25"
+									cx="12"
+									cy="12"
+									r="10"
+									stroke="currentColor"
+									stroke-width="4"
+								></circle><path
+									class="opacity-75"
+									fill="currentColor"
+									d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"
+								></path></svg
+							>
+							Memproses...
+						</span>
+					{:else}
+						MASUK
+					{/if}
 				</button>
 			</div>
+		</div>
+
+		<!-- Admin login link -->
+		<div class="border-t border-slate-700/50 p-6 text-center">
+			<a
+				href="/login-admin"
+				class="text-sm font-medium text-slate-400 transition-colors hover:text-white"
+			>
+				Login sebagai Admin
+			</a>
 		</div>
 	</div>
 </div>

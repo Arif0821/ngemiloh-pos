@@ -1,94 +1,101 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
-	import { posStore } from '$lib/stores/pos.store.svelte';
-	import { posService } from '$lib/services/pos.service';
+	import { pos_store } from '$lib/stores/pos.store.svelte';
+	import { pos_service } from '$lib/services/pos.service';
 	import { db } from '$lib/db';
 	import { FLAG_REFRESH_INTERVAL_MS } from '$lib/utils/format';
 
 	import ProductList from '$lib/components/pos/ProductList.svelte';
 	import CartSidebar from '$lib/components/pos/CartSidebar.svelte';
-	import Modals from '$lib/components/pos/Modals.svelte';
+	import ModalManager from '$lib/components/pos/ModalManager.svelte';
 
-	// FIX F-01: Track interval references for cleanup
-	let flagInterval: ReturnType<typeof setInterval> | undefined;
-	// FIX F-03: Track event handler references for cleanup
-	let handleOnline: (() => void) | undefined;
-	let handleOffline: (() => void) | undefined;
+	// Track interval references for cleanup
+	let flag_interval: ReturnType<typeof setInterval> | undefined;
+	let handle_online: (() => void) | undefined;
+	let handle_offline: (() => void) | undefined;
 
+	// Cart persistence: reactive tracking of cart changes
+	// Use a separate state to track when cart has been populated from Dexie
+	let cart_initialized = $state(false);
+
+	// Save cart to Dexie whenever cart changes (after initial load)
 	$effect(() => {
-		if (posStore.isCartLoaded) {
-			db.cart.put({ id: 'current_cart', items: $state.snapshot(posStore.cart) });
+		// Only save after we've loaded from Dexie and user has cart data
+		if (cart_initialized && pos_store.cart.length >= 0) {
+			db.cart.put({ id: 'current_cart', items: [...pos_store.cart] }).catch((e) => {
+				console.error('Failed to save cart to Dexie:', e);
+			});
 		}
 	});
 
-	// FIX F-02 & F-03: Cleanup on component destroy
 	onDestroy(() => {
 		// Clear flag refresh interval
-		if (flagInterval) {
-			clearInterval(flagInterval);
-			flagInterval = undefined;
+		if (flag_interval) {
+			clearInterval(flag_interval);
+			flag_interval = undefined;
 		}
 		// Remove event listeners
-		if (handleOnline) {
-			window.removeEventListener('online', handleOnline);
-			handleOnline = undefined;
+		if (handle_online) {
+			window.removeEventListener('online', handle_online);
+			handle_online = undefined;
 		}
-		if (handleOffline) {
-			window.removeEventListener('offline', handleOffline);
-			handleOffline = undefined;
+		if (handle_offline) {
+			window.removeEventListener('offline', handle_offline);
+			handle_offline = undefined;
 		}
-		// FIX F-01: Cancel SSE/polling on component destroy
-		posService.cancelQrisWaiting();
+		// Cancel SSE/polling on component destroy
+		pos_service.cancel_qris_waiting();
 	});
 
 	onMount(async () => {
-		posStore.isOffline = !navigator.onLine;
+		// Set initial offline state from browser
+		pos_store.is_offline = !navigator.onLine;
 
-		// FIX F-03: Store handler references for cleanup
-		handleOnline = async () => {
-			posStore.isOffline = false;
-			await posService.syncPendingOrders();
+		// Store handler references for cleanup
+		handle_online = async () => {
+			pos_store.is_offline = false; // BUG-06 FIX: Update state on online event
+			await pos_service.sync_pending_orders();
 		};
-		handleOffline = () => {
-			posStore.isOffline = true;
-			if (posStore.paymentMethod === 'qris' || posStore.paymentMethod === 'split') {
-				posStore.paymentMethod = 'cash';
+		handle_offline = () => {
+			pos_store.is_offline = true; // BUG-06 FIX: Update state on offline event
+			if (pos_store.payment_method === 'qris' || pos_store.payment_method === 'split') {
+				pos_store.payment_method = 'cash';
 			}
 		};
 
-		window.addEventListener('online', handleOnline);
-		window.addEventListener('offline', handleOffline);
+		window.addEventListener('online', handle_online);
+		window.addEventListener('offline', handle_offline);
 
-		await posService.loadProductsFromDb();
-		if (!posStore.isOffline) {
-			posService.fetchFlags();
-			// FIX F-02: Store interval reference for cleanup
-			flagInterval = setInterval(() => posService.fetchFlags(), FLAG_REFRESH_INTERVAL_MS);
-			await posService.checkShift();
-			await posService.fetchProductsFromApi();
-			await posService.fetchDiscounts();
-			// FIX F-08: Sync pending orders on app start if online
-			await posService.syncPendingOrders();
+		await pos_service.load_products_from_db();
+		if (!pos_store.is_offline) {
+			pos_service.fetch_flags();
+			flag_interval = setInterval(() => pos_service.fetch_flags(), FLAG_REFRESH_INTERVAL_MS);
+			await pos_service.check_shift();
+			await pos_service.fetch_products_from_api();
+			await pos_service.fetch_discounts();
+			await pos_service.sync_pending_orders();
 		} else {
-			posStore.isCheckingShift = false;
+			pos_store.is_checking_shift = false;
 		}
 
+		// Load saved cart from Dexie
 		try {
-			const savedCart = await db.cart.get('current_cart');
-			if (savedCart && savedCart.items && savedCart.items.length > 0) {
-				posStore.cart = savedCart.items as typeof posStore.cart;
+			const saved_cart = await db.cart.get('current_cart');
+			if (saved_cart && Array.isArray(saved_cart.items) && saved_cart.items.length > 0) {
+				pos_store.cart = saved_cart.items as typeof pos_store.cart;
 			}
 		} catch (e) {
 			console.error('Failed to load cart', e);
 		}
-		posStore.isCartLoaded = true;
+		// Mark cart as initialized AFTER loading (prevents saving empty cart over saved cart)
+		cart_initialized = true;
 	});
 </script>
 
 <div
 	class="bg-surface-100 dark:bg-surface-900 text-surface-900 dark:text-surface-50 flex h-screen flex-col overflow-hidden md:flex-row"
 >
-	{#if posStore.isOffline}
+	{#if pos_store.is_offline}
 		<div
 			class="animate-pulse-slow absolute top-0 left-0 z-50 w-full bg-red-500 py-1 text-center text-sm font-medium text-white shadow-md"
 		>
@@ -104,20 +111,20 @@
 					class="dark:bg-surface-800 border-surface-200 dark:border-surface-700 flex items-center gap-2 rounded-full border bg-white px-4 py-2 text-sm font-medium shadow-sm"
 				>
 					<div
-						class="h-2 w-2 rounded-full {posStore.isOffline ? 'bg-red-500' : 'bg-green-500'}"
+						class="h-2 w-2 rounded-full {pos_store.is_offline ? 'bg-red-500' : 'bg-green-500'}"
 					></div>
-					Kasir: Nabil
+					Kasir
 				</span>
 				<button
-					onclick={() => (posStore.showCloseShiftModal = true)}
+					onclick={() => (pos_store.show_close_shift_modal = true)}
 					class="flex items-center gap-2 rounded-full border border-amber-100 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-600 shadow-sm transition-colors hover:bg-amber-100"
 				>
 					<span class="hidden font-bold sm:inline">Tutup Shift</span>
 				</button>
 				<button
 					onclick={() => {
-						posService.fetchHistory();
-						posStore.showHistoryModal = true;
+						pos_service.fetch_history();
+						pos_store.show_history_modal = true;
 					}}
 					class="flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-600 shadow-sm transition-colors hover:bg-indigo-100"
 				>
@@ -156,6 +163,6 @@
 	<!-- Cart Sidebar View -->
 	<CartSidebar />
 
-	<!-- Modals -->
-	<Modals />
+	<!-- Modal Manager -->
+	<ModalManager />
 </div>

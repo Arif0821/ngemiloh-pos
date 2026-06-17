@@ -57,6 +57,20 @@ export class CreateOrderDto {
   @Min(0)
   qris_amount?: number;
 
+  @IsOptional()
+  @IsString()
+  customer_name?: string;
+
+  // Server-generated: TRX-YYYYMMDD-{cashier_letter}{SEQ}, not provided by client
+  @IsOptional()
+  @IsString()
+  order_number?: string;
+
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  cash_received?: number;
+
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)

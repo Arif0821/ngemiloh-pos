@@ -187,7 +187,22 @@ async function main() {
     }
   }
 
-  // 6. Seed Feature Flags (8 Item)
+  // 6. Seed Store Settings
+  const storeSettings = [
+    { key: 'store_name', value: 'Ngemiloh' },
+    { key: 'store_address', value: 'Jalan Raya No. 1, Jakarta' },
+    { key: 'store_phone', value: '021-12345678' },
+    { key: 'store_whatsapp', value: '081234567890' },
+  ];
+  for (const s of storeSettings) {
+    await prisma.setting.upsert({
+      where: { key: s.key },
+      update: {},
+      create: { key: s.key, value: s.value, updated_at: new Date() } as any,
+    });
+  }
+
+  // 7. Seed Feature Flags (8 Item)
   const featureFlags = [
     { name: 'ENABLE_SPLIT_PAYMENT', description: 'Fitur pembayaran pisah bill', is_enabled: true },
     { name: 'ENABLE_LOYALTY_PROGRAM', description: 'Fitur poin pelanggan', is_enabled: false },

@@ -47,7 +47,7 @@ npx tsc --version 2>/dev/null || echo "tsc not found"
 # Step 1: Run Prisma Migrations
 echo ""
 echo "[1/3] Running Prisma migrations..."
-if npx prisma migrate deploy 2>&1; then
+if /app/node_modules/.bin/prisma migrate deploy 2>&1; then
   echo "[1/3] ✅ Migrations completed successfully!"
 else
   echo "[1/3] ❌ Migrations failed! Continuing anyway..."
@@ -56,7 +56,7 @@ fi
 # Step 2: Run Prisma Seed
 echo ""
 echo "[2/3] Running database seed..."
-if npx prisma db seed 2>&1; then
+if /app/node_modules/.bin/prisma db seed 2>&1; then
   echo "[2/3] ✅ Seed completed successfully!"
 else
   echo "[2/3] ⚠️  Seed failed (non-fatal). Continuing..."

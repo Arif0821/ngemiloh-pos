@@ -11,8 +11,10 @@ ENV NODE_OPTIONS="--max-old-space-size=512"
 ENV PRISMA_SKIP_POSTINSTALL_GENERATE=1
 ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
 
-# CI/CD: Install curl for healthcheck (Alpine doesn't have it by default)
-RUN apk add --no-cache curl
+# CI/CD: Install curl + OpenSSL 1.1 (required by Prisma CLI binary detection)
+# libssl1.1 from v3.18 community repo (Alpine 3.19 removed it from main)
+RUN echo 'http://dl-cdn.alpinelinux.org/alpine/v3.18/community' >> /etc/apk/repositories && \
+    apk add --no-cache curl libssl1.1
 
 WORKDIR /app
 
@@ -41,8 +43,10 @@ FROM mirror.gcr.io/library/node:20-alpine AS production
 ENV NODE_ENV=production
 WORKDIR /app
 
-# KRITIS-01: Install curl for Docker healthcheck
-RUN apk add --no-cache curl
+# KRITIS-01: Install curl and OpenSSL 1.1 (required by Prisma query engine for linux-musl binary)
+# libssl1.1 from v3.18 community repo (Alpine 3.19 removed it from main)
+RUN echo 'http://dl-cdn.alpinelinux.org/alpine/v3.18/community' >> /etc/apk/repositories && \
+    apk add --no-cache curl libssl1.1
 
 # Copy package files
 COPY package.json package-lock.json* ./
@@ -63,8 +67,15 @@ COPY --from=builder /app/dist ./dist
 # Copy tsconfig.json - dibutuhkan oleh ts-node untuk migration
 COPY --from=builder /app/tsconfig.json ./tsconfig.json
 
-# Install runtime tools (global)
-RUN npm install -g prisma ts-node typescript tsconfig-paths
+# Install Prisma CLI dari project dependencies (pakai versi dari package-lock.json, BUKAN versi global terbaru)
+# Symlink di .bin -> ../prisma/build/index.js resolve ke /app/node_modules/prisma/
+COPY --from=builder /app/node_modules/.bin /app/node_modules/.bin
+COPY --from=builder /app/node_modules/prisma /app/node_modules/prisma
+COPY --from=builder /app/node_modules/@prisma /app/node_modules/@prisma
+# ts-node untuk seed - copy modules yang diperlukan saja
+COPY --from=builder /app/node_modules/ts-node /app/node_modules/ts-node
+COPY --from=builder /app/node_modules/.prisma /app/node_modules/.prisma
+COPY --from=builder /app/node_modules/@prisma /app/node_modules/@prisma
 
 # Buat direktori penyimpanan
 RUN mkdir -p /var/storage/ngemiloh

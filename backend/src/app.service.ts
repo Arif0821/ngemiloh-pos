@@ -38,6 +38,17 @@ export class AppService {
     return this.prisma.setting.findMany();
   }
 
+  async getStoreInfo() {
+    const settings = await this.prisma.setting.findMany({
+      where: { key: { in: ['store_name', 'store_address', 'store_phone', 'store_whatsapp'] } },
+    });
+    const result: Record<string, string> = {};
+    for (const s of settings) {
+      result[s.key] = s.value;
+    }
+    return result;
+  }
+
   async updateSettings(data: Record<string, string>, userId: string) {
     const promises = Object.entries(data).map(([key, value]) => {
       return this.prisma.setting.upsert({
