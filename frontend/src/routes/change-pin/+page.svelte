@@ -102,7 +102,7 @@
 </script>
 
 <div
-	class="flex min-h-screen items-center justify-center bg-gradient-to-br from-indigo-900 via-purple-900 to-slate-900 p-4"
+	class="flex min-h-screen items-center justify-center bg-linear-to-br from-indigo-900 via-purple-900 to-slate-900 p-4"
 >
 	<div
 		class="flex w-full max-w-md flex-col overflow-hidden rounded-3xl border border-slate-700/50 bg-slate-900/80 shadow-2xl backdrop-blur-xl"
@@ -110,7 +110,7 @@
 		<!-- Header -->
 		<div class="p-8 pb-4 text-center">
 			<div
-				class="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-gradient-to-br from-amber-500 to-orange-600 shadow-lg shadow-amber-500/30"
+				class="mx-auto mb-4 flex h-20 w-20 items-center justify-center rounded-2xl bg-linear-to-br from-amber-500 to-orange-600 shadow-lg shadow-amber-500/30"
 			>
 				<svg class="h-10 w-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24"
 					><path

@@ -84,9 +84,15 @@ services:
       - MIDTRANS_CLIENT_KEY_SANDBOX=${MIDTRANS_CLIENT_KEY_SANDBOX}
       - MIDTRANS_CLIENT_KEY_PRODUCTION=${MIDTRANS_CLIENT_KEY_PRODUCTION}
       - QRIS_EXPIRY_SECONDS=${QRIS_EXPIRY_SECONDS:-900}
+      # FIX: Add missing email environment variables
+      - EMAIL_HOST=${EMAIL_HOST}
+      - EMAIL_PORT=${EMAIL_PORT:-587}
+      - EMAIL_SECURE=${EMAIL_SECURE:-false}
+      - EMAIL_FROM=${EMAIL_FROM:-noreply@ngemiloh.com}
       - EMAIL_USER=${EMAIL_USER}
       - EMAIL_APP_PASSWORD=${EMAIL_APP_PASSWORD}
       - EMAIL_ALERT_TO=${EMAIL_ALERT_TO}
+      - CSRF_SECRET=${CSRF_SECRET}
       - SENTRY_DSN=${SENTRY_DSN}
       - DISCREPANCY_THRESHOLD=${DISCREPANCY_THRESHOLD:-5000}
       - PRICE_DELTA_THRESHOLD_PCT=${PRICE_DELTA_THRESHOLD_PCT:-10}
@@ -99,7 +105,7 @@ services:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_started
+        condition: service_healthy  # FIX: Wait for Redis to be healthy before starting
     deploy:
       resources:
         limits:

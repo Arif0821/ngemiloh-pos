@@ -87,23 +87,50 @@ export class OrdersService {
   /**
    * Generate a unique order number in format: TRX-YYYYMMDD-{cashier_letter}{SEQ}
    * Sequence resets each day per cashier.
+   * Uses PostgreSQL advisory lock to prevent race conditions.
    */
   async generateOrderNumber(
     cashierLetter: string,
     date: Date,
   ): Promise<string> {
     const dateStr = date.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
+    const lockKey = `ordernum:${dateStr}:${cashierLetter}`;
 
-    const existingCount = await this.prisma.order.count({
-      where: {
-        order_number: {
-          startsWith: `TRX-${dateStr}-${cashierLetter}`,
+    // Use advisory lock to prevent race conditions when generating sequence numbers
+    const lockId = this.hashStringToBigInt(lockKey);
+
+    try {
+      // Acquire advisory lock (blocks until available)
+      await this.prisma.$executeRaw`SELECT pg_advisory_lock(${lockId})`;
+
+      const existingCount = await this.prisma.order.count({
+        where: {
+          order_number: {
+            startsWith: `TRX-${dateStr}-${cashierLetter}`,
+          },
         },
-      },
-    });
+      });
 
-    const sequence = String(existingCount + 1).padStart(3, '0');
-    return `TRX-${dateStr}-${cashierLetter}${sequence}`;
+      const sequence = String(existingCount + 1).padStart(3, '0');
+      return `TRX-${dateStr}-${cashierLetter}${sequence}`;
+    } finally {
+      // Always release the lock
+      await this.prisma.$executeRaw`SELECT pg_advisory_unlock(${lockId})`;
+    }
+  }
+
+  /**
+   * Convert string to bigint for PostgreSQL advisory lock
+   * Uses FNV-1a hash to ensure consistent value in 64-bit range
+   */
+  private hashStringToBigInt(str: string): bigint {
+    let hash = 2166136261n; // FNV offset basis
+    for (let i = 0; i < str.length; i++) {
+      hash ^= BigInt(str.charCodeAt(i));
+      hash *= 16777619n; // FNV prime
+    }
+    // Ensure positive and within PostgreSQL bigint range
+    return (hash & 0x7FFFFFFFFFFFFFFFn);
   }
 
   async createOrder(data: CreateOrderDto, kasirId: string) {
@@ -953,6 +980,16 @@ export class OrdersService {
     if (order.status === OrderStatus.voided) {
       throw new BadRequestException('Order sudah di-void');
     }
+
+    // FIX: Restore inventory stock BEFORE voiding the order
+    // This ensures stock is returned to inventory when order is voided
+    await this.inventoryService.restoreStockForOrder(orderId).catch((err) => {
+      this.logger.error(
+        `Failed to restore stock for voided order ${orderId}: ${err instanceof Error ? err.message : 'Unknown error'}`,
+      );
+      // Continue with void operation even if stock restoration fails
+      // The error is logged for manual review
+    });
 
     await this.orderRepository.updateOrder(orderId, {
       status: OrderStatus.voided,

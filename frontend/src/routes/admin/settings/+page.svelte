@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { api } from '$lib/services/api.client';
+	import { toast } from '$lib/stores/toast.store.svelte';
 	import { onMount } from 'svelte';
 
 	let settings: Record<string, string> = $state({});
@@ -18,10 +19,8 @@
 	async function fetchData() {
 		isLoading = true;
 		try {
-			const hostname = window.location.hostname;
-
 			// Fetch settings
-			const resSettings = await api.request(`/api/v1/admin/settings`, { credentials: 'include' });
+			const resSettings = await api.request(`/admin/settings`, { credentials: 'include' });
 			if (resSettings.ok) {
 				const json = await resSettings.json();
 				// convert array [{key, value}] to object {key: value}
@@ -38,7 +37,7 @@
 			}
 
 			// Fetch flags
-			const resFlags = await api.request(`/api/v1/admin/feature-flags`, { credentials: 'include' });
+			const resFlags = await api.request(`/admin/feature-flags`, { credentials: 'include' });
 			if (resFlags.ok) {
 				const json = await resFlags.json();
 				featureFlags = json.data;
@@ -59,7 +58,6 @@
 		if (isSavingSettings) return;
 		isSavingSettings = true;
 		try {
-			const hostname = window.location.hostname;
 			const payload = {
 				STORE_NAME: storeName,
 				HALAL_NUMBER: halalNumber,
@@ -67,7 +65,7 @@
 				RECEIPT_FOOTER: receiptFooter
 			};
 
-			const res = await api.request(`/api/v1/admin/settings`, {
+			const res = await api.request(`/admin/settings`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
 				credentials: 'include',
@@ -75,12 +73,12 @@
 			});
 
 			if (res.ok) {
-				alert('Pengaturan berhasil disimpan!');
+				toast.success('Pengaturan berhasil disimpan!');
 			} else {
-				alert('Gagal menyimpan pengaturan');
+				toast.error('Gagal menyimpan pengaturan');
 			}
-		} catch (e) {
-			alert('Error pada server');
+		} catch {
+			toast.error('Error pada server');
 		} finally {
 			isSavingSettings = false;
 		}
@@ -88,8 +86,7 @@
 
 	async function toggleFlag(id: string, currentStatus: boolean) {
 		try {
-			const hostname = window.location.hostname;
-			const res = await api.request(`/api/v1/admin/feature-flags/${id}`, {
+			const res = await api.request(`/admin/feature-flags/${id}`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
 				credentials: 'include',
@@ -99,7 +96,7 @@
 			if (res.ok) {
 				fetchData();
 			}
-		} catch (e) {
+		} catch {
 			console.error(e);
 		}
 	}
@@ -221,7 +218,7 @@
 											onchange={() => toggleFlag(flag.id, flag.is_enabled)}
 										/>
 										<div
-											class="peer h-7 w-14 rounded-full bg-slate-200 peer-checked:bg-green-500 peer-focus:ring-4 peer-focus:ring-indigo-300 peer-focus:outline-none after:absolute after:top-[2px] after:left-[2px] after:h-6 after:w-6 after:rounded-full after:border after:border-slate-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"
+											class="peer h-7 w-14 rounded-full bg-slate-200 peer-checked:bg-green-500 peer-focus:ring-4 peer-focus:ring-indigo-300 peer-focus:outline-none after:absolute after:top-0.5 after:left-0.5 after:h-6 after:w-6 after:rounded-full after:border after:border-slate-300 after:bg-white after:transition-all after:content-[''] peer-checked:after:translate-x-full peer-checked:after:border-white"
 										></div>
 									</label>
 								</div>

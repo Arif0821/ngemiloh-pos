@@ -185,4 +185,67 @@ export class InventoryService {
       await repo.updateOrderCogs(orderId, totalCogs);
     });
   }
+
+  /**
+   * Restore inventory stock when an order is voided
+   * This reverses the stock deduction made during order creation
+   */
+  async restoreStockForOrder(orderId: string) {
+    const order = (await this.inventoryRepository.findOrderWithIngredients(
+      orderId,
+    )) as {
+      items: Array<{
+        quantity: number;
+        product: {
+          bom_recipes: Array<{
+            raw_material_id: string;
+            quantity_per_serving: { toNumber(): number };
+          }>;
+        };
+      }>;
+    } | null;
+
+    if (!order) {
+      this.logger.warn(`Order ${orderId} not found for stock restoration`);
+      return;
+    }
+
+    await this.inventoryRepository.executeInTransaction(async (repo) => {
+      const restorations: Record<string, number> = {};
+
+      // Calculate total quantity to restore per raw material
+      for (const item of order.items) {
+        if (!item.product.bom_recipes) continue;
+        for (const ingredient of item.product.bom_recipes) {
+          restorations[ingredient.raw_material_id] =
+            (restorations[ingredient.raw_material_id] || 0) +
+            Number(ingredient.quantity_per_serving) * item.quantity;
+        }
+      }
+
+      // Restore stock for each raw material
+      for (const [rawMaterialId, qty] of Object.entries(restorations)) {
+        // Find the stock movement that deducted this quantity
+        const stockMovement = await repo.findStockMovementByOrderId(orderId, rawMaterialId);
+
+        if (stockMovement) {
+          // Restore from the original stock movement reference
+          await repo.createInventoryTransaction({
+            raw_material_id: rawMaterialId,
+            qty,
+            transaction_type: 'in',
+            reference_id: orderId,
+            notes: `Auto-restore for voided Order ${orderId}`,
+          });
+        }
+
+        // Restore stock to raw material
+        await repo.updateRawMaterialStock(rawMaterialId, qty, 'increment');
+
+        this.logger.log(
+          `Restored ${qty} units of raw material ${rawMaterialId} for voided order ${orderId}`,
+        );
+      }
+    });
+  }
 }

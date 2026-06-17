@@ -223,4 +223,18 @@ export class PrismaInventoryRepository implements IInventoryRepository {
   async deleteBomRecipe(id: string): Promise<unknown> {
     return this.client.bomRecipe.delete({ where: { id } });
   }
+
+  async findStockMovementByOrderId(
+    orderId: string,
+    rawMaterialId: string,
+  ): Promise<StockMovement | null> {
+    return this.client.stockMovement.findFirst({
+      where: {
+        reference_id: orderId,
+        raw_material_id: rawMaterialId,
+        transaction_type: 'out',
+      },
+      orderBy: { created_at: 'desc' },
+    });
+  }
 }

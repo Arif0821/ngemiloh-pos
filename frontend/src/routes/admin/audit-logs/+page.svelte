@@ -32,7 +32,7 @@
 			if (filterDateFrom) params.append('date_from', filterDateFrom);
 			if (filterDateTo) params.append('date_to', filterDateTo);
 
-			const res = await api.request(`/api/v1/admin/audit-logs?${params.toString()}`, {
+			const res = await api.request(`/admin/audit-logs?${params.toString()}`, {
 				credentials: 'include'
 			});
 			if (res.ok) {

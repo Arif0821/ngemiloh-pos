@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { api } from '$lib/services/api.client';
+	import { toast } from '$lib/stores/toast.store.svelte';
 	import { onMount } from 'svelte';
 
 	import type { FeatureFlag } from '$lib/domain/models/types';
@@ -9,7 +10,7 @@
 	async function fetchFlags() {
 		isLoading = true;
 		try {
-			const res = await api.request(`/api/v1/flags/admin`, { credentials: 'include' });
+			const res = await api.request(`/flags/admin`, { credentials: 'include' });
 			if (res.ok) {
 				const json = await res.json();
 				flags = json.data;
@@ -28,7 +29,7 @@
 		flag.is_enabled = newValue;
 
 		try {
-			const res = await api.request(`/api/v1/flags/toggle`, {
+			const res = await api.request(`/flags/toggle`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				credentials: 'include',
@@ -37,8 +38,8 @@
 			if (!res.ok) {
 				throw new Error('Gagal update flag');
 			}
-		} catch (e) {
-			alert('Gagal menyimpan perubahan');
+		} catch {
+			toast.error('Gagal menyimpan perubahan');
 			flags = oldFlags; // revert
 		}
 	}
@@ -75,7 +76,7 @@
 							</div>
 							<button
 								onclick={() => toggleFlag(flag)}
-								class="relative inline-flex h-7 w-12 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none {flag.is_enabled
+								class="relative inline-flex h-7 w-12 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none {flag.is_enabled
 									? 'bg-emerald-500'
 									: 'dark:bg-surface-600 bg-slate-300'}"
 							>

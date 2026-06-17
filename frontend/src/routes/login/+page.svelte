@@ -84,7 +84,7 @@
 	}
 </script>
 
-<svelte:window on:keydown={handle_keydown} />
+<svelte:window onkeydown={handle_keydown} />
 
 <div
 	class="flex min-h-screen items-center justify-center bg-linear-to-br from-indigo-900 via-purple-900 to-slate-900 p-4"

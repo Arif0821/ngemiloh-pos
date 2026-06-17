@@ -119,8 +119,9 @@ jobs:
       - name: Run migrations
         run: npx prisma migrate deploy
         env:
-          DATABASE_URL: "postgresql://postgres:test@localhost:5432/ngemiloh_test"
-          DIRECT_URL: "postgresql://postgres:test@localhost:5432/ngemiloh_test"
+          # FIX: Use GitHub Secrets for test credentials
+          DATABASE_URL: "postgresql://postgres:${{ secrets.CI_POSTGRES_PASSWORD }}@localhost:5432/ngemiloh_test"
+          DIRECT_URL: "postgresql://postgres:${{ secrets.CI_POSTGRES_PASSWORD }}@localhost:5432/ngemiloh_test"
 
       - name: Wait for PostgreSQL to be ready
         run: |
@@ -133,12 +134,13 @@ jobs:
       - name: Run tests with coverage
         run: npm test -- --coverage --coverageReporters=lcov
         env:
-          DATABASE_URL: "postgresql://postgres:test@localhost:5432/ngemiloh_test"
-          DIRECT_URL: "postgresql://postgres:test@localhost:5432/ngemiloh_test"
+          # FIX: Use GitHub Secrets for test credentials
+          DATABASE_URL: "postgresql://postgres:${{ secrets.CI_POSTGRES_PASSWORD }}@localhost:5432/ngemiloh_test"
+          DIRECT_URL: "postgresql://postgres:${{ secrets.CI_POSTGRES_PASSWORD }}@localhost:5432/ngemiloh_test"
           REDIS_URL: "redis://localhost:6379"
-          JWT_ACCESS_SECRET: "test-secret"
+          JWT_ACCESS_SECRET: ${{ secrets.CI_JWT_SECRET }}
           JWT_ACCESS_EXPIRES: "1h"
-          PIN_PEPPER_SECRET: "test-pepper"
+          PIN_PEPPER_SECRET: ${{ secrets.CI_PIN_PEPPER_SECRET }}
           NODE_ENV: "test"
 
       - name: Upload coverage to Codecov

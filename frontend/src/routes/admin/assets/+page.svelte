@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { api } from '$lib/services/api.client';
+	import { toast } from '$lib/stores/toast.store.svelte';
 	import { onMount } from 'svelte';
 
 	import type { Asset } from '$lib/domain/models/types';
@@ -19,8 +20,7 @@
 	async function fetchAssets() {
 		isLoading = true;
 		try {
-			const hostname = window.location.hostname;
-			const res = await api.request(`/api/v1/admin/finance/assets`, { credentials: 'include' });
+			const res = await api.request(`/admin/finance/assets`, { credentials: 'include' });
 			if (res.ok) {
 				const data = await res.json();
 				assets = data.data;
@@ -61,10 +61,9 @@
 	async function saveAsset(e: Event) {
 		e.preventDefault();
 		try {
-			const hostname = window.location.hostname;
 			const url = isEditing
-				? `/api/v1/admin/finance/assets/${formId}`
-				: `/api/v1/admin/finance/assets`;
+				? `/admin/finance/assets/${formId}`
+				: `/admin/finance/assets`;
 			const method = isEditing ? 'PATCH' : 'POST';
 
 			const payload = {
@@ -87,10 +86,10 @@
 				fetchAssets();
 			} else {
 				const err = await res.json();
-				alert('Gagal menyimpan aset: ' + (err.message || ''));
+				toast.error('Gagal menyimpan aset: ' + (err.message || 'Error'));
 			}
-		} catch (e) {
-			alert('Error pada server');
+		} catch {
+			toast.error('Error pada server');
 		}
 	}
 

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { api } from '$lib/services/api.client';
+	import { toast } from '$lib/stores/toast.store.svelte';
 	import { onMount } from 'svelte';
 
 	import type { RawMaterial } from '$lib/domain/models/types';
@@ -13,8 +14,7 @@
 	async function fetchInventory() {
 		isLoading = true;
 		try {
-			const hostname = window.location.hostname;
-			const res = await api.request(`/api/v1/admin/inventory`, { credentials: 'include' });
+			const res = await api.request(`/admin/inventory`, { credentials: 'include' });
 			if (res.ok) {
 				const json = await res.json();
 				materials = json.data;
@@ -46,7 +46,6 @@
 
 		isSubmitting = true;
 		try {
-			const hostname = window.location.hostname;
 			const payload = {
 				items: materials.map((m) => ({
 					id: m.id,
@@ -54,7 +53,7 @@
 				}))
 			};
 
-			const res = await api.request(`/api/v1/admin/inventory/opname`, {
+			const res = await api.request(`/admin/inventory/opname`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				credentials: 'include',
@@ -62,14 +61,14 @@
 			});
 
 			if (res.ok) {
-				alert('Stok opname berhasil disimpan!');
+				toast.success('Stok opname berhasil disimpan!');
 				isOpnameMode = false;
 				fetchInventory();
 			} else {
-				alert('Gagal menyimpan opname.');
+				toast.error('Gagal menyimpan opname');
 			}
-		} catch (e) {
-			alert('Terjadi kesalahan jaringan.');
+		} catch {
+			toast.error('Terjadi kesalahan jaringan');
 		} finally {
 			isSubmitting = false;
 		}

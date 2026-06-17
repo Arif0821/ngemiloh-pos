@@ -55,4 +55,13 @@ export interface IInventoryRepository {
   ): Promise<RawMaterial>;
   createBomRecipe(data: Prisma.BomRecipeUncheckedCreateInput): Promise<unknown>;
   deleteBomRecipe(id: string): Promise<unknown>;
+
+  /**
+   * Find a stock movement by order ID and raw material
+   * Used for tracking stock deductions for void/restore operations
+   */
+  findStockMovementByOrderId(
+    orderId: string,
+    rawMaterialId: string,
+  ): Promise<StockMovement | null>;
 }

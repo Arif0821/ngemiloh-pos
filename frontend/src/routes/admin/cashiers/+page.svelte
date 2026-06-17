@@ -104,15 +104,18 @@
 	}
 
 	async function reset_pin(cashier: Cashier) {
-		if (!confirm(`Reset PIN untuk ${cashier.name}?`)) return;
+		if (!confirm(`Reset PIN untuk ${cashier.name}? PIN baru akan dibuatkan sistem.`)) return;
 		try {
+			// Generate random 6-digit PIN for security
+			const newPin = Math.floor(100000 + Math.random() * 900000).toString();
 			const res = await api.request(`/admin/users/cashiers/${cashier.id}/reset-pin`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ pin: '123456' }) // Default PIN
+				body: JSON.stringify({ pin: newPin })
 			});
 			if (res.ok) {
-				toast.success('PIN berhasil di-reset ke 123456');
+				toast.success(`PIN berhasil di-reset. PIN baru: ${newPin}`);
+				// In production, you might want to show this via secure channel instead
 			}
 		} catch {
 			toast.error('Gagal reset PIN');

@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { api } from '$lib/services/api.client';
+	import { toast } from '$lib/stores/toast.store.svelte';
 	import { onMount } from 'svelte';
 
 	let loading = $state(true);
@@ -29,7 +30,7 @@
 	async function fetchExpenses() {
 		loading = true;
 		try {
-			const res = await api.request(`/api/v1/admin/finance/opex`, {
+			const res = await api.request(`/admin/finance/opex`, {
 				credentials: 'include'
 			});
 			if (res.ok) {
@@ -49,7 +50,7 @@
 		e.preventDefault();
 		isSubmitting = true;
 		try {
-			const res = await api.request(`/api/v1/admin/finance/opex`, {
+			const res = await api.request(`/admin/finance/opex`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				credentials: 'include',
@@ -67,10 +68,10 @@
 				category = 'other';
 				await fetchExpenses();
 			} else {
-				alert('Gagal menyimpan biaya operasional');
+				toast.error('Gagal menyimpan biaya operasional');
 			}
-		} catch (e) {
-			alert('Koneksi ke server gagal');
+		} catch {
+			toast.error('Koneksi ke server gagal');
 		} finally {
 			isSubmitting = false;
 		}

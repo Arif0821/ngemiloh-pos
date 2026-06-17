@@ -1,4 +1,7 @@
 <script lang="ts">
+	import { api } from '$lib/services/api.client';
+	import { toast } from '$lib/stores/toast.store.svelte';
+
 	let startDate = $state(new Date(new Date().setDate(1)).toISOString().split('T')[0]); // First day of month
 	let endDate = $state(new Date().toISOString().split('T')[0]);
 	let isExporting = $state(false);
@@ -7,16 +10,16 @@
 		isExporting = true;
 		try {
 			// Call real backend endpoint
-			const hostname = window.location.hostname;
 			window.open(
-				`/api/v1/admin/reports/export?startDate=${startDate}&endDate=${endDate}`,
+				`/admin/reports/export?startDate=${startDate}&endDate=${endDate}`,
 				'_blank'
 			);
 
 			// Simulating a short delay so the loading state shows
 			await new Promise((r) => setTimeout(r, 1000));
-		} catch (e) {
-			alert('Gagal membuat laporan');
+			toast.success('Export dimulai. File akan terunduh otomatis.');
+		} catch {
+			toast.error('Gagal membuat laporan');
 		} finally {
 			isExporting = false;
 		}

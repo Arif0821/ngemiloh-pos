@@ -70,12 +70,12 @@
 </svelte:head>
 
 <div
-	class="flex min-h-screen flex-col justify-center bg-gradient-to-br from-slate-900 via-indigo-900 to-purple-900 px-4 py-12 sm:px-6 lg:px-8"
+	class="flex min-h-screen flex-col justify-center bg-linear-to-br from-slate-900 via-indigo-900 to-purple-900 px-4 py-12 sm:px-6 lg:px-8"
 >
 	<div class="sm:mx-auto sm:w-full sm:max-w-md">
 		<div class="text-center">
 			<div
-				class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-gradient-to-br from-indigo-500 to-purple-600 shadow-xl shadow-indigo-500/30"
+				class="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-linear-to-br from-indigo-500 to-purple-600 shadow-xl shadow-indigo-500/30"
 			>
 				<svg class="h-8 w-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path
@@ -97,7 +97,7 @@
 				{#if error}
 					<div class="mb-6 rounded-xl border border-red-500/50 bg-red-500/20 p-4">
 						<div class="flex">
-							<div class="flex-shrink-0">
+							<div class="shrink-0">
 								<svg class="h-5 w-5 text-red-400" viewBox="0 0 20 20" fill="currentColor">
 									<path
 										fill-rule="evenodd"
@@ -187,7 +187,7 @@
 						<button
 							type="submit"
 							disabled={is_loading || !email || !password}
-							class="flex w-full justify-center rounded-xl border border-transparent bg-gradient-to-r from-indigo-600 to-purple-600 px-4 py-3 text-sm font-medium text-white shadow-lg shadow-indigo-500/30 transition-all duration-200 hover:from-indigo-500 hover:to-purple-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+							class="flex w-full justify-center rounded-xl border border-transparent bg-linear-to-r from-indigo-600 to-purple-600 px-4 py-3 text-sm font-medium text-white shadow-lg shadow-indigo-500/30 transition-all duration-200 hover:from-indigo-500 hover:to-purple-500 focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 focus:ring-offset-slate-900 focus:outline-none disabled:cursor-not-allowed disabled:opacity-50"
 						>
 							{#if is_loading}
 								<span class="flex items-center gap-2">

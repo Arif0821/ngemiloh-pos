@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { api } from '$lib/services/api.client';
+	import { toast } from '$lib/stores/toast.store.svelte';
 	import { onMount } from 'svelte';
 
 	import type { Discount } from '$lib/domain/models/types';
@@ -36,8 +37,7 @@
 	async function fetchDiscounts() {
 		isLoading = true;
 		try {
-			const hostname = window.location.hostname;
-			const res = await api.request(`/api/v1/admin/discounts`, { credentials: 'include' });
+			const res = await api.request(`/admin/discounts`, { credentials: 'include' });
 			if (res.ok) {
 				const data = await res.json();
 				discounts = data.data;
@@ -56,8 +56,7 @@
 	async function saveDiscount(e: Event) {
 		e.preventDefault();
 		try {
-			const hostname = window.location.hostname;
-			const res = await api.request(`/api/v1/admin/discounts`, {
+			const res = await api.request(`/admin/discounts`, {
 				method: 'POST',
 				headers: { 'Content-Type': 'application/json' },
 				credentials: 'include',
@@ -79,17 +78,16 @@
 				dValidFrom = '';
 				fetchDiscounts();
 			} else {
-				alert('Gagal membuat diskon');
+				toast.error('Gagal membuat diskon');
 			}
-		} catch (e) {
-			alert('Error pada server');
+		} catch {
+			toast.error('Error pada server');
 		}
 	}
 
 	async function toggleStatus(discount: Discount) {
 		try {
-			const hostname = window.location.hostname;
-			const res = await api.request(`/api/v1/admin/discounts/${discount.id}`, {
+			const res = await api.request(`/admin/discounts/${discount.id}`, {
 				method: 'PATCH',
 				headers: { 'Content-Type': 'application/json' },
 				credentials: 'include',
@@ -98,8 +96,8 @@
 			if (res.ok) {
 				fetchDiscounts();
 			}
-		} catch (e) {
-			alert('Gagal mengubah status');
+		} catch {
+			toast.error('Gagal mengubah status');
 		}
 	}
 
