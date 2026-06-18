@@ -66,6 +66,7 @@ export class AuthController {
       loginIdentifier,
       loginSecret,
       this.getClientIp(req),
+      response,
     );
 
     // Generate and send OTP via email — sendOtp handles hashing, Redis storage, and email delivery
