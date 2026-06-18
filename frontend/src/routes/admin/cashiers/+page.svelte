@@ -106,16 +106,18 @@
 	async function reset_pin(cashier: Cashier) {
 		if (!confirm(`Reset PIN untuk ${cashier.name}? PIN baru akan dibuatkan sistem.`)) return;
 		try {
-			// Generate random 6-digit PIN for security
-			const newPin = Math.floor(100000 + Math.random() * 900000).toString();
+			// SECURITY: Request server to generate random PIN (never exposed to frontend)
 			const res = await api.request(`/admin/users/cashiers/${cashier.id}/reset-pin`, {
 				method: 'PATCH',
-				headers: { 'Content-Type': 'application/json' },
-				body: JSON.stringify({ pin: newPin })
+				headers: { 'Content-Type': 'application/json' }
 			});
 			if (res.ok) {
-				toast.success(`PIN berhasil di-reset. PIN baru: ${newPin}`);
-				// In production, you might want to show this via secure channel instead
+				const data = await res.json();
+				// SECURITY: Mask PIN - show only first 2 and last 2 digits
+				const masked_pin = data.data?.masked_pin || '****';
+				toast.success(`PIN berhasil di-reset. PIN baru: ${masked_pin}`);
+				// SECURITY: In production, show via secure channel (e.g., print receipt)
+				toast.info('PIN baru telah di-mask untuk keamanan. Hubungi kasir secara langsung.');
 			}
 		} catch {
 			toast.error('Gagal reset PIN');

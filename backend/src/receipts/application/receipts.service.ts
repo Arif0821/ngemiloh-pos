@@ -1,6 +1,12 @@
-import { Injectable, NotFoundException, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  NotFoundException,
+  ForbiddenException,
+  Logger,
+} from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
 import { Order, OrderItem, User, CashRegister } from '@prisma/client';
+import { Role } from '@prisma/client';
 
 export interface ReceiptData {
   order: Order & {
@@ -39,8 +45,13 @@ export class ReceiptsService {
 
   /**
    * Get complete order data for receipt generation
+   * SECURITY: Only superadmin or the cashier who created the order can access
    */
-  async getReceiptData(orderId: string): Promise<ReceiptData> {
+  async getReceiptData(
+    orderId: string,
+    userId?: string,
+    userRole?: string,
+  ): Promise<ReceiptData> {
     const order = await this.prisma.order.findUnique({
       where: { id: orderId },
       include: {
@@ -60,6 +71,13 @@ export class ReceiptsService {
 
     if (!order) {
       throw new NotFoundException(`Order ${orderId} not found`);
+    }
+
+    // SECURITY: IDOR Check - only superadmin or the order owner can access
+    if (userRole !== Role.superadmin && order.cashier_id !== userId) {
+      throw new ForbiddenException(
+        'You do not have permission to access this receipt',
+      );
     }
 
     // Get current shift info
@@ -319,12 +337,17 @@ export class ReceiptsService {
 
   /**
    * Generate receipt by order ID
+   * SECURITY: Only superadmin or the cashier who created the order can access
    */
-  async generateReceiptByOrderId(orderId: string): Promise<{
+  async generateReceiptByOrderId(
+    orderId: string,
+    userId?: string,
+    userRole?: string,
+  ): Promise<{
     text: PrintableReceipt;
     html: string;
   }> {
-    const data = await this.getReceiptData(orderId);
+    const data = await this.getReceiptData(orderId, userId, userRole);
     return {
       text: this.generateReceiptText(data),
       html: this.generateHtmlReceipt(data),

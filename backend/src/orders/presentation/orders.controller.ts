@@ -108,10 +108,18 @@ export class OrdersController {
   @Get('orders/shift')
   @UseGuards(JwtAuthGuard)
   async getShiftSummary(@Req() req: AuthenticatedRequest) {
-    const filterKasir =
-      req.user.role === 'kasir'
-        ? req.user.id
-        : String(req.query.kasir_id || '');
+    // SECURITY: Kasir can only see their own shift, superadmin can see any by query param
+    let filterKasir: string;
+    if (req.user.role === 'kasir') {
+      // Kasir can only see their own shift - ignore query param
+      filterKasir = req.user.id;
+    } else if (req.user.role === Role.superadmin) {
+      // Superadmin can query by kasir_id or default to themselves
+      filterKasir = String(req.query.kasir_id || req.user.id);
+    } else {
+      throw new ForbiddenException('Invalid role for shift summary');
+    }
+
     if (!filterKasir) {
       return {
         success: false,
@@ -191,9 +199,20 @@ export class OrdersController {
 
   @Get('orders/:id/status')
   @UseGuards(JwtAuthGuard)
-  async getOrderStatus(@Param('id') id: string, @Req() _req: Request) {
-    // SECURITY: Require authentication via guard for proper 401 response
+  async getOrderStatus(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    // SECURITY: IDOR Check - only superadmin or the order owner can access
     const order = await this.ordersService.getOrder(id);
+
+    // SECURITY: Role check - kasir can only see their own orders
+    if (req.user.role !== Role.superadmin && order.cashier_id !== req.user.id) {
+      throw new ForbiddenException(
+        'You do not have permission to access this order status',
+      );
+    }
+
     return {
       success: true,
       data: { status: order.status, payment_status: order.payment_status },
