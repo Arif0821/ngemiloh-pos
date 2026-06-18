@@ -23,8 +23,7 @@ RUN npm run build
 # ============================================================
 FROM mirror.gcr.io/library/caddy:2-alpine
 
-# KRITIS-02: Install curl for Docker healthcheck (Alpine doesn't have it by default)
-RUN apk add --no-cache curl
+# Caddy uses wget for healthcheck (built into Alpine)
 
 COPY Caddyfile /etc/caddy/Caddyfile
 
