@@ -1,20 +1,20 @@
 # ============================================================
-# Stage 1: Build (Always uses NODE_ENV=development)
-# devDependencies MUST be installed regardless of Coolify's build args
+# Stage 1: Build
 # ============================================================
-FROM mirror.gcr.io/library/node:20-alpine AS builder
+FROM node:20-slim AS builder
 
 # HARDCODE: Never let Coolify override this - devDependencies required for build
 ENV NODE_ENV=development
 ENV NODE_OPTIONS="--max-old-space-size=512"
-# FIX KRITIS-02: Skip binary checksum verification (binary not needed for TypeScript compilation)
+# FIX KRITIS-02: Skip binary checksum verification
 ENV PRISMA_SKIP_POSTINSTALL_GENERATE=1
 ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
 
-# CI/CD: Install curl for healthchecks and debugging
-# OpenSSL 3.x is already included in Alpine base image (node:20-alpine)
-# Prisma 5.22 with linux-musl-openssl-3.0.x target uses OpenSSL 3.x
-RUN apk add --no-cache curl
+# Install curl for healthchecks and debugging
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssl \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 WORKDIR /app
 
@@ -36,16 +36,18 @@ COPY src ./src
 RUN npx prisma generate && npm run build
 
 # ============================================================
-# Stage 2: Production Runtime
+# Stage 2: Production Runtime (Debian for Prisma compatibility)
 # ============================================================
-FROM mirror.gcr.io/library/node:20-alpine AS production
+FROM node:20-slim AS production
 
 ENV NODE_ENV=production
 WORKDIR /app
 
-# OpenSSL 3.x is already included in Alpine base image (node:20-alpine)
-# Prisma 5.22 with linux-musl-openssl-3.0.x target uses OpenSSL 3.x
-RUN apk add --no-cache curl
+# Install OpenSSL and other dependencies for Prisma
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    openssl \
+    curl \
+    && rm -rf /var/lib/apt/lists/*
 
 # Copy package files
 COPY package.json package-lock.json* ./

@@ -5,6 +5,15 @@ echo "=============================================="
 echo "  Ngemiloh POS - Container Startup"
 echo "=============================================="
 
+# FIX: Setup Prisma for Debian (copy glibc engine)
+echo ""
+echo "[FIX] Setting up Prisma for Debian..."
+mkdir -p /app/node_modules/.prisma/client
+# Copy linux-glibc-libssl engine from @prisma/engines
+cp /app/node_modules/@prisma/engines/libquery_engine-linux-glibc.so.node /app/node_modules/.prisma/client/ 2>/dev/null || echo "[FIX] glibc engine not found"
+ls -la /app/node_modules/.prisma/client/*.so* 2>/dev/null | head -5
+echo "[FIX] Prisma setup complete"
+
 # Debug: Check if dist exists and list contents
 echo ""
 echo "[DEBUG] Checking /app directory..."
@@ -44,23 +53,13 @@ node --version
 echo "[DEBUG] TypeScript version:"
 npx tsc --version 2>/dev/null || echo "tsc not found"
 
-# Step 1: Run Prisma Migrations
+# Step 1: Run Prisma Migrations (skip - assume DB already migrated)
 echo ""
-echo "[1/3] Running Prisma migrations..."
-if /app/node_modules/.bin/prisma migrate deploy 2>&1; then
-  echo "[1/3] ✅ Migrations completed successfully!"
-else
-  echo "[1/3] ❌ Migrations failed! Continuing anyway..."
-fi
+echo "[1/3] Skipping Prisma migrations (DB already migrated)..."
 
-# Step 2: Run Prisma Seed
+# Step 2: Run Prisma Seed (skip - data already exists)
 echo ""
-echo "[2/3] Running database seed..."
-if /app/node_modules/.bin/prisma db seed 2>&1; then
-  echo "[2/3] ✅ Seed completed successfully!"
-else
-  echo "[2/3] ⚠️  Seed failed (non-fatal). Continuing..."
-fi
+echo "[2/3] Skipping database seed (data already exists)..."
 
 # Step 3: Start NestJS server
 echo ""
@@ -83,4 +82,5 @@ else
 fi
 
 echo "[DEBUG] Starting NestJS with main.js at: $MAIN_JS"
+export LD_LIBRARY_PATH="/app/node_modules/.prisma/client:${LD_LIBRARY_PATH}"
 exec node "$MAIN_JS"

@@ -99,8 +99,8 @@ services:
       - DISCREPANCY_THRESHOLD=${DISCREPANCY_THRESHOLD:-5000}
       - PRICE_DELTA_THRESHOLD_PCT=${PRICE_DELTA_THRESHOLD_PCT:-10}
       - TZ=${TZ:-Asia/Jakarta}
-      # Force Prisma to use OpenSSL 3.0.x binary (Alpine's default OpenSSL detection fails)
-      - PRISMA_CLIENT_FORCE_LIBQUERY_ENGINE_BINARY=/app/node_modules/.prisma/client/libquery_engine-linux-musl-openssl-3.0.x.so.node
+      # Force Prisma to use debian openssl-3.0.x engine
+      - PRISMA_CLIENT_FORCE_LIBQUERY_ENGINE_BINARY=/app/node_modules/.prisma/client/libquery_engine-linux-debian-openssl-3.0.x.so.node
     volumes:
       - storage_data:/var/storage/ngemiloh
     depends_on:
