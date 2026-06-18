@@ -1,17 +1,23 @@
+/**
+ * Cookie options interface for express Response
+ */
 export interface CookieOptions {
   httpOnly?: boolean;
   secure?: boolean;
-  sameSite?: 'strict' | 'lax' | 'none';
+  sameSite?: boolean | 'strict' | 'lax' | 'none';
   maxAge?: number;
   path?: string;
   domain?: string;
 }
 
 /**
- * Set a cookie on the Response object
+ * Set a cookie on Express Response object
+ * Uses res.cookie() method from express
  */
 export function set_cookie(
-  res: Response,
+  res: {
+    cookie: (name: string, value: string, options?: CookieOptions) => void;
+  },
   name: string,
   value: string,
   options: CookieOptions = {},
@@ -25,23 +31,27 @@ export function set_cookie(
     domain,
   } = options;
 
-  let cookie_str = `${encodeURIComponent(name)}=${encodeURIComponent(value)}`;
-  cookie_str += `; Path=${path}`;
-
-  if (domain) cookie_str += `; Domain=${domain}`;
-  if (httpOnly) cookie_str += '; HttpOnly';
-  if (secure) cookie_str += '; Secure';
-  cookie_str += `; SameSite=${sameSite}`;
-  if (maxAge !== undefined) cookie_str += `; Max-Age=${maxAge}`;
-
-  res.headers.append('Set-Cookie', cookie_str);
+  res.cookie(name, value, {
+    httpOnly,
+    secure,
+    sameSite,
+    maxAge,
+    path,
+    domain,
+  });
 }
 
 /**
- * Clear a cookie
+ * Clear a cookie via Express Response
  */
-export function clear_cookie(res: Response, name: string, path = '/'): void {
-  set_cookie(res, name, '', {
+export function clear_cookie(
+  res: {
+    cookie: (name: string, value: string, options?: CookieOptions) => void;
+  },
+  name: string,
+  path = '/',
+): void {
+  res.cookie(name, '', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
     sameSite: 'strict',

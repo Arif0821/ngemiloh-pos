@@ -86,9 +86,10 @@ class ApiClient {
 	 */
 	private get_auth_token(endpoint: string): string | null {
 		// Read from httpOnly cookie (set by backend)
-		const token_name = endpoint.includes('/admin/') || endpoint.includes('/auth/admin')
-			? 'admin_token'
-			: 'access_token';
+		const token_name =
+			endpoint.includes('/admin/') || endpoint.includes('/auth/admin')
+				? 'admin_token'
+				: 'access_token';
 
 		return get_cookie(token_name) || null;
 	}
