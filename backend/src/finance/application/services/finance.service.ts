@@ -48,10 +48,11 @@ export class FinanceService {
     const dailyRevenueTarget = Number(
       process.env.DAILY_REVENUE_TARGET || 5000000,
     );
-    const targetProgress = Math.min(
-      100,
-      Math.round((revenue / dailyRevenueTarget) * 100),
-    );
+    // SECURITY: Prevent division by zero
+    const targetProgress =
+      dailyRevenueTarget > 0
+        ? Math.min(100, Math.round((revenue / dailyRevenueTarget) * 100))
+        : 0;
 
     const transactions = orders.length;
     const avg = transactions > 0 ? revenue / transactions : 0;
@@ -324,9 +325,9 @@ export class FinanceService {
     const purchasePrice = Number(data.purchase_price);
     const lifespanMonths = Number(data.useful_life_months);
 
-    if (!purchasePrice || !lifespanMonths) {
+    if (!purchasePrice || !lifespanMonths || lifespanMonths <= 0) {
       throw new BadRequestException(
-        'Invalid asset data: purchase_price and useful_life_months are required',
+        'Invalid asset data: purchase_price and useful_life_months (>0) are required',
       );
     }
 
@@ -359,6 +360,13 @@ export class FinanceService {
       parsedValue = Number(asset.purchase_price);
     if (newLifespan !== undefined && isNaN(parsedLifespan))
       parsedLifespan = asset.useful_life_months;
+
+    // SECURITY: Prevent division by zero
+    if (parsedLifespan <= 0) {
+      throw new BadRequestException(
+        'useful_life_months must be greater than 0',
+      );
+    }
 
     return this.financeRepository.updateAsset(id, {
       name: data.name,

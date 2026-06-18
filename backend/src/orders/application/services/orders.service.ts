@@ -375,11 +375,14 @@ export class OrdersService {
     });
 
     if (order.status === OrderStatus.completed) {
-      await this.inventoryService.reduceStockForOrder(order.id).catch((err) => {
-        this.logger.error(
-          `Failed to reduce stock for order ${order.id}: ${err.message}`,
-        );
-      });
+      await this.inventoryService
+        .reduceStockForOrder(order.id)
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : 'Unknown error';
+          this.logger.error(
+            `Failed to reduce stock for order ${order.id}: ${msg}`,
+          );
+        });
     }
 
     // KRITIS-05: Create QRIS charge for both qris and split payment (when qrisAmount > 0)
@@ -866,11 +869,14 @@ export class OrdersService {
           },
         });
 
-        this.inventoryService.reduceStockForOrder(orderId).catch((err) => {
-          this.logger.error(
-            `Failed to reduce stock for order ${orderId}: ${err.message}`,
-          );
-        });
+        this.inventoryService
+          .reduceStockForOrder(orderId)
+          .catch((err: unknown) => {
+            const msg = err instanceof Error ? err.message : 'Unknown error';
+            this.logger.error(
+              `Failed to reduce stock for order ${orderId}: ${msg}`,
+            );
+          });
 
         this.eventEmitter.emit('order.paid', { orderId, status: newStatus });
       }
@@ -1026,9 +1032,10 @@ export class OrdersService {
           'Indikasi Fraud - Banyak Void Transaksi',
           `<p>Sistem mendeteksi ada <strong>${recentVoids} transaksi</strong> yang di-void dalam 10 menit terakhir.</p><p>Mohon segera periksa log audit untuk detail lebih lanjut.</p>`,
         )
-        .catch((err) =>
-          this.logger.error('Failed to send fraud alert:', err.message),
-        );
+        .catch((err: unknown) => {
+          const msg = err instanceof Error ? err.message : 'Unknown error';
+          this.logger.error('Failed to send fraud alert:', msg);
+        });
     }
 
     return { success: true, message: 'Order voided successfully' };
