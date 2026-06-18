@@ -82,17 +82,24 @@ class ApiClient {
 	 * Get the appropriate auth token based on route
 	 * - /admin/* routes use admin_token
 	 * - All others use access_token
+	 * Tokens are read from httpOnly cookies set by the backend
 	 */
 	private get_auth_token(endpoint: string): string | null {
+		// Read from httpOnly cookie (set by backend)
+		const token_name = endpoint.includes('/admin/') || endpoint.includes('/auth/admin')
+			? 'admin_token'
+			: 'access_token';
+
+		return get_cookie(token_name) || null;
+	}
+
+	/**
+	 * Get CSRF token from localStorage
+	 * CSRF token is stored in localStorage (not httpOnly) after login
+	 */
+	private get_csrf_token(): string | null {
 		if (typeof localStorage === 'undefined') return null;
-
-		// Check if this is an admin route
-		const is_admin_route = endpoint.includes('/admin/') || endpoint.includes('/auth/admin');
-
-		if (is_admin_route) {
-			return localStorage.getItem('admin_token');
-		}
-		return localStorage.getItem('access_token');
+		return localStorage.getItem('csrf_token');
 	}
 
 	/**
@@ -126,10 +133,11 @@ class ApiClient {
 		}
 
 		// CSRF token for state-changing requests
+		// CSRF token is stored in localStorage (not httpOnly)
 		const is_mutating =
 			options.method && ['POST', 'PUT', 'PATCH', 'DELETE'].includes(options.method.toUpperCase());
 		if (is_mutating) {
-			const csrf_token = get_cookie('csrf_token');
+			const csrf_token = this.get_csrf_token();
 			if (csrf_token) {
 				options.headers['X-CSRF-Token'] = csrf_token;
 			} else {
