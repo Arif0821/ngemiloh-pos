@@ -53,6 +53,10 @@
 
 			if (data.success) {
 				sessionStorage.removeItem('admin_email');
+				// Store CSRF token (access token is httpOnly cookie set by backend)
+				if (data.csrfToken) {
+					localStorage.setItem('csrf_token', data.csrfToken);
+				}
 				localStorage.setItem('user', JSON.stringify(data.data));
 				goto('/admin/dashboard');
 			} else {

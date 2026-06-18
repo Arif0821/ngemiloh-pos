@@ -42,7 +42,11 @@
 				throw new Error('Akses ditolak: Hanya Superadmin yang diizinkan');
 			}
 
-			// Store in localStorage for layout guards
+			// Store CSRF token (access token is httpOnly cookie set by backend)
+			if (data.csrfToken) {
+				localStorage.setItem('csrf_token', data.csrfToken);
+			}
+			// Store user data in localStorage for layout guards
 			localStorage.setItem('user', JSON.stringify(data.data));
 
 			// Redirect to admin dashboard
