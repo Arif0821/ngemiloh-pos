@@ -187,7 +187,9 @@
 					<!-- Cash Payment Form -->
 					<div class="animate-in slide-in-from-left-4 space-y-5 duration-300">
 						<div>
-							<label for="cash-amount" class="text-surface-600 dark:text-surface-400 mb-2 block text-sm font-medium"
+							<label
+								for="cash-amount"
+								class="text-surface-600 dark:text-surface-400 mb-2 block text-sm font-medium"
 								>Nominal Diterima</label
 							>
 							<div class="relative">

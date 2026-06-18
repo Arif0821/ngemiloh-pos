@@ -15,6 +15,7 @@ export interface IFinanceRepository {
   findOrders(
     where: Prisma.OrderWhereInput,
     include?: Prisma.OrderInclude,
+    take?: number,
   ): Promise<Order[]>;
   findOperationalExpenses(
     where: Prisma.OperationalExpenseWhereInput,

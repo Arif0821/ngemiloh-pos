@@ -226,7 +226,9 @@
 					/>
 				</div>
 				<div>
-					<label for="cat-sort-order" class="mb-1 block text-sm font-bold text-slate-700">Urutan Tampilan</label>
+					<label for="cat-sort-order" class="mb-1 block text-sm font-bold text-slate-700"
+						>Urutan Tampilan</label
+					>
 					<input
 						id="cat-sort-order"
 						type="number"

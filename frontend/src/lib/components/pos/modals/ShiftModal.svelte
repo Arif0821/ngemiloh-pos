@@ -90,7 +90,9 @@
 			<form onsubmit={handle_submit} class="p-6">
 				<div class="space-y-4">
 					<div>
-						<label for="opening-balance" class="mb-1 block text-sm font-bold text-slate-700 dark:text-slate-300"
+						<label
+							for="opening-balance"
+							class="mb-1 block text-sm font-bold text-slate-700 dark:text-slate-300"
 							>Kas Awal (Rp)</label
 						>
 						<input
@@ -155,7 +157,9 @@
 					dengan sistem.
 				</p>
 				<div>
-					<label for="closing-balance" class="mb-1 block text-sm font-bold text-slate-700 dark:text-slate-300"
+					<label
+						for="closing-balance"
+						class="mb-1 block text-sm font-bold text-slate-700 dark:text-slate-300"
 						>Kas Akhir Laci (Fisik)</label
 					>
 					<input

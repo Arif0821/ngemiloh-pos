@@ -61,9 +61,7 @@
 	async function saveAsset(e: Event) {
 		e.preventDefault();
 		try {
-			const url = isEditing
-				? `/admin/finance/assets/${formId}`
-				: `/admin/finance/assets`;
+			const url = isEditing ? `/admin/finance/assets/${formId}` : `/admin/finance/assets`;
 			const method = isEditing ? 'PATCH' : 'POST';
 
 			const payload = {

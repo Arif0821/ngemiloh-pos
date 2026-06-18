@@ -101,7 +101,9 @@
 		class="dark:bg-surface-800 dark:border-surface-700 flex flex-wrap items-end gap-4 rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
 	>
 		<div>
-			<label for="filter-action" class="mb-1 block text-xs font-bold text-slate-500">Aksi / Event Type</label>
+			<label for="filter-action" class="mb-1 block text-xs font-bold text-slate-500"
+				>Aksi / Event Type</label
+			>
 			<select
 				id="filter-action"
 				bind:value={filterAction}
@@ -114,7 +116,9 @@
 			</select>
 		</div>
 		<div>
-			<label for="filter-date-from" class="mb-1 block text-xs font-bold text-slate-500">Mulai Tanggal</label>
+			<label for="filter-date-from" class="mb-1 block text-xs font-bold text-slate-500"
+				>Mulai Tanggal</label
+			>
 			<input
 				id="filter-date-from"
 				type="date"
@@ -123,7 +127,9 @@
 			/>
 		</div>
 		<div>
-			<label for="filter-date-to" class="mb-1 block text-xs font-bold text-slate-500">Sampai Tanggal</label>
+			<label for="filter-date-to" class="mb-1 block text-xs font-bold text-slate-500"
+				>Sampai Tanggal</label
+			>
 			<input
 				id="filter-date-to"
 				type="date"

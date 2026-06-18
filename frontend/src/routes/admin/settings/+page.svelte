@@ -132,7 +132,9 @@
 				<form onsubmit={saveSettings} class="space-y-6 p-6">
 					<div class="grid grid-cols-1 gap-6 md:grid-cols-2">
 						<div>
-							<label for="store-name" class="mb-1 block text-sm font-bold text-slate-700">Nama Toko</label>
+							<label for="store-name" class="mb-1 block text-sm font-bold text-slate-700"
+								>Nama Toko</label
+							>
 							<input
 								id="store-name"
 								type="text"
@@ -142,7 +144,8 @@
 							/>
 						</div>
 						<div>
-							<label for="halal-number" class="mb-1 block text-sm font-bold text-slate-700">Sertifikat Halal MUI</label
+							<label for="halal-number" class="mb-1 block text-sm font-bold text-slate-700"
+								>Sertifikat Halal MUI</label
 							>
 							<input
 								id="halal-number"
@@ -153,7 +156,9 @@
 							/>
 						</div>
 						<div class="md:col-span-2">
-							<label for="store-address" class="mb-1 block text-sm font-bold text-slate-700">Alamat Outlet</label>
+							<label for="store-address" class="mb-1 block text-sm font-bold text-slate-700"
+								>Alamat Outlet</label
+							>
 							<textarea
 								id="store-address"
 								bind:value={storeAddress}

@@ -111,7 +111,9 @@
 		<!-- Filters -->
 		<div class="flex flex-wrap gap-4 rounded-xl bg-white p-4 shadow-sm">
 			<div>
-				<label for="log-filter-action" class="mb-1 block text-xs font-semibold text-slate-500">Tipe Aksi</label>
+				<label for="log-filter-action" class="mb-1 block text-xs font-semibold text-slate-500"
+					>Tipe Aksi</label
+				>
 				<select
 					id="log-filter-action"
 					bind:value={filter_action}
@@ -125,7 +127,9 @@
 				</select>
 			</div>
 			<div>
-				<label for="log-filter-date-from" class="mb-1 block text-xs font-semibold text-slate-500">Dari Tanggal</label>
+				<label for="log-filter-date-from" class="mb-1 block text-xs font-semibold text-slate-500"
+					>Dari Tanggal</label
+				>
 				<input
 					id="log-filter-date-from"
 					type="date"
@@ -135,7 +139,9 @@
 				/>
 			</div>
 			<div>
-				<label for="log-filter-date-to" class="mb-1 block text-xs font-semibold text-slate-500">Sampai Tanggal</label>
+				<label for="log-filter-date-to" class="mb-1 block text-xs font-semibold text-slate-500"
+					>Sampai Tanggal</label
+				>
 				<input
 					id="log-filter-date-to"
 					type="date"

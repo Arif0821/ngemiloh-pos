@@ -103,7 +103,9 @@
 		<!-- Filters -->
 		<div class="flex gap-4 rounded-xl bg-white p-4 shadow-sm">
 			<div>
-				<label for="shift-filter-date" class="mb-1 block text-xs font-semibold text-slate-500">Filter Tanggal</label>
+				<label for="shift-filter-date" class="mb-1 block text-xs font-semibold text-slate-500"
+					>Filter Tanggal</label
+				>
 				<input
 					id="shift-filter-date"
 					type="date"
@@ -113,7 +115,9 @@
 				/>
 			</div>
 			<div>
-				<label for="shift-filter-status" class="mb-1 block text-xs font-semibold text-slate-500">Status</label>
+				<label for="shift-filter-status" class="mb-1 block text-xs font-semibold text-slate-500"
+					>Status</label
+				>
 				<select
 					id="shift-filter-status"
 					bind:value={filter_status}

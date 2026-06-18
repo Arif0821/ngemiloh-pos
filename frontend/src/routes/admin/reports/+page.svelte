@@ -10,10 +10,7 @@
 		isExporting = true;
 		try {
 			// Call real backend endpoint
-			window.open(
-				`/admin/reports/export?startDate=${startDate}&endDate=${endDate}`,
-				'_blank'
-			);
+			window.open(`/admin/reports/export?startDate=${startDate}&endDate=${endDate}`, '_blank');
 
 			// Simulating a short delay so the loading state shows
 			await new Promise((r) => setTimeout(r, 1000));
