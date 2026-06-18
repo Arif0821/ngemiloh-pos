@@ -4,6 +4,7 @@ import {
   UnauthorizedException,
   HttpException,
   HttpStatus,
+  BadRequestException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AUTH_REPOSITORY } from '../../domain/interfaces/auth.repository.interface';
@@ -57,6 +58,7 @@ describe('AuthService', () => {
 
     mockEmailService = {
       sendAlert: jest.fn().mockResolvedValue(undefined),
+      sendOtp: jest.fn().mockResolvedValue(undefined),
     };
 
     mockRedisService = {
@@ -438,6 +440,515 @@ describe('AuthService', () => {
         tokenPayload.sub, // user id
         expect.any(Date), // expires at
       );
+    });
+  });
+
+  describe('validateAdminCredentials', () => {
+    const mockIpAddress = '192.168.1.1';
+
+    it('should successfully validate admin with valid credentials', async () => {
+      const mockUser = createMockUser({
+        id: 'admin-456',
+        username: 'admin',
+        email: 'admin@ngemiloh.com',
+        role: Role.superadmin,
+        password_hash: '$2b$12$valid-hash',
+        is_active: true,
+      });
+
+      mockAuthRepository.findIpLockout.mockResolvedValue(null);
+      mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
+      mockAuthRepository.resetUserFailedLogin.mockResolvedValue(mockUser);
+      mockAuthRepository.resetIpLockout.mockResolvedValue(
+        createMockIpLockout(),
+      );
+
+      const validPassword = 'ValidP@ssw0rd123!';
+      const result = await service.validateAdminCredentials(
+        'admin@ngemiloh.com',
+        validPassword,
+        mockIpAddress,
+      );
+
+      expect(result).toHaveProperty('csrfToken');
+      expect(result).toHaveProperty('userId', mockUser.id);
+      expect(result).toHaveProperty('email', mockUser.email);
+      expect(result).toHaveProperty('name', mockUser.name);
+    });
+
+    it('should fail validation when IP is locked', async () => {
+      const lockedUntil = new Date(Date.now() + 30 * 60 * 1000);
+      mockAuthRepository.findIpLockout.mockResolvedValue(
+        createMockIpLockout({ locked_until: lockedUntil }),
+      );
+
+      await expect(
+        service.validateAdminCredentials(
+          'admin@ngemiloh.com',
+          'ValidP@ssw0rd123!',
+          mockIpAddress,
+        ),
+      ).rejects.toMatchObject({ status: HttpStatus.TOO_MANY_REQUESTS });
+    });
+
+    it('should fail validation when admin not found', async () => {
+      mockAuthRepository.findIpLockout.mockResolvedValue(null);
+      mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(null);
+
+      await expect(
+        service.validateAdminCredentials(
+          'notadmin@example.com',
+          'ValidP@ssw0rd123!',
+          mockIpAddress,
+        ),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+
+    it('should fail validation when password is too short', async () => {
+      const mockUser = createMockUser({
+        role: Role.superadmin,
+        password_hash: '$2b$12$valid-hash',
+      });
+
+      mockAuthRepository.findIpLockout.mockResolvedValue(null);
+      mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
+
+      await expect(
+        service.validateAdminCredentials('admin@ngemiloh.com', 'short', mockIpAddress),
+      ).rejects.toThrow('Password must be at least 16 characters');
+    });
+
+    it('should fail validation when password lacks requirements', async () => {
+      const mockUser = createMockUser({
+        role: Role.superadmin,
+        password_hash: '$2b$12$valid-hash',
+      });
+
+      mockAuthRepository.findIpLockout.mockResolvedValue(null);
+      mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
+
+      await expect(
+        service.validateAdminCredentials(
+          'admin@ngemiloh.com',
+          'alllowercase123456',
+          mockIpAddress,
+        ),
+      ).rejects.toThrow(
+        'Password must contain uppercase, lowercase, number, and symbol',
+      );
+    });
+
+    it('should fail validation with incorrect password and trigger lockout', async () => {
+      const mockUser = createMockUser({
+        role: Role.superadmin,
+        password_hash: '$2b$12$valid-hash',
+      });
+
+      mockAuthRepository.findIpLockout.mockResolvedValue(null);
+      mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
+      // bcrypt compare fails - password format is valid but hash doesn't match
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+      mockAuthRepository.incrementUserFailedLogin.mockResolvedValue({
+        ...mockUser,
+        failed_login_count: 5,
+      });
+      mockAuthRepository.incrementIpLockout.mockResolvedValue(
+        createMockIpLockout({ failed_count: 5 }),
+      );
+      mockAuthRepository.lockUser.mockResolvedValue(mockUser);
+      mockAuthRepository.lockIpAddress.mockResolvedValue(
+        createMockIpLockout({
+          locked_until: new Date(Date.now() + 30 * 60 * 1000),
+        }),
+      );
+
+      // Service throws UnauthorizedException (401) for invalid password even when triggering lockout
+      // The lockout is enforced on next login attempt, not immediately
+      await expect(
+        service.validateAdminCredentials(
+          'admin@ngemiloh.com',
+          'ValidP@ssw0rd123!',
+          mockIpAddress,
+        ),
+      ).rejects.toMatchObject({ status: HttpStatus.UNAUTHORIZED });
+
+      // Verify lockout methods were called
+      expect(mockAuthRepository.lockUser).toHaveBeenCalled();
+      expect(mockAuthRepository.lockIpAddress).toHaveBeenCalled();
+    });
+
+    it('should fail validation when admin account is locked', async () => {
+      const mockUser = createMockUser({
+        role: Role.superadmin,
+        locked_until: new Date(Date.now() + 30 * 60 * 1000),
+      });
+
+      mockAuthRepository.findIpLockout.mockResolvedValue(null);
+      mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
+
+      await expect(
+        service.validateAdminCredentials(
+          'admin@ngemiloh.com',
+          'ValidP@ssw0rd123!',
+          mockIpAddress,
+        ),
+      ).rejects.toMatchObject({ status: HttpStatus.TOO_MANY_REQUESTS });
+    });
+
+    it('should fail validation when admin account is inactive', async () => {
+      const mockUser = createMockUser({
+        role: Role.superadmin,
+        is_active: false,
+      });
+
+      mockAuthRepository.findIpLockout.mockResolvedValue(null);
+      mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
+
+      await expect(
+        service.validateAdminCredentials(
+          'admin@ngemiloh.com',
+          'ValidP@ssw0rd123!',
+          mockIpAddress,
+        ),
+      ).rejects.toThrow(UnauthorizedException);
+    });
+  });
+
+  describe('sendOtp - OTP Rate Limiting', () => {
+    const mockAdminEmail = 'admin@ngemiloh.com';
+
+    it('should send OTP successfully when no rate limit', async () => {
+      const mockUser = createMockUser({
+        id: 'admin-789',
+        role: Role.superadmin,
+        email: mockAdminEmail,
+      });
+
+      mockRedisService.get.mockResolvedValue(null); // No rate limit
+      mockRedisService.set.mockResolvedValue('OK');
+      mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
+
+      await service.sendOtp(mockAdminEmail);
+
+      expect(mockEmailService.sendOtp).toHaveBeenCalledWith(
+        mockAdminEmail,
+        expect.stringMatching(/^\d{6}$/), // 6-digit OTP
+      );
+      expect(mockRedisService.set).toHaveBeenCalledTimes(3); // otp:admin, otp:email, otp:ratelimit
+    });
+
+    it('should reject OTP request during rate limit cooldown', async () => {
+      const mockUser = createMockUser({
+        role: Role.superadmin,
+        email: mockAdminEmail,
+      });
+
+      mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
+      // Set last request to 30 seconds ago (within 60s cooldown)
+      mockRedisService.get.mockResolvedValue(
+        (Date.now() - 30000).toString(),
+      );
+
+      await expect(service.sendOtp(mockAdminEmail)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.sendOtp(mockAdminEmail)).rejects.toThrow(
+        'Please wait',
+      );
+
+      expect(mockEmailService.sendOtp).not.toHaveBeenCalled();
+    });
+
+    it('should allow OTP request after rate limit cooldown expires', async () => {
+      const mockUser = createMockUser({
+        id: 'admin-789',
+        role: Role.superadmin,
+        email: mockAdminEmail,
+      });
+
+      mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
+      // Set last request to 61 seconds ago (past 60s cooldown)
+      mockRedisService.get.mockResolvedValue(
+        (Date.now() - 61000).toString(),
+      );
+      mockRedisService.set.mockResolvedValue('OK');
+
+      await expect(service.sendOtp(mockAdminEmail)).resolves.not.toThrow();
+      expect(mockEmailService.sendOtp).toHaveBeenCalled();
+    });
+
+    it('should reject OTP request for non-admin email', async () => {
+      mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(null);
+
+      await expect(service.sendOtp('notadmin@example.com')).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+
+    it('should reject OTP request for kasir role', async () => {
+      const mockKasirUser = createMockUser({
+        role: Role.kasir,
+        email: mockAdminEmail,
+      });
+
+      mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockKasirUser);
+
+      await expect(service.sendOtp(mockAdminEmail)).rejects.toThrow(
+        UnauthorizedException,
+      );
+    });
+  });
+
+  describe('verifyOtp - OTP Verification', () => {
+    const mockAdminEmail = 'admin@ngemiloh.com';
+    const mockUserId = 'admin-789';
+    const mockIpAddress = '192.168.1.100';
+    const validOtp = '123456';
+
+    beforeEach(() => {
+      // Clear all call history
+      jest.clearAllMocks();
+
+      // Reset bcrypt to return true by default
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+    });
+
+    it('should verify OTP successfully', async () => {
+      const mockUser = createMockUser({
+        id: mockUserId,
+        role: Role.superadmin,
+        email: mockAdminEmail,
+        name: 'Admin User',
+      });
+
+      // Setup redis mock with correct sequence
+      let callCount = 0;
+      mockRedisService.get.mockImplementation((key: string) => {
+        callCount++;
+        if (key === `otp:email:${mockAdminEmail.toLowerCase()}`) {
+          return Promise.resolve(mockUserId);
+        }
+        if (key === `otp:lockout:${mockAdminEmail.toLowerCase()}`) {
+          return Promise.resolve(null);
+        }
+        if (key === `otp:admin:${mockUserId}`) {
+          return Promise.resolve(JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }));
+        }
+        return Promise.resolve(null);
+      });
+      mockRedisService.del.mockResolvedValue(1);
+
+      mockAuthRepository.findUserById.mockResolvedValue(mockUser);
+      mockAuthRepository.resetUserFailedLogin.mockResolvedValue(mockUser);
+      mockAuthRepository.resetIpLockout.mockResolvedValue(createMockIpLockout());
+
+      const result = await service.verifyOtp(
+        mockAdminEmail,
+        validOtp,
+        mockIpAddress,
+      );
+
+      expect(result).toHaveProperty('csrfToken');
+      expect(result.user).toEqual({
+        id: mockUser.id,
+        name: mockUser.name,
+        role: mockUser.role,
+      });
+
+      // Verify OTP keys were deleted
+      expect(mockRedisService.del).toHaveBeenCalledWith(`otp:admin:${mockUserId}`);
+      expect(mockRedisService.del).toHaveBeenCalledWith(
+        `otp:email:${mockAdminEmail.toLowerCase()}`,
+      );
+    });
+
+    it('should reject verification when email is empty', async () => {
+      await expect(service.verifyOtp('', validOtp, mockIpAddress)).rejects.toThrow(
+        BadRequestException,
+      );
+      await expect(service.verifyOtp('', validOtp, mockIpAddress)).rejects.toThrow(
+        'Email is required',
+      );
+    });
+
+    it('should reject verification when no pending OTP exists', async () => {
+      mockRedisService.get.mockResolvedValue(null);
+
+      await expect(
+        service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress),
+      ).rejects.toThrow('No pending OTP');
+    });
+
+    it('should reject verification when OTP is expired', async () => {
+      mockRedisService.get.mockImplementation((key: string) => {
+        if (key === `otp:email:${mockAdminEmail.toLowerCase()}`) {
+          return Promise.resolve(mockUserId);
+        }
+        if (key === `otp:lockout:${mockAdminEmail.toLowerCase()}`) {
+          return Promise.resolve(null);
+        }
+        if (key === `otp:admin:${mockUserId}`) {
+          return Promise.resolve(null); // OTP expired
+        }
+        return Promise.resolve(null);
+      });
+
+      await expect(
+        service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress),
+      ).rejects.toThrow('OTP expired');
+    });
+
+    it('should reject verification with incorrect OTP code', async () => {
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+      mockRedisService.get.mockImplementation((key: string) => {
+        if (key === `otp:email:${mockAdminEmail.toLowerCase()}`) {
+          return Promise.resolve(mockUserId);
+        }
+        if (key === `otp:lockout:${mockAdminEmail.toLowerCase()}`) {
+          return Promise.resolve(null);
+        }
+        if (key === `otp:admin:${mockUserId}`) {
+          return Promise.resolve(JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }));
+        }
+        return Promise.resolve(null);
+      });
+      mockRedisService.set.mockResolvedValue('OK');
+
+      await expect(
+        service.verifyOtp(mockAdminEmail, 'wrong', mockIpAddress),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.verifyOtp(mockAdminEmail, 'wrong', mockIpAddress),
+      ).rejects.toThrow('Invalid OTP code');
+    });
+
+    it('should trigger OTP lockout after 3 failed attempts', async () => {
+      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+
+      mockRedisService.get.mockImplementation((key: string) => {
+        if (key === `otp:email:${mockAdminEmail.toLowerCase()}`) {
+          return Promise.resolve(mockUserId);
+        }
+        if (key === `otp:lockout:${mockAdminEmail.toLowerCase()}`) {
+          return Promise.resolve(null);
+        }
+        if (key === `otp:admin:${mockUserId}`) {
+          return Promise.resolve(JSON.stringify({ code_hash: '$2b$10$hash', attempts: 2 })); // Already 2 failed
+        }
+        return Promise.resolve(null);
+      });
+      mockRedisService.set.mockResolvedValue('OK');
+      mockRedisService.del.mockResolvedValue(1);
+
+      await expect(
+        service.verifyOtp(mockAdminEmail, 'wrong', mockIpAddress),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.verifyOtp(mockAdminEmail, 'wrong', mockIpAddress),
+      ).rejects.toThrow('Too many failed attempts');
+
+      // Verify lockout was set
+      expect(mockRedisService.set).toHaveBeenCalledWith(
+        expect.stringContaining('otp:lockout:'),
+        expect.any(String),
+        300,
+      );
+      // Verify OTP data was deleted on lockout
+      expect(mockRedisService.del).toHaveBeenCalledWith(`otp:admin:${mockUserId}`);
+      expect(mockRedisService.del).toHaveBeenCalledWith(
+        `otp:email:${mockAdminEmail.toLowerCase()}`,
+      );
+    });
+
+    it('should reject verification when OTP lockout is active', async () => {
+      const lockoutExpiry = Date.now() + 300000; // 5 minutes from now
+
+      mockRedisService.get.mockImplementation((key: string) => {
+        if (key === `otp:email:${mockAdminEmail.toLowerCase()}`) {
+          return Promise.resolve(mockUserId);
+        }
+        if (key === `otp:lockout:${mockAdminEmail.toLowerCase()}`) {
+          return Promise.resolve(lockoutExpiry.toString()); // Active lockout
+        }
+        if (key === `otp:admin:${mockUserId}`) {
+          return Promise.resolve(JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }));
+        }
+        return Promise.resolve(null);
+      });
+
+      await expect(
+        service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress),
+      ).rejects.toThrow('Too many failed attempts');
+      await expect(
+        service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress),
+      ).rejects.toThrow('Please try again in');
+    });
+
+    it('should reject verification when user not found after OTP', async () => {
+      mockRedisService.get.mockImplementation((key: string) => {
+        if (key === `otp:email:${mockAdminEmail.toLowerCase()}`) {
+          return Promise.resolve(mockUserId);
+        }
+        if (key === `otp:lockout:${mockAdminEmail.toLowerCase()}`) {
+          return Promise.resolve(null);
+        }
+        if (key === `otp:admin:${mockUserId}`) {
+          return Promise.resolve(JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }));
+        }
+        return Promise.resolve(null);
+      });
+      mockRedisService.del.mockResolvedValue(1);
+
+      mockAuthRepository.findUserById.mockResolvedValue(null);
+
+      await expect(
+        service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress),
+      ).rejects.toThrow(UnauthorizedException);
+      await expect(
+        service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress),
+      ).rejects.toThrow('User not found');
+    });
+
+    it('should reset failed login and IP lockout on successful verification', async () => {
+      const mockUser = createMockUser({
+        id: mockUserId,
+        role: Role.superadmin,
+        email: mockAdminEmail,
+        name: 'Admin User',
+      });
+
+      mockRedisService.get.mockImplementation((key: string) => {
+        if (key === `otp:email:${mockAdminEmail.toLowerCase()}`) {
+          return Promise.resolve(mockUserId);
+        }
+        if (key === `otp:lockout:${mockAdminEmail.toLowerCase()}`) {
+          return Promise.resolve(null);
+        }
+        if (key === `otp:admin:${mockUserId}`) {
+          return Promise.resolve(JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }));
+        }
+        return Promise.resolve(null);
+      });
+      mockRedisService.del.mockResolvedValue(1);
+
+      mockAuthRepository.findUserById.mockResolvedValue(mockUser);
+      mockAuthRepository.resetUserFailedLogin.mockResolvedValue(mockUser);
+      mockAuthRepository.resetIpLockout.mockResolvedValue(createMockIpLockout());
+
+      await service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress);
+
+      expect(mockAuthRepository.resetUserFailedLogin).toHaveBeenCalledWith(mockUserId);
+      expect(mockAuthRepository.resetIpLockout).toHaveBeenCalledWith(mockIpAddress);
     });
   });
 });
