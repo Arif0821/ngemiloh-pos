@@ -1,19 +1,19 @@
 <script lang="ts">
 	import { page } from '$app/stores';
 
-	let errorMessage = $derived($page.error?.message || 'An unexpected error occurred');
-	let errorStatus = $derived($page.status || 500);
+	let error_message = $derived($page.error?.message || 'An unexpected error occurred');
+	let error_status = $derived($page.status || 500);
 
-	function goAdminDashboard() {
+	function go_admin_dashboard() {
 		window.location.href = '/admin/dashboard';
 	}
 
-	function goBack() {
+	function go_back() {
 		window.history.back();
 	}
 
-	const is404 = $derived(errorStatus === 404);
-	const is403 = $derived(errorStatus === 403);
+	const is_404 = $derived(error_status === 404);
+	const is_403 = $derived(error_status === 403);
 </script>
 
 <div class="bg-surface-100 dark:bg-surface-900 flex min-h-screen items-center justify-center p-4">
@@ -38,9 +38,9 @@
 			</div>
 
 			<h1 class="text-surface-900 dark:text-surface-50 mb-2 text-xl font-bold">
-				{#if is404}
+				{#if is_404}
 					Halaman Admin Tidak Ditemukan
-				{:else if is403}
+				{:else if is_403}
 					Akses Admin Ditolak
 				{:else}
 					Kesalahan Admin Panel
@@ -48,19 +48,19 @@
 			</h1>
 
 			<p class="text-surface-600 dark:text-surface-400 mb-6">
-				{errorMessage}
+				{error_message}
 			</p>
 
 			<div class="flex justify-center gap-4">
 				<button
-					onclick={goBack}
+					onclick={go_back}
 					class="bg-surface-200 dark:bg-surface-800 text-surface-700 dark:text-surface-300 hover:bg-surface-300 dark:hover:bg-surface-700 rounded-lg px-6 py-3 transition-colors"
 				>
 					Kembali
 				</button>
 
 				<button
-					onclick={goAdminDashboard}
+					onclick={go_admin_dashboard}
 					class="bg-brand-600 hover:bg-brand-700 rounded-lg px-6 py-3 text-white transition-colors"
 				>
 					Kembali ke Dashboard
@@ -68,7 +68,7 @@
 			</div>
 
 			<p class="text-surface-400 mt-6 text-xs">
-				Error Code: {errorStatus}
+				Error Code: {error_status}
 			</p>
 		</div>
 	</div>
