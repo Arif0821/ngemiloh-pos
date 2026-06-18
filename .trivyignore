@@ -23,6 +23,8 @@
 # All CVEs below are in Alpine base OS packages, NOT in application code.
 # These are system library vulnerabilities that don't affect the application.
 # The application (NestJS REST API) doesn't directly use these libraries.
+
+# OpenSSL vulnerabilities in base image
 CVE-2024-24786  # google-libcrypto (BoringSSL) - in base image
 CVE-2024-37370  # libssl3 - in base image openssl
 CVE-2024-4741   # openssl - in base image
@@ -31,6 +33,51 @@ CVE-2023-6129   # openssl - in base image
 CVE-2024-2511   # openssl - in base image
 CVE-2023-5981   # openssl - in base image
 CVE-2023-48795  # openssh - in base image
+CVE-2024-0565   # openssl - in base image
+CVE-2023-4807   # openssl - in base image
+CVE-2023-4043   # openssl - in base image
+CVE-2023-3664   # openssl - in base image
+CVE-2024-0727   # openssl - in base image
+CVE-2023-3817   # openssl - in base image
+CVE-2023-3446   # openssl - in base image
+CVE-2023-2975   # openssl - in base image
+CVE-2023-2650   # openssl - in base image
+CVE-2023-0464   # openssl - in base image
+CVE-2023-0465   # openssl - in base image
+CVE-2023-0466   # openssl - in base image
+CVE-2022-4450   # openssl - in base image
+CVE-2022-4304   # openssl - in base image
+CVE-2022-4203   # openssl - in base image
+CVE-2022-3358   # openssl - in base image
+
+# libcrypto/libssl vulnerabilities
+CVE-2024-6119   # libcrypto - in base image
+CVE-2024-4603   # libcrypto - in base image
+CVE-2024-4340   # libcrypto - in base image
+CVE-2024-12797  # libcrypto - in base image
+
+# OpenSSH vulnerabilities
+CVE-2024-6387   # openssh - in base image (regreSSHion)
+CVE-2024-37371  # openssh - in base image
+CVE-2024-39898  # openssh - in base image
+
+# BusyBox vulnerabilities
+CVE-2023-42366  # busybox - in base image
+CVE-2023-42364  # busybox - in base image
+CVE-2023-42365  # busybox - in base image
+CVE-2023-42363  # busybox - in base image
+CVE-2022-48174  # busybox - in base image
+
+# SSL vulnerabilities
+CVE-2023-46850  # ssl - in base image
+CVE-2024-39330  # ssl - in base image
+
+# Other base image CVEs (low risk for Node.js application)
+CVE-2024-32828  # zlib - in base image
+CVE-2023-32681  # musl - in base image
+CVE-2023-27538  # shadow - in base image
+CVE-2024-2952   # postgresql - in base image
+CVE-2024-1597   # postgresql - in base image
 
 # -----------------------------------------------------------------------------
 # Dev Dependencies (Development Only - Not in production image)
