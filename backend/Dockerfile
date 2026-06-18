@@ -1,31 +1,22 @@
 # ============================================================
-# Stage 1: Build
+# Stage 1: Builder - Compile TypeScript
+# Using node:22-alpine (LTS) - fewer CVEs than node:20
 # ============================================================
-FROM node:20-slim AS builder
+FROM --platform=linux/amd64 node:22-alpine AS builder
 
-# HARDCODE: Never let Coolify override this - devDependencies required for build
-ENV NODE_ENV=development
-ENV NODE_OPTIONS="--max-old-space-size=512"
-# FIX KRITIS-02: Skip binary checksum verification
-ENV PRISMA_SKIP_POSTINSTALL_GENERATE=1
-ENV PRISMA_ENGINES_CHECKSUM_IGNORE_MISSING=1
-
-# Install curl for healthchecks and debugging
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    openssl \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# Set build arguments for better caching
+ARG NODE_ENV=development
+ENV NODE_ENV=${NODE_ENV}
+ENV NPM_CONFIG_LOGLEVEL=warn
 
 WORKDIR /app
 
-# Copy dependency manifest terlebih dahulu (untuk cache layer)
+# Copy dependency manifest first (for cache layer)
 COPY package.json package-lock.json* ./
 
-# KRITIS: Selalu gunakan --include=dev secara eksplisit
-# Ini tetap menginstall devDependencies meskipun NODE_ENV=production
-# Retry logic untuk handle transient network errors
-RUN npm install --include=dev --retry 3 --fetch-retry-mintimeout 20000 --fetch-retry-maxtimeout 120000 || \
-    npm install --include=dev --retry 3 --retry-delay 5
+# Install dependencies including devDependencies for build
+RUN npm ci --include=dev --ignore-scripts && \
+    echo "=== Dependencies installed ==="
 
 # Copy source code & Prisma schema
 COPY prisma ./prisma
@@ -33,67 +24,77 @@ COPY tsconfig.json tsconfig.build.json nest-cli.json ./
 COPY src ./src
 
 # Generate Prisma Client & Build NestJS
-RUN npx prisma generate && npm run build
+RUN npx prisma generate && \
+    npm run build && \
+    echo "=== Build complete ==="
 
 # ============================================================
-# Stage 2: Production Runtime (Debian for Prisma compatibility)
+# Stage 2: Production Runtime - Alpine Linux (Minimal + Shell)
 # ============================================================
-FROM node:20-slim AS production
+FROM --platform=linux/amd64 node:22-alpine AS production
 
-ENV NODE_ENV=production
+# Metadata
+LABEL maintainer="Ngemiloh POS"
+LABEL description="Ngemiloh POS - NestJS Backend API"
+
+# Security: Install only what's needed
+# Note: curl has unfixed CVEs, but we need it for health checks
+# Consider using distroless image in future for zero CVEs
+RUN apk add --no-cache \
+    openssl \
+    && rm -rf /var/cache/apk/*
+
+# Health check using node built-in (no curl needed)
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD node -e "const http=require('http');http.get('http://localhost:3000/health',(r)=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
+
+# Create non-root user with known UID/GID for volume mounts
+RUN addgroup -g 1001 -S appgroup && \
+    adduser -u 1001 -S appuser -G appgroup
+
 WORKDIR /app
 
-# Install OpenSSL and other dependencies for Prisma
-RUN apt-get update && apt-get install -y --no-install-recommends \
-    openssl \
-    curl \
-    && rm -rf /var/lib/apt/lists/*
+# Set environment variables
+ENV NODE_ENV=production
+ENV STORAGE_PATH=/var/storage/ngemiloh
+ENV TZ=Asia/Jakarta
+ENV NPM_CONFIG_LOGLEVEL=warn
 
-# ── SECURITY: Create non-root user ──────────────────────────
-RUN groupadd --gid 1001 appgroup && \
-    useradd --uid 1001 --gid appgroup --shell /bin/false --home /app appuser
+# Copy package files for production dependencies
+COPY --from=builder --chown=appuser:appgroup /app/package.json /app/package-lock.json* ./
 
-# Copy package files
-COPY package.json package-lock.json* ./
+# Install ONLY production dependencies (omit devDependencies)
+RUN npm ci --omit=dev --ignore-scripts --legacy-peer-deps && \
+    echo "=== Production dependencies installed ==="
 
-# Install production dependencies
-RUN npm install --omit=dev --legacy-peer-deps && \
-    echo "=== Verifying express installed ===" && \
-    test -d node_modules/express && echo "express OK" || npm install express --save --legacy-peer-deps
-
-# Copy Prisma schema + generated client dari builder
-COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/node_modules/.prisma ./node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma ./node_modules/@prisma
+# Copy Prisma schema + generated client from builder
+COPY --from=builder --chown=appuser:appgroup /app/prisma ./prisma
+COPY --from=builder --chown=appuser:appgroup /app/node_modules/.prisma ./node_modules/.prisma
+COPY --from=builder --chown=appuser:appgroup /app/node_modules/@prisma ./node_modules/@prisma
 
 # Copy built application
-COPY --from=builder /app/dist ./dist
+COPY --from=builder --chown=appuser:appgroup /app/dist ./dist
 
-# Copy tsconfig.json - dibutuhkan oleh ts-node untuk migration
-COPY --from=builder /app/tsconfig.json ./tsconfig.json
+# Copy tsconfig.json - needed by ts-node for migrations
+COPY --from=builder --chown=appuser:appgroup /app/tsconfig.json ./tsconfig.json
 
-# Install Prisma CLI dari project dependencies (pakai versi dari package-lock.json, BUKAN versi global terbaru)
-# Symlink di .bin -> ../prisma/build/index.js resolve ke /app/node_modules/prisma/
-COPY --from=builder /app/node_modules/.bin /app/node_modules/.bin
-COPY --from=builder /app/node_modules/prisma /app/node_modules/prisma
-COPY --from=builder /app/node_modules/@prisma /app/node_modules/@prisma
-# ts-node untuk seed - copy modules yang diperlukan saja
-COPY --from=builder /app/node_modules/ts-node /app/node_modules/ts-node
-COPY --from=builder /app/node_modules/.prisma /app/node_modules/.prisma
-COPY --from=builder /app/node_modules/@prisma /app/node_modules/@prisma
+# Install Prisma CLI for migrations (needed at runtime for seeding)
+COPY --from=builder --chown=appuser:appgroup /app/node_modules/.bin ./node_modules/.bin
+COPY --from=builder --chown=appuser:appgroup /app/node_modules/prisma ./node_modules/prisma
 
-# Buat direktori penyimpanan dengan permission yang benar
-RUN mkdir -p /var/storage/ngemiloh && \
-    chown -R appuser:appgroup /app
-
-EXPOSE 3000
-
-# Copy dan set executable startup script
+# Copy startup script
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
 
-# ── SECURITY: Switch to non-root user ───────────────────────
+# Create storage directory with proper permissions
+RUN mkdir -p /var/storage/ngemiloh && \
+    chown -R appuser:appgroup /app /var/storage/ngemiloh
+
+# Expose port
+EXPOSE 3000
+
+# Switch to non-root user
 USER appuser
 
-# Seed boleh gagal, tapi server TETAP jalan (tidak restart loop)
+# Default command - run entrypoint script
 CMD ["/app/docker-entrypoint.sh"]

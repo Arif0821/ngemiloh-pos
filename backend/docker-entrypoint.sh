@@ -1,14 +1,12 @@
 #!/bin/sh
-set -e
-
 # ============================================================
 # Ngemiloh POS - Production Startup Script
-# Security: Load secrets, minimal logging, no sensitive info
+# For distroless/static images
 # ============================================================
 
-# Load secrets from Docker secrets files (if available)
-# This allows reading from /run/secrets/<name> files
+set -e
 
+# Load secrets from Docker secrets files (if available)
 load_secrets() {
     # JWT Secret
     if [ -f "/run/secrets/jwt_access_secret" ]; then
@@ -53,17 +51,12 @@ load_secrets() {
 # Load secrets
 load_secrets
 
-# Minimal startup - no debug output in production
+# Minimal startup - no debug output
 if [ "${NODE_ENV}" = "production" ]; then
-    # Production: Minimal logging
     echo "[INFO] Starting Ngemiloh POS..."
 else
-    # Development: Show info
     echo "[DEV] Starting Ngemiloh POS in development mode..."
 fi
-
-# Set library path for Prisma
-export LD_LIBRARY_PATH="/app/node_modules/.prisma/client:${LD_LIBRARY_PATH}"
 
 # Verify main.js exists
 if [ ! -f "/app/dist/main.js" ]; then
