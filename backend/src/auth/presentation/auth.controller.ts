@@ -33,29 +33,6 @@ export class AuthController {
     return req.socket.remoteAddress || 'unknown';
   }
 
-  private setAuthCookies(
-    response: Response,
-    accessToken: string,
-    csrfToken?: string,
-    maxAgeMs: number = 12 * 60 * 60 * 1000, // default 12h for admin
-  ) {
-    const secure = process.env.NODE_ENV === 'production';
-    response.cookie('access_token', accessToken, {
-      httpOnly: true,
-      secure,
-      sameSite: 'strict',
-      maxAge: maxAgeMs,
-    });
-    if (csrfToken) {
-      response.cookie('csrf_token', csrfToken, {
-        httpOnly: false,
-        secure,
-        sameSite: 'strict',
-        maxAge: maxAgeMs,
-      });
-    }
-  }
-
   @UseGuards(ThrottlerGuard)
   @Post('login')
   @HttpCode(HttpStatus.OK)
@@ -78,12 +55,7 @@ export class AuthController {
         loginIdentifier,
         loginSecret,
         this.getClientIp(req),
-      );
-      this.setAuthCookies(
         response,
-        result.accessToken,
-        result.csrfToken,
-        20 * 60 * 60 * 1000, // 20 hours for kasir
       );
       return { success: true, data: result.user };
     }
@@ -144,15 +116,8 @@ export class AuthController {
       userId,
       dto.current_pin,
       dto.new_pin,
+      response,
     );
-
-    // Re-issue tokens with updated must_change_pin flag
-    response.cookie('access_token', result.accessToken, {
-      httpOnly: true,
-      secure: process.env.NODE_ENV === 'production',
-      sameSite: 'strict',
-      maxAge: 20 * 60 * 60 * 1000, // 20 hours
-    });
 
     return { success: true, data: result.user };
   }
@@ -198,9 +163,9 @@ export class AuthController {
       dto.email,
       dto.otp,
       this.getClientIp(req),
+      response,
     );
 
-    this.setAuthCookies(response, result.accessToken, result.csrfToken);
     return { success: true, data: result.user };
   }
 }
