@@ -14,21 +14,121 @@
 3. **snake_case naming** for all code
 4. **Simple, readable code** - No unnecessary complexity
 
-## Available Skills
+---
 
-### Superpowers (via `Skill` tool)
-- `subagent-driven-development` - Dispatch fresh subagent per task
-- `writing-plans` - Create detailed implementation plans
-- `brainstorming` - Turn ideas into designs
-- `using-superpowers` - Skill loader/injector
+## The Basic Workflow
 
-### Agent-Skills (via `Agent` tool)
-- `code-reviewer` - Senior code reviewer
-- `security-auditor` - Vulnerability detection
-- `test-engineer` - QA/test strategy
-- `web-performance-auditor` - Performance analysis
-- `Plan` - Software architect for designs
-- `Explore` - Broad file/code search
+```
+brainstorming → writing-plans → subagent-driven-development →
+finishing-a-development-branch
+```
+
+---
+
+## Superpowers Skills (via `Skill` tool)
+
+### Testing (1 skill)
+| Skill | Purpose |
+|-------|---------|
+| `test-driven-development` | RED-GREEN-REFACTOR cycle |
+
+### Debugging (2 skills)
+| Skill | Purpose |
+|-------|---------|
+| `systematic-debugging` | 4-phase root cause analysis |
+| `verification-before-completion` | Verify fixes before commit |
+
+### Collaboration (11 skills)
+| Skill | Purpose |
+|-------|---------|
+| `brainstorming` | Socratic design approach |
+| `writing-plans` | Create implementation plans |
+| `executing-plans` | Batch execution with checkpoints |
+| `subagent-driven-development` | Parallel subagent + 2-stage review |
+| `dispatching-parallel-agents` | Fan-out agent dispatching |
+| `requesting-code-review` | Code review template |
+| `receiving-code-review` | Review response handling |
+| `using-git-worktrees` | Isolated workspace |
+| `finishing-a-development-branch` | Complete development |
+
+### Meta Skills
+| Skill | Purpose |
+|-------|---------|
+| `using-superpowers` | Load skill instructions |
+| `writing-skills` | Create new skills |
+
+---
+
+## Agent-Skills (via `Agent` tool)
+
+### Define Phase
+| Skill | Purpose |
+|-------|---------|
+| `interview-me` | Clarify requirements |
+| `idea-refine` | Refine ideas into specs |
+| `spec-driven-development` | Spec-first development |
+
+### Plan Phase
+| Skill | Purpose |
+|-------|---------|
+| `planning-and-task-breakdown` | Create task plans |
+| `Plan` | Architecture design |
+
+### Build Phase
+| Skill | Purpose |
+|-------|---------|
+| `incremental-implementation` | Step-by-step coding |
+| `source-driven-development` | Code-first iteration |
+| `frontend-ui-engineering` | UI component building |
+| `doubt-driven-development` | Adversarial review for non-trivial decisions |
+| `context-engineering` | Manage context effectively |
+| `api-and-interface-design` | API design and contracts |
+
+### Verify Phase
+| Skill | Purpose |
+|-------|---------|
+| `test-driven-development` | TDD cycle |
+| `browser-testing-with-devtools` | E2E testing |
+| `debugging-and-error-recovery` | Fix bugs systematically |
+
+### Review Phase
+| Skill | Purpose |
+|-------|---------|
+| `code-review-and-quality` | Five-axis quality review |
+| `code-simplification` | Simplify complex code |
+| `security-and-hardening` | Security audit |
+| `performance-optimization` | Performance analysis |
+
+### Ship Phase
+| Skill | Purpose |
+|-------|---------|
+| `git-workflow-and-versioning` | Git practices |
+| `ci-cd-and-automation` | CI/CD pipelines |
+| `shipping-and-launch` | Deployment |
+| `deprecation-and-migration` | Code migration |
+| `documentation-and-adrs` | Write docs |
+
+### Support Skills
+| Skill | Purpose |
+|-------|---------|
+| `observability-and-instrumentation` | Logging/monitoring |
+| `using-agent-skills` | Agent skill guide |
+
+---
+
+## Agent Types (subagent_type)
+
+| Agent | Use Case |
+|-------|----------|
+| `Explore` | Broad file/code search |
+| `Plan` | Architecture design |
+| `code-reviewer` | Senior reviewer (5 dimensions) |
+| `security-auditor` | Vulnerability detection |
+| `test-engineer` | QA/test strategy |
+| `web-performance-auditor` | Performance analysis |
+| `general-purpose` | Catch-all tasks |
+
+---
 
 ## Key Commands
 
@@ -54,12 +154,16 @@ docker compose up -d       # Start services
 docker compose logs -f     # View logs
 ```
 
+---
+
 ## Important Patterns
 
 ### Shift = Business Date
 All reports filter by `shift_start`..`shift_end`, NOT `created_at::date`.
 
-### JWT Auth
+### JWT Auth (httpOnly Cookies)
+- Tokens stored in httpOnly;Secure;SameSite=Strict cookies
+- CSRF token separate, stored in localStorage
 - Kasir: 20-hour token, PIN only
 - Admin: 12-hour token, email + 6-digit OTP
 - No refresh tokens
@@ -67,15 +171,35 @@ All reports filter by `shift_start`..`shift_end`, NOT `created_at::date`.
 ### Database Safety
 Use `SELECT ... FOR UPDATE` for idempotent state transitions.
 
-## Quick Start
+---
 
-1. Read CLAUDE.md for full context
-2. Invoke relevant skills at task start
-3. Use agent-skills for parallel work
-4. Commit frequently with clear messages
+## Context Memory
 
-## Last Audit (2026-06-18)
-- 356 issues found and resolved
+| File | Purpose |
+|------|---------|
+| `memory/no-phase-development.md` | No phased work |
+| `memory/always-use-skills.md` | Use skills always |
+| `memory/backend-debugging-findings.md` | Past fixes |
+
+---
+
+## Last Session (2026-06-18)
+
+### Completed: Hybrid Token Migration ✅
+- Moved JWT tokens from localStorage to httpOnly cookies
+- Access token in httpOnly;Secure;SameSite=Strict cookie
+- CSRF token stored separately in localStorage
+- Backend tests: 85 passed
+- Frontend tests: 32 passed
+- Committed: `6aec072`
+
+### Completed: Comprehensive Audit ✅
+- 356 issues resolved (P1-P4)
 - 12 P1-Critical fixed
 - 40 P2-High fixed
 - All lint/tests/build passing
+
+### Pending Priorities
+1. Database Migration (indexes from audit)
+2. Naming Convention (180 violations)
+3. Test Coverage (62 missing tests)
