@@ -10,10 +10,12 @@ const mockFinanceRepository = {
   createCashRegister: jest.fn(),
   updateCashRegister: jest.fn(),
   findProfitShareLog: jest.fn(),
+  findProfitShareLogByPeriod: jest.fn(),
   createProfitShareLog: jest.fn(),
   updateProfitShareLog: jest.fn(),
   createAuditLog: jest.fn(),
   findOperationalExpenses: jest.fn(),
+  createOperationalExpense: jest.fn(),
   findAssets: jest.fn(),
   findManyCashRegisters: jest.fn(),
 };
@@ -189,6 +191,117 @@ describe('FinanceService', () => {
 
       expect(result.revenue).toBe(1500000);
       expect(mockFinanceRepository.createProfitShareLog).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('payProfitShare', () => {
+    it('should throw NotFoundException if profit share not found', async () => {
+      mockFinanceRepository.findProfitShareLogByPeriod.mockResolvedValue(null);
+
+      await expect(
+        service.payProfitShare(6, 2026, 'proof.pdf', 'notes', 'admin-1'),
+      ).rejects.toThrow(NotFoundException);
+    });
+
+    it('should throw BadRequestException if already paid', async () => {
+      mockFinanceRepository.findProfitShareLogByPeriod.mockResolvedValue({
+        id: 'log-1',
+        period_month: new Date('2026-06-01'),
+        is_paid: true,
+      });
+
+      await expect(
+        service.payProfitShare(6, 2026, 'proof.pdf', 'notes', 'admin-1'),
+      ).rejects.toThrow(BadRequestException);
+    });
+
+    it('should pay profit share and create audit log', async () => {
+      mockFinanceRepository.findProfitShareLogByPeriod.mockResolvedValue({
+        id: 'log-1',
+        period_month: new Date('2026-06-01'),
+        cashier_share: 400000,
+        is_paid: false,
+      });
+      mockFinanceRepository.updateProfitShareLog.mockResolvedValue({
+        id: 'log-1',
+        is_paid: true,
+      });
+      mockFinanceRepository.createAuditLog.mockResolvedValue({ id: 'audit-1' });
+
+      const result = await service.payProfitShare(
+        6,
+        2026,
+        'proof.pdf',
+        'notes',
+        'admin-1',
+      );
+
+      expect(result.is_paid).toBe(true);
+      expect(mockFinanceRepository.createAuditLog).toHaveBeenCalled();
+    });
+  });
+
+  describe('getDashboardKpi', () => {
+    it('should calculate KPI correctly', async () => {
+      const mockOrders = [
+        {
+          id: 'order-1',
+          total_amount: 500000,
+          cogs_total: 200000,
+          payment_method: 'cash',
+        },
+        {
+          id: 'order-2',
+          total_amount: 300000,
+          cogs_total: 120000,
+          payment_method: 'qris',
+        },
+      ];
+      mockFinanceRepository.findOrders.mockResolvedValue(mockOrders);
+
+      const result = await service.getDashboardKpi('2026-06-18');
+
+      expect(result.revenue).toBe(800000);
+      expect(result.hpp).toBe(320000);
+      expect(result.transactions).toBe(2);
+      expect(result.paymentDistribution.cash).toBe(1);
+      expect(result.paymentDistribution.qris).toBe(1);
+    });
+
+    it('should handle zero transactions', async () => {
+      mockFinanceRepository.findOrders.mockResolvedValue([]);
+
+      const result = await service.getDashboardKpi('2026-06-18');
+
+      expect(result.revenue).toBe(0);
+      expect(result.transactions).toBe(0);
+    });
+  });
+
+  describe('createOpex', () => {
+    it('should create operational expense', async () => {
+      mockFinanceRepository.createOperationalExpense.mockResolvedValue({
+        id: 'opex-1',
+        category: 'electricity',
+        amount: 500000,
+      });
+
+      const result = await service.createOpex(
+        {
+          category: 'electricity',
+          amount: 500000,
+          expense_date: new Date('2026-06-18'),
+        },
+        'admin-1',
+      );
+
+      expect(result.id).toBe('opex-1');
+      expect(mockFinanceRepository.createOperationalExpense).toHaveBeenCalledWith(
+        expect.objectContaining({
+          category: 'electricity',
+          created_by: 'admin-1',
+        }),
+      );
     });
   });
 
