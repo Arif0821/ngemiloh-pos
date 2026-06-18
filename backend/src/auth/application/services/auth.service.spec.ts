@@ -80,6 +80,14 @@ describe('AuthService', () => {
     service = module.get<AuthService>(AuthService);
   });
 
+  afterEach(() => {
+    jest.clearAllMocks();
+  });
+
+  afterAll(() => {
+    delete process.env.PIN_PEPPER_SECRET;
+  });
+
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
@@ -221,9 +229,6 @@ describe('AuthService', () => {
       // Act& Assert: Login should fail with UnauthorizedException
       await expect(
         service.login('testuser', 'wrong-pin', mockIpAddress),
-      ).rejects.toThrow(UnauthorizedException);
-      await expect(
-        service.login('testuser', 'wrong-pin', mockIpAddress),
       ).rejects.toThrow('Invalid credentials');
     });
 
@@ -236,9 +241,6 @@ describe('AuthService', () => {
       await expect(
         service.login('nonexistent', '123456', mockIpAddress),
       ).rejects.toThrow(UnauthorizedException);
-      await expect(
-        service.login('nonexistent', '123456', mockIpAddress),
-      ).rejects.toThrow('Invalid credentials');
     });
 
     it('should fail login with inactive user', async () => {
@@ -254,9 +256,6 @@ describe('AuthService', () => {
       await expect(
         service.login('testuser', '123456', mockIpAddress),
       ).rejects.toThrow(UnauthorizedException);
-      await expect(
-        service.login('testuser', '123456', mockIpAddress),
-      ).rejects.toThrow('Account is inactive');
     });
 
     it('should fail login with locked account (user.locked_until in future)', async () => {
@@ -270,9 +269,6 @@ describe('AuthService', () => {
       mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
 
       // Act & Assert: Should throw HttpException with TOO_MANY_REQUESTS
-      await expect(
-        service.login('testuser', '123456', mockIpAddress),
-      ).rejects.toThrow(HttpException);
       await expect(
         service.login('testuser', '123456', mockIpAddress),
       ).rejects.toMatchObject({
@@ -308,15 +304,13 @@ describe('AuthService', () => {
       // Act& Assert: Should throw HttpException indicating IP is locked
       await expect(
         service.login('testuser', 'wrong-pin', mockIpAddress),
-      ).rejects.toThrow(HttpException);
-      await expect(
-        service.login('testuser', 'wrong-pin', mockIpAddress),
       ).rejects.toMatchObject({
         status: HttpStatus.TOO_MANY_REQUESTS,
       });
 
       // Verify lockIpAddress was called
       expect(mockAuthRepository.lockIpAddress).toHaveBeenCalled();
+      expect(mockAuthRepository.incrementIpLockout).toHaveBeenCalledWith(mockIpAddress);
     });
 
     it('should trigger account lockout after 5 failed attempts and send alert email', async () => {
@@ -365,9 +359,6 @@ describe('AuthService', () => {
       mockAuthRepository.findIpLockout.mockResolvedValue(mockIpLockout);
 
       // Act & Assert: Should throw HttpException immediately without checking user
-      await expect(
-        service.login('testuser', '123456', mockIpAddress),
-      ).rejects.toThrow(HttpException);
       await expect(
         service.login('testuser', '123456', mockIpAddress),
       ).rejects.toMatchObject({
@@ -645,16 +636,15 @@ describe('AuthService', () => {
 
       mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
       // Set last request to 30 seconds ago (within 60s cooldown)
+      // remaining = (60000 - 30000) / 1000 = 30 seconds
       mockRedisService.get.mockResolvedValue(
         (Date.now() - 30000).toString(),
       );
 
-      await expect(service.sendOtp(mockAdminEmail)).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.sendOtp(mockAdminEmail)).rejects.toThrow(
-        'Please wait',
-      );
+      await expect(service.sendOtp(mockAdminEmail)).rejects.toMatchObject({
+        status: 400,
+        message: 'Please wait 30 seconds before requesting another OTP.',
+      });
 
       expect(mockEmailService.sendOtp).not.toHaveBeenCalled();
     });

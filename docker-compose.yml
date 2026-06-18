@@ -14,6 +14,8 @@ services:
   postgres:
     image: 'mirror.gcr.io/library/postgres:16-alpine'
     container_name: ngemiloh_db
+    ports:
+      - "5433:5432"
     environment:
       POSTGRES_USER: ngemiloh
       POSTGRES_PASSWORD: ${DB_PASSWORD}
