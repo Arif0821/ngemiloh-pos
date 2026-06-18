@@ -64,8 +64,14 @@ ENV NPM_CONFIG_LOGLEVEL=warn
 COPY --from=builder --chown=appuser:appgroup /app/package.json /app/package-lock.json* ./
 
 # Install ONLY production dependencies (omit devDependencies)
+# Note: We intentionally use npm here even though it has CVEs in its bundled deps,
+# because we remove npm after installation - it's only used at build time
 RUN npm ci --omit=dev --ignore-scripts --legacy-peer-deps && \
-    echo "=== Production dependencies installed ==="
+    echo "=== Production dependencies installed ===" && \
+    # Remove npm CLI and its bundled dependencies to eliminate base image CVE exposure
+    # npm is not needed at runtime - we only use 'node' to run the application
+    rm -rf /usr/local/lib/node_modules/npm && \
+    echo "=== npm CLI removed ==="
 
 # Copy Prisma schema + generated client from builder
 COPY --from=builder --chown=appuser:appgroup /app/prisma ./prisma

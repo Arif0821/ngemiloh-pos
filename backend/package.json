@@ -102,7 +102,14 @@
     "glob": "^11.1.0",
     "brace-expansion": "^5.0.5",
     "diff": "^5.2.2",
-    "ip-address": "^10.1.1"
+    "ip-address": "^10.1.1",
+    "picomatch": "^4.0.4",
+    "micromatch": {
+      "picomatch": "^4.0.4"
+    },
+    "anymatch": {
+      "picomatch": "^4.0.4"
+    }
   },
   "prisma": {
     "seed": "ts-node prisma/seed.ts"
