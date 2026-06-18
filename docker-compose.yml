@@ -1,65 +1,143 @@
 version: '3.8'
 
+# ═══════════════════════════════════════════════════════════════════
+# Ngemiloh POS - Production-Ready Docker Compose
+# Security: All secrets, TLS, non-root users, network isolation
+# ═══════════════════════════════════════════════════════════════════
+
 volumes:
   postgres_data:
+    driver: local
   redis_data:
+    driver: local
   storage_data:
+    driver: local
   caddy_data:
+    driver: local
   caddy_config:
+    driver: local
+
+# ═══════════════════════════════════════════════════════════════════
+# Docker Secrets (for production - use external secrets manager)
+# ═══════════════════════════════════════════════════════════════════
+secrets:
+  db_password:
+    file: ./secrets/db_password.txt
+  redis_password:
+    file: ./secrets/redis_password.txt
+  jwt_access_secret:
+    file: ./secrets/jwt_access_secret.txt
+  pin_pepper_secret:
+    file: ./secrets/pin_pepper_secret.txt
+  csrf_secret:
+    file: ./secrets/csrf_secret.txt
+  midtrans_server_key_sandbox:
+    file: ./secrets/midtrans_server_key_sandbox.txt
+  midtrans_server_key_production:
+    file: ./secrets/midtrans_server_key_production.txt
+  email_app_password:
+    file: ./secrets/email_app_password.txt
+
+networks:
+  frontend_network:
+    driver: bridge
+  backend_network:
+    driver: bridge
+    internal: true  # No external access - database isolated
 
 services:
   # ============================================================
-  # Database: PostgreSQL 16
+  # Database: PostgreSQL 16 (SECURED)
   # ============================================================
   postgres:
     image: 'mirror.gcr.io/library/postgres:16-alpine'
     container_name: ngemiloh_db
-    ports:
-      - "5433:5432"
+    # FIX: Remove public port exposure - use Docker internal network only
+    # For local dev: bind to localhost only with "127.0.0.1:5433:5432"
     environment:
       POSTGRES_USER: ngemiloh
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      # FIX: Use secrets instead of env vars for password
+      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
       POSTGRES_DB: ngemiloh_db
+      # FIX: Enable SSL/TLS for connections
+      POSTGRES_SSL_MODE: require
+      # FIX: Stronger authentication
+      POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    networks:
+      - backend_network
+    # FIX: Run as non-root user
+    user: "1000:1000"
+    # FIX: Drop all capabilities
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     deploy:
       resources:
         limits:
           memory: 1G
           cpus: '0.5'
+        reservations:
+          memory: 512M
+          cpus: '0.25'
     healthcheck:
-      # CI/CD: Use postgres superuser for healthcheck (more reliable)
       test: ["CMD-SHELL", "pg_isready -U ngemiloh -d ngemiloh_db"]
       interval: 5s
       timeout: 5s
       retries: 10
       start_period: 30s
     restart: unless-stopped
+    secrets:
+      - db_password
 
   # ============================================================
-  # Redis: Cache& Queue
+  # Redis: Cache & Queue (SECURED)
   # ============================================================
   redis:
     image: 'mirror.gcr.io/library/redis:7-alpine'
     container_name: ngemiloh_redis
-    command: redis-server --appendonly yes
+    # FIX: Add password authentication and security configs
+    command: >
+      redis-server
+      --appendonly yes
+      --requirepass /run/secrets/redis_password
+      --loglevel warning
+      --maxmemory 200mb
+      --maxmemory-policy allkeys-lru
+      --rename-command FLUSHDB ""
+      --rename-command FLUSHALL ""
+      --rename-command SHUTDOWN "SHUTDOWN_NG"
+      --rename-command CONFIG "CONFIG_NG"
+      --rename-command EVAL ""
+      --rename-command EVALSHA ""
     volumes:
       - redis_data:/data
+    networks:
+      - backend_network
+    user: "1000:1000"
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     deploy:
       resources:
         limits:
           memory: 256M
           cpus: '0.25'
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli ping"]
+      test: ["CMD-SHELL", "redis-cli -a $(cat /run/secrets/redis_password) ping"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
     restart: unless-stopped
+    secrets:
+      - redis_password
 
   # ============================================================
-  # NestJS Backend API
+  # NestJS Backend API (SECURED)
   # ============================================================
   nestjs-api:
     container_name: ngemiloh_api
@@ -68,69 +146,97 @@ services:
       dockerfile: Dockerfile
       args:
         - NODE_ENV=development
-        - ALPINE_VERSION=3.18
     environment:
-      # Direct connection to postgres (no pgbouncer for simplicity)
-      - DATABASE_URL=postgresql://ngemiloh:${DB_PASSWORD}@postgres:5432/ngemiloh_db
-      - DIRECT_URL=postgresql://ngemiloh:${DB_PASSWORD}@postgres:5432/ngemiloh_db
-      - REDIS_URL=redis://redis:6379
-      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET}
-      - PIN_PEPPER_SECRET=${PIN_PEPPER_SECRET}
+      # Database with SSL
+      - DATABASE_URL=postgresql://ngemiloh@postgres:5432/ngemiloh_db?sslmode=require
+      - DIRECT_URL=postgresql://ngemiloh@postgres:5432/ngemiloh_db?sslmode=require
+      # FIX: Redis with password auth
+      - REDIS_URL=redis://:$(cat /run/secrets/redis_password)@redis:6379
+      # JWT settings from secrets
+      - JWT_ACCESS_SECRET_FILE=/run/secrets/jwt_access_secret
+      - PIN_PEPPER_SECRET_FILE=/run/secrets/pin_pepper_secret
+      - CSRF_SECRET_FILE=/run/secrets/csrf_secret
       - NODE_ENV=${NODE_ENV:-production}
       - STORAGE_PATH=/var/storage/ngemiloh
       - JWT_ACCESS_EXPIRES=8h
       - FRONTEND_URL=${FRONTEND_URL:-https://pos.yourdomain.com}
+      # Midtrans
       - MIDTRANS_ENV=${MIDTRANS_ENV:-sandbox}
-      - MIDTRANS_SERVER_KEY_SANDBOX=${MIDTRANS_SERVER_KEY_SANDBOX}
-      - MIDTRANS_SERVER_KEY_PRODUCTION=${MIDTRANS_SERVER_KEY_PRODUCTION}
+      - MIDTRANS_SERVER_KEY_SANDBOX_FILE=/run/secrets/midtrans_server_key_sandbox
+      - MIDTRANS_SERVER_KEY_PRODUCTION_FILE=/run/secrets/midtrans_server_key_production
       - MIDTRANS_CLIENT_KEY_SANDBOX=${MIDTRANS_CLIENT_KEY_SANDBOX}
       - MIDTRANS_CLIENT_KEY_PRODUCTION=${MIDTRANS_CLIENT_KEY_PRODUCTION}
       - QRIS_EXPIRY_SECONDS=${QRIS_EXPIRY_SECONDS:-900}
-      # FIX: Add missing email environment variables
+      # Email
       - EMAIL_HOST=${EMAIL_HOST}
       - EMAIL_PORT=${EMAIL_PORT:-587}
       - EMAIL_SECURE=${EMAIL_SECURE:-false}
       - EMAIL_FROM=${EMAIL_FROM:-noreply@ngemiloh.com}
       - EMAIL_USER=${EMAIL_USER}
-      - EMAIL_APP_PASSWORD=${EMAIL_APP_PASSWORD}
+      - EMAIL_APP_PASSWORD_FILE=/run/secrets/email_app_password
       - EMAIL_ALERT_TO=${EMAIL_ALERT_TO}
-      - CSRF_SECRET=${CSRF_SECRET}
+      # Monitoring
       - SENTRY_DSN=${SENTRY_DSN}
+      # Business rules
       - DISCREPANCY_THRESHOLD=${DISCREPANCY_THRESHOLD:-5000}
       - PRICE_DELTA_THRESHOLD_PCT=${PRICE_DELTA_THRESHOLD_PCT:-10}
       - TZ=${TZ:-Asia/Jakarta}
-      # Force Prisma to use debian openssl-3.0.x engine
+      # Prisma engine
       - PRISMA_CLIENT_FORCE_LIBQUERY_ENGINE_BINARY=/app/node_modules/.prisma/client/libquery_engine-linux-debian-openssl-3.0.x.so.node
     volumes:
       - storage_data:/var/storage/ngemiloh
+    networks:
+      - frontend_network
+      - backend_network
     depends_on:
       postgres:
         condition: service_healthy
       redis:
-        condition: service_healthy  # FIX: Wait for Redis to be healthy before starting
+        condition: service_healthy
+    # FIX: Security configurations
+    read_only: true
+    tmpfs:
+      - /tmp
+      - /var/tmp
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    ulimits:
+      nofile:
+        soft: 1024
+        hard: 4096
     deploy:
       resources:
         limits:
           memory: 512M
           cpus: '0.5'
+        reservations:
+          memory: 256M
     healthcheck:
-      # CI/CD: Use curl instead of wget (Alpine doesn't have wget by default)
       test: ["CMD-SHELL", "curl -f http://127.0.0.1:3000/health || exit 1"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 120s
     restart: unless-stopped
+    secrets:
+      - db_password
+      - redis_password
+      - jwt_access_secret
+      - pin_pepper_secret
+      - csrf_secret
+      - midtrans_server_key_sandbox
+      - midtrans_server_key_production
+      - email_app_password
 
   # ============================================================
-  # Caddy: Reverse Proxy + Static Files
+  # Caddy: Reverse Proxy + Static Files (SECURED)
   # ============================================================
   caddy:
     build:
       context: .
       dockerfile: Caddy.Dockerfile
-      args:
-        - NODE_ENV=development
     container_name: ngemiloh_caddy
     ports:
       - "80"
@@ -138,16 +244,22 @@ services:
     volumes:
       - caddy_data:/data
       - caddy_config:/config
+    networks:
+      - frontend_network
     depends_on:
       nestjs-api:
         condition: service_healthy
+    # FIX: Security configurations
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
     deploy:
       resources:
         limits:
           memory: 128M
           cpus: '0.25'
     healthcheck:
-      # CI/CD: Use curl instead of wget (Alpine doesn't have wget by default)
       test: ["CMD-SHELL", "curl -f http://127.0.0.1:80/health || exit 1"]
       interval: 10s
       timeout: 5s

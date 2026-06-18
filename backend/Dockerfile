@@ -49,6 +49,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     curl \
     && rm -rf /var/lib/apt/lists/*
 
+# ── SECURITY: Create non-root user ──────────────────────────
+RUN groupadd --gid 1001 appgroup && \
+    useradd --uid 1001 --gid appgroup --shell /bin/false --home /app appuser
+
 # Copy package files
 COPY package.json package-lock.json* ./
 
@@ -78,14 +82,18 @@ COPY --from=builder /app/node_modules/ts-node /app/node_modules/ts-node
 COPY --from=builder /app/node_modules/.prisma /app/node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma /app/node_modules/@prisma
 
-# Buat direktori penyimpanan
-RUN mkdir -p /var/storage/ngemiloh
+# Buat direktori penyimpanan dengan permission yang benar
+RUN mkdir -p /var/storage/ngemiloh && \
+    chown -R appuser:appgroup /app
 
 EXPOSE 3000
 
 # Copy dan set executable startup script
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh
 RUN chmod +x /app/docker-entrypoint.sh
+
+# ── SECURITY: Switch to non-root user ───────────────────────
+USER appuser
 
 # Seed boleh gagal, tapi server TETAP jalan (tidak restart loop)
 CMD ["/app/docker-entrypoint.sh"]
