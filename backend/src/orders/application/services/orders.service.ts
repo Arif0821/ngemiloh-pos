@@ -1072,6 +1072,10 @@ export class OrdersService {
     const start = startDate ? new Date(startDate) : new Date(0);
     const end = endDate ? endOfDay(new Date(endDate)) : endOfDay();
 
+    // PERFORMANCE: Limit orders to prevent OOM
+    // For very large exports, consider using streaming CSV or date chunking
+    const MAX_EXPORT_ROWS = 50000;
+
     const orders = await this.orderRepository.findOrders(
       {
         created_at: { gte: start, lte: end },
@@ -1085,6 +1089,7 @@ export class OrdersService {
           },
         },
       },
+      MAX_EXPORT_ROWS, // take limit
     );
 
     const header =

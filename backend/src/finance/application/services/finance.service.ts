@@ -457,6 +457,10 @@ export class FinanceService {
       startDate.setMonth(now.getMonth() - 12);
     }
 
+    // PERFORMANCE: Limit orders to prevent OOM
+    // For very large datasets, use database aggregations instead
+    const MAX_ANALYTICS_ORDERS = 10000;
+
     type OrderWithItems = Order & {
       items: Array<{
         product_id: string;
@@ -469,6 +473,7 @@ export class FinanceService {
     const orders = (await this.financeRepository.findOrders(
       { created_at: { gte: startDate }, status: { not: 'voided' } },
       { items: true },
+      MAX_ANALYTICS_ORDERS, // take limit
     )) as OrderWithItems[];
 
     const trend = this.buildTrend(orders, period);

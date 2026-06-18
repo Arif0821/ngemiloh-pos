@@ -10,8 +10,9 @@ export class PrismaFinanceRepository implements IFinanceRepository {
   async findOrders(
     where: Prisma.OrderWhereInput,
     include?: Prisma.OrderInclude,
+    take?: number,
   ) {
-    return this.prisma.order.findMany({ where, include });
+    return this.prisma.order.findMany({ where, include, take });
   }
 
   async findOperationalExpenses(
