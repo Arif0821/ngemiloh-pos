@@ -187,7 +187,9 @@ describe('OrdersService', () => {
     });
 
     it('should generate order number in correct format TRX-YYYYMMDD-{letter}{seq}', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue({ cashier_letter: 'A' });
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        cashier_letter: 'A',
+      });
       mockPrismaService.order.count.mockResolvedValue(0);
 
       const result = await service.generateOrderNumber(
@@ -200,7 +202,9 @@ describe('OrdersService', () => {
     });
 
     it('should increment sequence based on existing orders for same cashier and date', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue({ cashier_letter: 'B' });
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        cashier_letter: 'B',
+      });
       mockPrismaService.order.count.mockResolvedValue(5);
 
       const result = await service.generateOrderNumber(
@@ -213,7 +217,9 @@ describe('OrdersService', () => {
     });
 
     it('should pad sequence with leading zeros', async () => {
-      mockPrismaService.user.findUnique.mockResolvedValue({ cashier_letter: 'C' });
+      mockPrismaService.user.findUnique.mockResolvedValue({
+        cashier_letter: 'C',
+      });
       mockPrismaService.order.count.mockResolvedValue(12);
 
       const result = await service.generateOrderNumber(
@@ -263,8 +269,12 @@ describe('OrdersService', () => {
         mockPrismaService.$transaction.mockResolvedValue(mockOrder);
 
         mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
-        mockOrderRepository.findActiveDiscounts.mockResolvedValue([mockDiscount]);
-        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([mockProduct]);
+        mockOrderRepository.findActiveDiscounts.mockResolvedValue([
+          mockDiscount,
+        ]);
+        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([
+          mockProduct,
+        ]);
 
         const result = await service.createOrder(baseOrderDto, 'kasir-001');
 
@@ -297,7 +307,9 @@ describe('OrdersService', () => {
 
         mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
         mockOrderRepository.findActiveDiscounts.mockResolvedValue([]);
-        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([{ ...mockProduct, base_price: 27000 }]);
+        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([
+          { ...mockProduct, base_price: 27000 },
+        ]);
         mockOrderRepository.updateOrder.mockResolvedValue({
           ...mockOrder,
           payment_method: PaymentMethod.qris,
@@ -339,7 +351,9 @@ describe('OrdersService', () => {
 
         mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
         mockOrderRepository.findActiveDiscounts.mockResolvedValue([]);
-        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([mockProduct]);
+        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([
+          mockProduct,
+        ]);
 
         const result = await service.createOrder(splitOrder, 'kasir-001');
 
@@ -350,8 +364,16 @@ describe('OrdersService', () => {
       });
 
       it('should apply best discount correctly when multiple discounts exist', async () => {
-        const percentageDiscount = { ...mockDiscount, type: 'percentage', value: 10 };
-        const fixedDiscount = { ...mockDiscount, type: 'fixed_amount', value: 3000 };
+        const percentageDiscount = {
+          ...mockDiscount,
+          type: 'percentage',
+          value: 10,
+        };
+        const fixedDiscount = {
+          ...mockDiscount,
+          type: 'fixed_amount',
+          value: 3000,
+        };
 
         const orderWithDiscount = {
           ...mockOrder,
@@ -362,8 +384,13 @@ describe('OrdersService', () => {
         mockPrismaService.$transaction.mockResolvedValue(orderWithDiscount);
 
         mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
-        mockOrderRepository.findActiveDiscounts.mockResolvedValue([percentageDiscount, fixedDiscount]);
-        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([mockProduct]);
+        mockOrderRepository.findActiveDiscounts.mockResolvedValue([
+          percentageDiscount,
+          fixedDiscount,
+        ]);
+        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([
+          mockProduct,
+        ]);
 
         const result = await service.createOrder(baseOrderDto, 'kasir-001');
 
@@ -396,7 +423,9 @@ describe('OrdersService', () => {
 
         mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
         mockOrderRepository.findActiveDiscounts.mockResolvedValue([]);
-        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([mockProduct]);
+        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([
+          mockProduct,
+        ]);
 
         const discrepancyOrder = {
           ...baseOrderDto,
@@ -467,7 +496,9 @@ describe('OrdersService', () => {
 
         mockOrderRepository.findOrderByClientUuid.mockResolvedValue(null);
         mockOrderRepository.findActiveDiscounts.mockResolvedValue([]);
-        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([mockProduct]);
+        mockOrderRepository.findProductsWithModifiers.mockResolvedValue([
+          mockProduct,
+        ]);
 
         // Mock $transaction to return properly created order
         const createdOrder = {

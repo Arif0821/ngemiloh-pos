@@ -48,15 +48,19 @@ export class SyncProcessor extends WorkerHost {
           }
           return [{ success: false, orderId: '', error: 'Missing orderId' }];
 
-        default:
-          this.logger.warn(`Unknown sync type: ${job.data.type}`);
+        default: {
+          // Wrap in braces due to no-case-declarations ESLint rule
+          // TypeScript exhaustive check guarantees job.data.type is never here
+          const unknownType = String(job.data.type);
+          this.logger.warn(`Unknown sync type: ${unknownType}`);
           return [
             {
               success: false,
               orderId: '',
-              error: `Unknown type: ${job.data.type}`,
+              error: `Unknown type: ${unknownType}`,
             },
           ];
+        }
       }
     } catch (error) {
       this.logger.error(`Sync job ${job.id} failed: ${error.message}`);

@@ -231,8 +231,9 @@ export class FinanceService {
         } else {
           // Get cashier name from shift if available, otherwise use cashierId
           const cashierName =
-            'cashier' in shift && (shift as { cashier?: { name: string } }).cashier?.name
-              ? (shift as { cashier?: { name: string } }).cashier!.name
+            'cashier' in shift &&
+            (shift as { cashier?: { name: string } }).cashier?.name
+              ? (shift as { cashier?: { name: string } }).cashier.name
               : cashierId;
           cashierMap.set(cashierId, {
             cashierId,

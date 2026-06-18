@@ -51,7 +51,9 @@ export class EmailProcessor extends WorkerHost {
           break;
 
         default:
-          this.logger.warn(`Unknown email type: ${job.data.type}`);
+          // TypeScript exhaustive check guarantees job.data.type is never here
+          // Cast needed for logging purposes only
+          this.logger.warn(`Unknown email type: ${String(job.data.type)}`);
       }
 
       this.logger.log(`Email job ${job.id} completed successfully`);

@@ -38,6 +38,7 @@ function escapeCsvField(value: unknown): string {
   if (value === null || value === undefined) return '';
   const str = String(value);
   // SECURITY: Remove control characters and newlines that could inject CSV rows
+  // eslint-disable-next-line no-control-regex -- Intentional sanitization of control chars (CSV injection prevention)
   const sanitized = str.replace(/[\r\n\x00-\x1F]/g, '');
   // Check for formula injection patterns at start of field
   if (/^[=+\-@\t\r]/.test(sanitized)) {
@@ -1101,11 +1102,11 @@ export class OrdersService {
         for (const item of o.items) {
           const itemName = escapeCsvField(item.product_name_snapshot || 'Item');
           const qty = item.quantity;
-          const basePrice = item.base_price;
+          const basePrice = String(item.base_price);
           const discountName = escapeCsvField(item.discount?.name || '-');
           const discountAmt =
             Number(item.base_price) - Number(item.discounted_base);
-          const finalPrice = item.final_price;
+          const finalPrice = String(item.final_price);
           rows.push(
             `${date},${id},${cashier},${method},${status},${itemName},${qty},${basePrice},${discountName},${discountAmt},${finalPrice}`,
           );

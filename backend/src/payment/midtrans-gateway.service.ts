@@ -118,7 +118,7 @@ export class MidtransGatewayService implements PaymentGateway {
   /**
    * Check if Midtrans is available (circuit breaker check)
    */
-  async isAvailable(): Promise<boolean> {
+  isAvailable(): Promise<boolean> {
     try {
       // Simple health check - try to ping Midtrans status page
       // For now, return true if we have valid server key
@@ -126,10 +126,10 @@ export class MidtransGatewayService implements PaymentGateway {
         process.env.MIDTRANS_ENV === 'production'
           ? process.env.MIDTRANS_SERVER_KEY_PRODUCTION
           : process.env.MIDTRANS_SERVER_KEY_SANDBOX;
-
-      return !!serverKey && serverKey.length > 0;
+      // Return synchronously - no async operations needed
+      return Promise.resolve(!!serverKey && serverKey.length > 0);
     } catch {
-      return false;
+      return Promise.resolve(false);
     }
   }
 }

@@ -12,7 +12,7 @@ export class FakePaymentGatewayService implements PaymentGateway {
   /**
    * Create mock QRIS payment
    */
-  async createQris(orderId: string, amount: number): Promise<QrisResult> {
+  createQris(orderId: string, amount: number): Promise<QrisResult> {
     this.logger.log(
       `[FAKE] Creating QRIS for order ${orderId}, amount: ${amount}`,
     );
@@ -26,7 +26,7 @@ export class FakePaymentGatewayService implements PaymentGateway {
     // Calculate expiry (15 minutes from now)
     const expiresAt = new Date(Date.now() + 15 * 60 * 1000);
 
-    return {
+    return Promise.resolve({
       transaction_id: mockTransactionId,
       qr_string: mockQrString,
       expires_at: expiresAt,
@@ -37,7 +37,7 @@ export class FakePaymentGatewayService implements PaymentGateway {
         amount,
         created_at: new Date().toISOString(),
       },
-    };
+    });
   }
 
   /**
@@ -51,7 +51,7 @@ export class FakePaymentGatewayService implements PaymentGateway {
   /**
    * Always available for testing
    */
-  async isAvailable(): Promise<boolean> {
-    return true;
+  isAvailable(): Promise<boolean> {
+    return Promise.resolve(true);
   }
 }

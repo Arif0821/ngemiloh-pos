@@ -114,7 +114,12 @@ export class AuthController {
     @Res({ passthrough: true }) response: Response,
   ) {
     const accessToken = req.cookies['access_token'];
-    if (accessToken) {
+    // Only call logout if we have a valid token string
+    if (
+      accessToken &&
+      typeof accessToken === 'string' &&
+      accessToken.length > 0
+    ) {
       await this.authService.logout(accessToken);
     }
 
