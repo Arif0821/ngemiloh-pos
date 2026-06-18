@@ -64,5 +64,12 @@ if [ ! -f "/app/dist/main.js" ]; then
     exit 1
 fi
 
+# Run database migrations
+if [ "${NODE_ENV}" = "production" ]; then
+    echo "[INFO] Running database migrations..."
+    npx prisma migrate deploy
+    echo "[INFO] Migrations complete"
+fi
+
 # Start the application
 exec node /app/dist/main.js
