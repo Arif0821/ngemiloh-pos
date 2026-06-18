@@ -108,7 +108,6 @@ describe('AuthService', () => {
       const result = await service.login('testuser', '123456', mockIpAddress);
 
       // Assert: Verify successful login response
-      expect(result).toHaveProperty('accessToken');
       expect(result).toHaveProperty('csrfToken');
       expect(result.user).toEqual({
         id: mockUser.id,
@@ -159,7 +158,7 @@ describe('AuthService', () => {
       );
 
       // Assert: Verify successful login
-      expect(result).toHaveProperty('accessToken');
+      expect(result).toHaveProperty('csrfToken');
       expect(result.user.role).toBe(Role.superadmin);
     });
 

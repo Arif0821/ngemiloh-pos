@@ -23,6 +23,8 @@ import {
   LOCKOUT_THRESHOLD,
 } from '../../../common/utils/constants';
 import { escapeHtml } from '../../../common/utils/html';
+import { set_cookie } from '../../../common/utils/cookie';
+import type { Response } from 'express';
 
 @Injectable()
 export class AuthService {
@@ -74,6 +76,7 @@ export class AuthService {
     usernameOrEmail: string,
     pinOrPassword: string,
     ipAddress: string = 'unknown',
+    res?: Response,
   ) {
     const ipLock = await this.authRepository.findIpLockout(ipAddress);
 
@@ -188,8 +191,17 @@ export class AuthService {
 
     const csrfToken = crypto.randomBytes(32).toString('hex');
 
+    if (res) {
+      set_cookie(res, 'access_token', accessToken, {
+        maxAge: 72000, // 20 hours in seconds
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+      });
+    }
+
     return {
-      accessToken,
       csrfToken,
       user: {
         id: user.id,
@@ -204,6 +216,7 @@ export class AuthService {
     email: string,
     password: string,
     ipAddress: string,
+    res?: Response,
   ) {
     const ipLock = await this.authRepository.findIpLockout(ipAddress);
     if (ipLock && ipLock.locked_until && ipLock.locked_until > new Date()) {
@@ -270,7 +283,33 @@ export class AuthService {
 
     await this.authRepository.resetUserFailedLogin(user.id);
     await this.authRepository.resetIpLockout(ipAddress);
-    return { userId: user.id, email: user.email, name: user.name };
+
+    const payload = { sub: user.id, role: user.role as string };
+    const jti = crypto.randomUUID();
+    const accessToken = this.jwtService.sign(payload, {
+      secret: process.env.JWT_ACCESS_SECRET ?? '',
+      expiresIn: '12h',
+      jwtid: jti,
+    });
+
+    const csrfToken = crypto.randomBytes(32).toString('hex');
+
+    if (res) {
+      set_cookie(res, 'admin_token', accessToken, {
+        maxAge: 43200, // 12 hours
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+      });
+    }
+
+    return {
+      csrfToken,
+      userId: user.id,
+      email: user.email,
+      name: user.name,
+    };
   }
 
   // FIX H8/H9/H10: Add rate limiting, audit logging, and improved OTP security
@@ -324,7 +363,12 @@ export class AuthService {
     await this.emailService.sendOtp(user.email || email, otpCode);
   }
 
-  async verifyOtp(email: string, otpCode: string, ipAddress: string) {
+  async verifyOtp(
+    email: string,
+    otpCode: string,
+    ipAddress: string,
+    res?: Response,
+  ) {
     if (!email) throw new BadRequestException('Email is required');
 
     const userId = await this.redisService.get(
@@ -412,8 +456,17 @@ export class AuthService {
     });
     const csrfToken = crypto.randomBytes(32).toString('hex');
 
+    if (res) {
+      set_cookie(res, 'admin_token', accessToken, {
+        maxAge: 43200, // 12 hours
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+      });
+    }
+
     return {
-      accessToken,
       csrfToken,
       user: { id: user.id, name: user.name, role: user.role },
     };
@@ -442,7 +495,12 @@ export class AuthService {
     }
   }
 
-  async changePin(userId: string, currentPin: string, newPin: string) {
+  async changePin(
+    userId: string,
+    currentPin: string,
+    newPin: string,
+    res?: Response,
+  ) {
     const user = await this.authRepository.findUserById(userId);
     if (!user) throw new NotFoundException('User not found');
     if (user.role !== 'kasir')
@@ -464,8 +522,20 @@ export class AuthService {
       jwtid: jti,
     });
 
+    const csrfToken = crypto.randomBytes(32).toString('hex');
+
+    if (res) {
+      set_cookie(res, 'access_token', accessToken, {
+        maxAge: 72000, // 20 hours in seconds
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+      });
+    }
+
     return {
-      accessToken,
+      csrfToken,
       user: {
         id: user.id,
         name: user.name,

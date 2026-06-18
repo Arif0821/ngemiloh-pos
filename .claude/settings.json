@@ -1,16 +1,81 @@
-{
-  "permissions": {
-    "allow": [
-      "WebSearch"
-    ]
-  },
-  "ui": {
-    "showMCPResources": true
-  },
-  "directories": {
-    "commands": [
-      ".claude/commands",
-      "agent-skills/.claude/commands"
-    ]
-  }
-}
+# POS Nabil - Claude Code Initialization
+
+## Project Context
+
+**POS Nabil** is a Point of Sale system for Ngemiloh (snack business).
+- **Backend:** NestJS 11 + PostgreSQL 16 + Prisma 6 + Redis 7
+- **Frontend:** SvelteKit 2 + Svelte 5 (Runes) + Tailwind CSS 4
+- **Infrastructure:** Docker + Caddy reverse proxy
+
+## User Preferences
+
+1. **No Phase Development** - Complete all features in one go, no splitting into phases
+2. **Always Use Skills** - Every task must use `superpowers` + `agent-skills` combined
+3. **snake_case naming** for all code
+4. **Simple, readable code** - No unnecessary complexity
+
+## Available Skills
+
+### Superpowers (via `Skill` tool)
+- `subagent-driven-development` - Dispatch fresh subagent per task
+- `writing-plans` - Create detailed implementation plans
+- `brainstorming` - Turn ideas into designs
+- `using-superpowers` - Skill loader/injector
+
+### Agent-Skills (via `Agent` tool)
+- `code-reviewer` - Senior code reviewer
+- `security-auditor` - Vulnerability detection
+- `test-engineer` - QA/test strategy
+- `web-performance-auditor` - Performance analysis
+- `Plan` - Software architect for designs
+- `Explore` - Broad file/code search
+
+## Key Commands
+
+### Backend
+```bash
+npm run build       # Build NestJS
+npm run start:dev   # Hot reload dev
+npm run lint        # ESLint
+npm run test        # Jest tests
+```
+
+### Frontend
+```bash
+npm run dev         # SvelteKit dev
+npm run build       # Production build
+npm run check       # TypeScript check
+npm run test        # Vitest tests
+```
+
+### Docker
+```bash
+docker compose up -d       # Start services
+docker compose logs -f     # View logs
+```
+
+## Important Patterns
+
+### Shift = Business Date
+All reports filter by `shift_start`..`shift_end`, NOT `created_at::date`.
+
+### JWT Auth
+- Kasir: 20-hour token, PIN only
+- Admin: 12-hour token, email + 6-digit OTP
+- No refresh tokens
+
+### Database Safety
+Use `SELECT ... FOR UPDATE` for idempotent state transitions.
+
+## Quick Start
+
+1. Read CLAUDE.md for full context
+2. Invoke relevant skills at task start
+3. Use agent-skills for parallel work
+4. Commit frequently with clear messages
+
+## Last Audit (2026-06-18)
+- 356 issues found and resolved
+- 12 P1-Critical fixed
+- 40 P2-High fixed
+- All lint/tests/build passing

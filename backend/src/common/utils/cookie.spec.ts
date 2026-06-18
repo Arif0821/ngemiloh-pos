@@ -9,9 +9,11 @@ describe('cookie utilities', () => {
     } as unknown as Response;
   };
 
-  // Helper to get all Set-Cookie header values
-  const getSetCookieHeaders = (res: Response): string[] => {
-    return res.headers.getAll?.('Set-Cookie') || [];
+  // Helper to get all Set-Cookie header values (kept for reference)
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const _getSetCookieHeaders = (res: Response): string[] => {
+    const header = res.headers.get('Set-Cookie');
+    return header ? [header] : [];
   };
 
   describe('set_cookie', () => {
