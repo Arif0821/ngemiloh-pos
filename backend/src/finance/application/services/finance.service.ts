@@ -200,53 +200,53 @@ export class FinanceService {
       });
 
       // Group orders by cashier_id
-      const ordersByCashier = new Map<string, typeof allOrders>();
+      const orders_by_cashier = new Map<string, typeof allOrders>();
       for (const order of allOrders) {
-        const existing = ordersByCashier.get(order.cashier_id) || [];
-        existing.push(order);
-        ordersByCashier.set(order.cashier_id, existing);
+        const existing_cashier = orders_by_cashier.get(order.cashier_id) || [];
+        existing_cashier.push(order);
+        orders_by_cashier.set(order.cashier_id, existing_cashier);
       }
 
       // Aggregate sales + orders per cashier from pre-fetched data
-      const cashierMap = new Map<
+      const cashier_map = new Map<
         string,
         {
-          cashierId: string;
-          cashierName: string;
-          totalSales: number;
-          totalOrders: number;
-          shiftCount: number;
+          cashier_id: string;
+          cashier_name: string;
+          total_sales: number;
+          total_orders: number;
+          shift_count: number;
         }
       >();
 
       for (const shift of closedShifts) {
-        const cashierId = shift.cashier_id;
-        const orders = ordersByCashier.get(cashierId) || [];
+        const cashier_id = shift.cashier_id;
+        const orders = orders_by_cashier.get(cashier_id) || [];
         const sales = orders.reduce((s, o) => s + Number(o.total_amount), 0);
 
-        const existing = cashierMap.get(cashierId);
+        const existing = cashier_map.get(cashier_id);
         if (existing) {
-          existing.totalSales += sales;
-          existing.totalOrders += orders.length;
-          existing.shiftCount += 1;
+          existing.total_sales += sales;
+          existing.total_orders += orders.length;
+          existing.shift_count += 1;
         } else {
-          // Get cashier name from shift if available, otherwise use cashierId
-          const cashierName =
+          // Get cashier name from shift if available, otherwise use cashier_id
+          const cashier_name =
             'cashier' in shift &&
             (shift as { cashier?: { name: string } }).cashier?.name
               ? (shift as { cashier?: { name: string } }).cashier.name
-              : cashierId;
-          cashierMap.set(cashierId, {
-            cashierId,
-            cashierName,
-            totalSales: sales,
-            totalOrders: orders.length,
-            shiftCount: 1,
+              : cashier_id;
+          cashier_map.set(cashier_id, {
+            cashier_id,
+            cashier_name,
+            total_sales: sales,
+            total_orders: orders.length,
+            shift_count: 1,
           });
         }
       }
 
-      if (cashierMap.size > 0) {
+      if (cashier_map.size > 0) {
         // Calculate proportional share per cashier
         // Proportional: (cashier_sales / total_revenue) * cashier_share
         // If revenue is 0 (edge case), fall back to equal split
@@ -260,22 +260,22 @@ export class FinanceService {
           share_amount: number;
         }> = [];
 
-        for (const [, data] of cashierMap) {
-          let shareAmount: number;
+        for (const [, data] of cashier_map) {
+          let share_amount: number;
           if (share.revenue > 0) {
-            shareAmount =
-              (data.totalSales / share.revenue) * share.cashierShare;
+            share_amount =
+              (data.total_sales / share.revenue) * share.cashierShare;
           } else {
-            shareAmount = share.cashierShare / cashierMap.size;
+            share_amount = share.cashierShare / cashier_map.size;
           }
           details.push({
             profit_share_log_id: log.id,
-            cashier_id: data.cashierId,
-            cashier_name: data.cashierName,
-            total_sales: Math.round(data.totalSales),
-            total_orders: data.totalOrders,
-            shift_count: data.shiftCount,
-            share_amount: Math.round(shareAmount),
+            cashier_id: data.cashier_id,
+            cashier_name: data.cashier_name,
+            total_sales: Math.round(data.total_sales),
+            total_orders: data.total_orders,
+            shift_count: data.shift_count,
+            share_amount: Math.round(share_amount),
           });
         }
 
@@ -322,10 +322,10 @@ export class FinanceService {
   }
 
   async createAsset(data: CreateAssetDto) {
-    const purchasePrice = Number(data.purchase_price);
-    const lifespanMonths = Number(data.useful_life_months);
+    const purchase_price = Number(data.purchase_price);
+    const lifespan_months = Number(data.useful_life_months);
 
-    if (!purchasePrice || !lifespanMonths || lifespanMonths <= 0) {
+    if (!purchase_price || !lifespan_months || lifespan_months <= 0) {
       throw new BadRequestException(
         'Invalid asset data: purchase_price and useful_life_months (>0) are required',
       );
@@ -333,9 +333,9 @@ export class FinanceService {
 
     return this.financeRepository.createAsset({
       name: data.name,
-      purchase_price: purchasePrice,
-      useful_life_months: lifespanMonths,
-      monthly_depreciation: Math.round(purchasePrice / lifespanMonths),
+      purchase_price: purchase_price,
+      useful_life_months: lifespan_months,
+      monthly_depreciation: Math.round(purchase_price / lifespan_months),
       purchase_date: new Date(data.purchase_date),
       created_at: new Date(),
       is_active: true,
@@ -346,23 +346,23 @@ export class FinanceService {
     const asset = await this.financeRepository.findAssetById(id);
     if (!asset) throw new NotFoundException('Asset not found');
 
-    const newValue = data.purchase_price;
-    const newLifespan = data.useful_life_months;
+    const new_value = data.purchase_price;
+    const new_lifespan = data.useful_life_months;
 
-    let parsedValue =
-      newValue !== undefined ? Number(newValue) : Number(asset.purchase_price);
-    let parsedLifespan =
-      newLifespan !== undefined
-        ? Number(newLifespan)
+    let parsed_value =
+      new_value !== undefined ? Number(new_value) : Number(asset.purchase_price);
+    let parsed_lifespan =
+      new_lifespan !== undefined
+        ? Number(new_lifespan)
         : asset.useful_life_months;
 
-    if (newValue !== undefined && isNaN(parsedValue))
-      parsedValue = Number(asset.purchase_price);
-    if (newLifespan !== undefined && isNaN(parsedLifespan))
-      parsedLifespan = asset.useful_life_months;
+    if (new_value !== undefined && isNaN(parsed_value))
+      parsed_value = Number(asset.purchase_price);
+    if (new_lifespan !== undefined && isNaN(parsed_lifespan))
+      parsed_lifespan = asset.useful_life_months;
 
     // SECURITY: Prevent division by zero
-    if (parsedLifespan <= 0) {
+    if (parsed_lifespan <= 0) {
       throw new BadRequestException(
         'useful_life_months must be greater than 0',
       );
@@ -370,9 +370,9 @@ export class FinanceService {
 
     return this.financeRepository.updateAsset(id, {
       name: data.name,
-      purchase_price: parsedValue,
-      useful_life_months: parsedLifespan,
-      monthly_depreciation: Math.round(parsedValue / parsedLifespan),
+      purchase_price: parsed_value,
+      useful_life_months: parsed_lifespan,
+      monthly_depreciation: Math.round(parsed_value / parsed_lifespan),
       purchase_date: data.purchase_date
         ? new Date(data.purchase_date)
         : asset.purchase_date,
@@ -390,30 +390,30 @@ export class FinanceService {
   ) {
     const periodMonth = new Date(year, month - 1, 1);
 
-    const profitShare =
+    const profit_share =
       await this.financeRepository.findProfitShareLogByPeriod(periodMonth);
 
-    if (!profitShare) {
+    if (!profit_share) {
       throw new NotFoundException(
         'Data bagi hasil untuk bulan tersebut tidak ditemukan. Silakan tutup buku terlebih dahulu.',
       );
     }
 
-    if (profitShare.is_paid) {
+    if (profit_share.is_paid) {
       throw new BadRequestException(
         'Bagi hasil untuk bulan ini sudah dibayarkan.',
       );
     }
 
     const updated = await this.financeRepository.updateProfitShareLog(
-      profitShare.id,
+      profit_share.id,
       {
         is_paid: true,
         payment_proof: proof,
         notes: notes,
         cashier_paid_at: new Date(),
         cashier_paid_by: adminId,
-        cashier_paid_amount: profitShare.cashier_share,
+        cashier_paid_amount: profit_share.cashier_share,
       },
     );
 
@@ -486,51 +486,51 @@ export class FinanceService {
 
     const trend = this.buildTrend(orders, period);
 
-    const productMap = new Map<
+    const product_map = new Map<
       string,
       { name: string; qty: number; revenue: number }
     >();
     for (const o of orders) {
       for (const item of o.items) {
-        const pId = item.product_id;
-        const current = productMap.get(pId) || {
+        const p_id = item.product_id;
+        const current = product_map.get(p_id) || {
           name: item.product_name_snapshot,
           qty: 0,
           revenue: 0,
         };
         current.qty += item.quantity;
         current.revenue += Number(item.subtotal);
-        productMap.set(pId, current);
+        product_map.set(p_id, current);
       }
     }
-    const productStats = Array.from(productMap.values());
-    const topByQty = [...productStats]
+    const product_stats = Array.from(product_map.values());
+    const top_by_qty = [...product_stats]
       .sort((a, b) => b.qty - a.qty)
       .slice(0, 5);
-    const topByRevenue = [...productStats]
+    const top_by_revenue = [...product_stats]
       .sort((a, b) => b.revenue - a.revenue)
       .slice(0, 5);
 
     let cash = 0,
       qris = 0,
       split = 0;
-    let cashVal = 0,
-      qrisVal = 0,
-      splitVal = 0;
+    let cash_val = 0,
+      qris_val = 0,
+      split_val = 0;
     for (const o of orders) {
       if (o.payment_method === 'cash') {
         cash++;
-        cashVal += Number(o.total_amount);
+        cash_val += Number(o.total_amount);
       } else if (o.payment_method === 'qris') {
         qris++;
-        qrisVal += Number(o.total_amount);
+        qris_val += Number(o.total_amount);
       } else if (o.payment_method === 'split') {
         split++;
-        splitVal += Number(o.total_amount);
+        split_val += Number(o.total_amount);
       }
     }
     const counts = { cash, qris, split };
-    const values = { cash: cashVal, qris: qrisVal, split: splitVal };
+    const values = { cash: cash_val, qris: qris_val, split: split_val };
 
     const hoursCount = new Array(24).fill(0);
     for (const o of orders) {
@@ -543,8 +543,8 @@ export class FinanceService {
     return {
       trend,
       topProducts: {
-        byQty: topByQty,
-        byRevenue: topByRevenue,
+        byQty: top_by_qty,
+        byRevenue: top_by_revenue,
       },
       paymentDistribution: {
         counts,
@@ -564,9 +564,9 @@ export class FinanceService {
 
   async openShift(
     cashierId: string,
-    openingBalance: number,
-    plannedCloseAt?: string,
-    carryOverFromShiftId?: string,
+    opening_balance: number,
+    planned_close_at?: string,
+    carry_over_from_shift_id?: string,
   ) {
     const existing = await this.financeRepository.findFirstCashRegister({
       cashier_id: cashierId,
@@ -580,43 +580,43 @@ export class FinanceService {
       cashier_id: cashierId,
       status: 'closed',
     });
-    const shiftNumber = closedShifts.length + 1;
+    const shift_number = closedShifts.length + 1;
 
     // Default planned_close_at: 04:00 WIB next day (or next 04:00 if before 04:00)
-    let plannedClose: Date;
-    if (plannedCloseAt) {
-      plannedClose = new Date(plannedCloseAt);
+    let planned_close: Date;
+    if (planned_close_at) {
+      planned_close = new Date(planned_close_at);
     } else {
       const now = new Date();
-      plannedClose = new Date(now);
-      plannedClose.setHours(4, 0, 0, 0); // 04:00 today
-      if (plannedClose <= now) {
-        plannedClose.setDate(plannedClose.getDate() + 1); // next day if past 04:00
+      planned_close = new Date(now);
+      planned_close.setHours(4, 0, 0, 0); // 04:00 today
+      if (planned_close <= now) {
+        planned_close.setDate(planned_close.getDate() + 1); // next day if past 04:00
       }
     }
 
     return this.financeRepository.createCashRegister({
       cashier_id: cashierId,
       shift_date: new Date(),
-      opening_balance: openingBalance,
-      shift_number: shiftNumber,
-      carry_over_from_shift_id: carryOverFromShiftId ?? null,
-      planned_close_at: plannedClose,
+      opening_balance: opening_balance,
+      shift_number: shift_number,
+      carry_over_from_shift_id: carry_over_from_shift_id ?? null,
+      planned_close_at: planned_close,
       status: 'open',
     });
   }
 
   async closeShift(
     cashierId: string,
-    actualCash: number,
+    actual_cash: number,
     notes?: string,
-    isAutoClosed = false,
+    is_auto_closed = false,
   ) {
-    // FIX: Validate actualCash is a valid number and non-negative
-    if (typeof actualCash !== 'number' || isNaN(actualCash)) {
+    // FIX: Validate actual_cash is a valid number and non-negative
+    if (typeof actual_cash !== 'number' || isNaN(actual_cash)) {
       throw new BadRequestException('Actual cash must be a valid number');
     }
-    if (actualCash < 0) {
+    if (actual_cash < 0) {
       throw new BadRequestException('Actual cash cannot be negative');
     }
 
@@ -646,15 +646,15 @@ export class FinanceService {
       return sum; // qris doesn't go into cash drawer
     }, 0);
 
-    const expectedBalance = Number(shift.opening_balance) + totalCashSales;
-    const discrepancy = actualCash - expectedBalance;
+    const expected_balance = Number(shift.opening_balance) + totalCashSales;
+    const discrepancy = actual_cash - expected_balance;
 
     const closed = await this.financeRepository.updateCashRegister(shift.id, {
       actual_close_at: new Date(),
-      closing_balance: actualCash,
-      system_cash_total: expectedBalance,
+      closing_balance: actual_cash,
+      system_cash_total: expected_balance,
       discrepancy: discrepancy,
-      is_auto_closed: isAutoClosed,
+      is_auto_closed: is_auto_closed,
       notes: notes ?? null,
       status: 'closed',
     });
@@ -681,10 +681,10 @@ export class FinanceService {
       entity_type: 'CashRegister',
       entity_id: shift.id,
       new_value: {
-        closing_balance: actualCash,
+        closing_balance: actual_cash,
         discrepancy: discrepancy,
-        system_cash_total: expectedBalance,
-        is_auto_closed: isAutoClosed,
+        system_cash_total: expected_balance,
+        is_auto_closed: is_auto_closed,
       },
     });
 
