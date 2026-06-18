@@ -17,8 +17,8 @@ export class CreateCashierDto {
   username: string;
 
   @IsString()
-  @MinLength(4)
-  @MaxLength(6)
+  @MinLength(6, { message: 'PIN harus 6 digit' })
+  @MaxLength(6, { message: 'PIN harus 6 digit' })
   pin: string;
 
   @IsString()
