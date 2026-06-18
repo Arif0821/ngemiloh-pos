@@ -66,6 +66,10 @@ export class UsersService {
   }
 
   async toggleCashierStatus(id: string, isActive: boolean) {
+    const user = await this.userRepository.findById(id);
+    if (!user || user.role !== 'kasir') {
+      throw new NotFoundException('Cashier not found');
+    }
     await this.userRepository.update(id, { is_active: isActive });
     return { success: true };
   }

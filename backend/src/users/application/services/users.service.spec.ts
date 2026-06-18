@@ -72,14 +72,15 @@ describe('UsersService', () => {
   });
 
   describe('createCashier', () => {
-    const createCashierDto = {
+    const getCreateCashierDto = () => ({
       name: 'John Doe',
       username: 'johndoe',
       pin: '123456',
-      cashier_letter: 'A',
-    };
+      cashier_letter: 'A' as const,
+    });
 
     it('should create a new cashier successfully', async () => {
+      const createCashierDto = getCreateCashierDto();
       const mockUser: User = {
         id: 'user-uuid-1',
         name: 'John Doe',
@@ -116,6 +117,7 @@ describe('UsersService', () => {
     });
 
     it('should convert username to lowercase', async () => {
+      const createCashierDto = getCreateCashierDto();
       const dtoWithUppercase = { ...createCashierDto, username: 'JOHNDOE' };
       mockUserRepo.findByUsername.mockResolvedValue(null);
       mockUserRepo.create.mockResolvedValue({
@@ -141,6 +143,7 @@ describe('UsersService', () => {
     });
 
     it('should throw BadRequestException if username already exists', async () => {
+      const createCashierDto = getCreateCashierDto();
       mockUserRepo.findByUsername.mockResolvedValue({
         id: 'existing-user',
         name: 'Existing',
@@ -168,6 +171,7 @@ describe('UsersService', () => {
 
     it('should hash PIN with pepper before storing', async () => {
       const plainPin = '123456';
+      const createCashierDto = getCreateCashierDto();
       const dto = { ...createCashierDto, pin: plainPin };
 
       mockUserRepo.findByUsername.mockResolvedValue(null);
@@ -200,6 +204,9 @@ describe('UsersService', () => {
       );
       expect(isValidHash).toBe(true);
     });
+    // Note: PIN format/length validation is handled by CreateCashierDto
+    // (class-validator) at the controller level, not in the service.
+    // Empty/null PIN handling is also DTO-level validation.
   });
 
   describe('resetCashierPin', () => {
@@ -323,22 +330,28 @@ describe('UsersService', () => {
   describe('toggleCashierStatus (deactivateUser)', () => {
     const cashierId = 'cashier-uuid-456';
 
+    const mockCashierUser: User = {
+      id: cashierId,
+      name: 'Kasir C',
+      username: 'kasirc',
+      email: null,
+      pin_hash: 'hash',
+      password_hash: null,
+      role: Role.kasir,
+      is_active: true,
+      must_change_pin: false,
+      failed_login_count: 0,
+      locked_until: null,
+      last_login_at: null,
+      created_at: new Date(),
+      updated_at: new Date(),
+    };
+
     it('should deactivate cashier when isActive is false', async () => {
+      mockUserRepo.findById.mockResolvedValue(mockCashierUser);
       mockUserRepo.update.mockResolvedValue({
-        id: cashierId,
-        name: 'Kasir C',
-        username: 'kasirc',
-        email: null,
-        pin_hash: 'hash',
-        password_hash: null,
-        role: Role.kasir,
+        ...mockCashierUser,
         is_active: false,
-        must_change_pin: false,
-        failed_login_count: 0,
-        locked_until: null,
-        last_login_at: null,
-        created_at: new Date(),
-        updated_at: new Date(),
       });
 
       const result = await service.toggleCashierStatus(cashierId, false);
@@ -350,21 +363,10 @@ describe('UsersService', () => {
     });
 
     it('should activate cashier when isActive is true', async () => {
+      mockUserRepo.findById.mockResolvedValue(mockCashierUser);
       mockUserRepo.update.mockResolvedValue({
-        id: cashierId,
-        name: 'Kasir C',
-        username: 'kasirc',
-        email: null,
-        pin_hash: 'hash',
-        password_hash: null,
-        role: Role.kasir,
+        ...mockCashierUser,
         is_active: true,
-        must_change_pin: false,
-        failed_login_count: 0,
-        locked_until: null,
-        last_login_at: null,
-        created_at: new Date(),
-        updated_at: new Date(),
       });
 
       const result = await service.toggleCashierStatus(cashierId, true);
@@ -374,23 +376,53 @@ describe('UsersService', () => {
         is_active: true,
       });
     });
+
+    it('should throw NotFoundException when cashier does not exist', async () => {
+      mockUserRepo.findById.mockResolvedValue(null);
+
+      await expect(
+        service.toggleCashierStatus('non-existent-id', true),
+      ).rejects.toThrow(NotFoundException);
+      await expect(
+        service.toggleCashierStatus('non-existent-id', false),
+      ).rejects.toThrow('Cashier not found');
+    });
   });
 
-  describe('error handling', () => {
-    it('should throw error if PIN_PEPPER_SECRET is not set', async () => {
+  describe('PIN_PEPPER_SECRET missing', () => {
+    let originalEnv: string | undefined;
+
+    beforeEach(() => {
+      originalEnv = process.env.PIN_PEPPER_SECRET;
       delete process.env.PIN_PEPPER_SECRET;
+    });
+
+    afterEach(() => {
+      process.env.PIN_PEPPER_SECRET = originalEnv;
+      jest.resetModules();
+    });
+
+    it('should throw if PIN_PEPPER_SECRET is not set', async () => {
+      // Must require the service AFTER deleting the env variable
+      // to avoid cached module with old env
+      const { UsersService: FreshUsersService } = await import(
+        './users.service'
+      );
+
+      const localMockUserRepo = mockUserRepository();
+      localMockUserRepo.findByUsername.mockResolvedValue(null);
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [
-          UsersService,
+          FreshUsersService,
           {
             provide: USER_REPOSITORY,
-            useFactory: mockUserRepository,
+            useValue: localMockUserRepo,
           },
         ],
       }).compile();
 
-      const serviceWithoutPepper = module.get<UsersService>(UsersService);
+      const serviceWithoutPepper = module.get<FreshUsersService>(FreshUsersService);
 
       await expect(
         serviceWithoutPepper.createCashier({
