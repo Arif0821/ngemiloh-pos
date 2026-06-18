@@ -23,7 +23,11 @@ RUN npm run build
 # ============================================================
 FROM mirror.gcr.io/library/caddy:2-alpine
 
-# Caddy uses wget for healthcheck (built into Alpine)
+# Security: Update openssl to fix CVE-2026-34182 and related CVEs
+# Using Alpine edge/main for latest patched openssl (3.5.7-r0)
+# Remove curl (has unfixed CVEs) - wget is used for healthcheck
+RUN apk add --no-cache -X https://dl-cdn.alpinelinux.org/alpine/edge/main openssl && \
+    apk del curl 2>/dev/null || true
 
 COPY Caddyfile /etc/caddy/Caddyfile
 
