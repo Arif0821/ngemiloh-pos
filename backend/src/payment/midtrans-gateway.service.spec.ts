@@ -273,6 +273,20 @@ describe('MidtransGatewayService', () => {
       expect(result).toBe(false);
     });
 
+    it('should return false for invalid hex in signature_key', () => {
+      const payload = {
+        order_id: 'ORDER-123',
+        status_code: '201',
+        gross_amount: '50000',
+        // Valid hex length but invalid characters (G is not a hex digit)
+        signature_key: 'GGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGGG',
+      };
+
+      const result = service.verifyWebhookSignature(payload, 'unused');
+
+      expect(result).toBe(false);
+    });
+
     it('should return false for tampered order_id', () => {
       const serverKey = 'test-sandbox-key';
       const statusCode = '201';
@@ -365,17 +379,32 @@ describe('MidtransGatewayService', () => {
 
   describe('isAvailable', () => {
     it('should return true when server key is configured', async () => {
+      // Recreate service with the env var set
+      delete process.env.MIDTRANS_SERVER_KEY_SANDBOX;
       process.env.MIDTRANS_SERVER_KEY_SANDBOX = 'valid-key';
 
-      const result = await service.isAvailable();
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [MidtransGatewayService],
+      }).compile();
+
+      const svc = module.get<MidtransGatewayService>(MidtransGatewayService);
+
+      const result = await svc.isAvailable();
 
       expect(result).toBe(true);
     });
 
     it('should return false when server key is empty', async () => {
+      // Recreate service with empty env var
       process.env.MIDTRANS_SERVER_KEY_SANDBOX = '';
 
-      const result = await service.isAvailable();
+      const module: TestingModule = await Test.createTestingModule({
+        providers: [MidtransGatewayService],
+      }).compile();
+
+      const svc = module.get<MidtransGatewayService>(MidtransGatewayService);
+
+      const result = await svc.isAvailable();
 
       expect(result).toBe(false);
     });
@@ -475,22 +504,22 @@ describe('MidtransGatewayService', () => {
     });
 
     it('should handle fractional seconds in expiry calculation', async () => {
+      // Use fake timers for deterministic testing
+      jest.useFakeTimers();
+      jest.setSystemTime(new Date('2026-01-01T12:00:00.000Z'));
+
       mockCoreApi.charge.mockResolvedValue({
         transaction_id: 'txn-time',
         status_code: '201',
       });
 
-      const beforeCall = Date.now();
       const result = await service.createQris('ORDER-TIME', 10000);
-      const afterCall = Date.now();
 
-      // Check that expires_at is roughly 900 seconds from now
-      const expectedExpiry = 900 * 1000;
-      const actualExpiry = result.expires_at!.getTime() - beforeCall;
+      // expires_at should be exactly 900 seconds from now
+      const expectedExpiry = new Date('2026-01-01T12:15:00.000Z');
+      expect(result.expires_at).toEqual(expectedExpiry);
 
-      // Allow 1 second tolerance for test execution time
-      expect(actualExpiry).toBeGreaterThanOrEqual(expectedExpiry - 1000);
-      expect(actualExpiry).toBeLessThanOrEqual(afterCall - beforeCall + expectedExpiry);
+      jest.useRealTimers();
     });
 
     it('should handle zero amount (though unlikely in real usage)', async () => {
