@@ -47,10 +47,12 @@ networks:
 
 services:
   # ============================================================
-  # Database: PostgreSQL 16 (SECURED)
+  # Database: PostgreSQL 17 (SECURED) - Custom build with OpenSSL 3.5.7
   # ============================================================
   postgres:
-    image: 'mirror.gcr.io/library/postgres:16-alpine'
+    build:
+      context: .
+      dockerfile: postgres.Dockerfile
     container_name: ngemiloh_db
     # FIX: Remove public port exposure - use Docker internal network only
     # For local dev: bind to localhost only with "127.0.0.1:5433:5432"
@@ -93,10 +95,10 @@ services:
       - db_password
 
   # ============================================================
-  # Redis: Cache & Queue (SECURED)
+  # Redis: Cache & Queue (SECURED) - Alpine 3.24
   # ============================================================
   redis:
-    image: 'mirror.gcr.io/library/redis:7-alpine'
+    image: 'mirror.gcr.io/library/redis:7.4-alpine'
     container_name: ngemiloh_redis
     # FIX: Add password authentication and security configs
     command: >
