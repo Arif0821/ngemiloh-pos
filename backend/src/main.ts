@@ -27,7 +27,7 @@ async function bootstrap() {
   }
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
-  app.set('trust proxy', 1);
+  app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
 
   Sentry.init({
     dsn: process.env.SENTRY_DSN || '',
