@@ -69,6 +69,16 @@
 	# ── Compression ─────────────────────────────────────────────
 	encode gzip zstd
 
+	# ── Cache Headers for Static Assets ─────────────────────────
+	@static {
+		file
+		*.css *.js *.ico *.png *.jpg *.jpeg *.gif *.svg *.woff *.woff2 *.ttf *.eot
+	}
+
+	header @static {
+		Cache-Control "public, max-age=31536000, immutable"
+	}
+
 	# ── Rate Limiting (applied at edge) ─────────────────────────
 	@auth_paths {
 		path /api/v1/auth/login*
