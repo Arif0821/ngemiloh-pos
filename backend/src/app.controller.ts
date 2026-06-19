@@ -40,6 +40,13 @@ export class AppController {
     return res.status(statusCode).json(health);
   }
 
+  // Internal health endpoint for Docker healthcheck - bypasses rate limiting
+  @SkipThrottle()
+  @Get('_health')
+  async internalHealth(@Res() res: Response) {
+    return res.status(200).json({ ok: true, timestamp: new Date().toISOString() });
+  }
+
   // Public: info toko untuk struk (nama, alamat, WA) — tidak perlu auth
   @SkipThrottle()
   @Get('api/v1/store-info')

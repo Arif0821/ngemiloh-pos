@@ -108,6 +108,11 @@
 		respond "OK" 200
 	}
 
+	# ── Internal Health Check (bypasses rate limiting) ──────────
+	handle /_health {
+		reverse_proxy nestjs-api:3000
+	}
+
 	# ── Static Files (Frontend SPA) ────────────────────────────
 	handle {
 		root * /srv
