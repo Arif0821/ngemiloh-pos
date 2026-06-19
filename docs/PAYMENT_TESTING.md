@@ -90,6 +90,8 @@ curl -X GET http://localhost:3000/api/v1/orders/{order_id} \
 - Order payment_status updates to `paid`
 - `payment_settled_at` timestamp is set
 
+**Note:** Online orders (with payment_method: qris/split) change status to `completed` on successful payment. Offline orders (cash) remain in `completed` status from creation.
+
 **Verification Commands:**
 ```bash
 # Check order status after webhook
@@ -147,19 +149,20 @@ curl -X GET http://localhost:3000/api/v1/orders/{order_id} \
 1. Create and complete payment (T1-T2)
 2. Login as admin
 3. Navigate to Orders > find the order
-4. Click "Refund" button
-5. Confirm refund
-6. In Midtrans Dashboard, approve the refund
+4. Click "Void" button (not "Refund")
+5. Confirm void action
 
 **Expected Results:**
-- Order payment_status = `refunded`
-- `refunded_at` timestamp is set
+- Admin voids the order (creates OrderRefund record in database)
+- Order payment_status changes to `failed`
+- `voided_at` timestamp is set
+- System does NOT process refund via Midtrans Dashboard (void is immediate)
 
 **Verification:**
 ```bash
 curl -X GET http://localhost:3000/api/v1/orders/{order_id} \
-  -H "Authorization: Bearer {admin_token}" | jq '.payment_status, .refunded_at'
-# "refunded"
+  -H "Authorization: Bearer {admin_token}" | jq '.payment_status, .voided_at'
+# "failed"
 # "2026-06-19T12:30:00.000Z"
 ```
 
@@ -178,6 +181,7 @@ curl -X GET http://localhost:3000/api/v1/orders/{order_id} \
 - Two payment records: cash portion + QRIS portion
 - QRIS portion follows same flow as T1-T2
 - Cash portion marked as paid immediately
+- Order status: `pending_sync`, payment_status: `unpaid` (awaiting QRIS settlement)
 
 ---
 
@@ -284,7 +288,7 @@ Content-Type: application/json
 | `cancel` | `failed` | Payment cancelled |
 | `expire` | `expire` | QR code expired |
 | `deny` | `failed` | Payment denied |
-| `pending` | `unpaid` | Awaiting payment |
+| `pending` | `pending_sync (order) / unpaid (payment)` | Awaiting payment |
 
 ---
 
@@ -296,8 +300,8 @@ Content-Type: application/json
 | T2 Paid | 200 | completed | paid | Webhook processed |
 | T3 Cancelled | 200 | completed | failed | Webhook processed |
 | T4 Expired | 200 | completed | expire | Webhook processed |
-| T5 Refunded | 200 | completed | refunded | Admin action + webhook |
-| T6 Split | 201 | pending | partial | Cash + QRIS split |
+| T5 Refunded | 200 | completed | failed | Admin void action |
+| T6 Split | 201 | pending_sync | unpaid | Cash + QRIS split |
 
 ---
 
