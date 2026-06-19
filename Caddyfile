@@ -2,121 +2,121 @@
 # Production-ready with automatic HTTPS via Let's Encrypt
 
 {
-    # Security settings
-    admin off
-    persist_config off
-    auto_https off  # We handle HTTPS explicitly
+	# Security settings
+	admin off
+	persist_config off
+	auto_https off # We handle HTTPS explicitly
 }
 
 # HTTP endpoint (redirects to HTTPS)
 :80 {
-    @http {
-        not header Connection *Upgrade*
-    }
+	@http {
+		not header Connection *Upgrade*
+	}
 
-    # Redirect HTTP to HTTPS
-    handle @http {
-        redir https://{host}{uri} 301
-    }
+	# Redirect HTTP to HTTPS
+	handle @http {
+		redir https://{host}{uri} 301
+	}
 
-    # Allow ACME challenges on HTTP
-    handle /.well-known/acme/challenge/* {
-        respond "OK"
-    }
+	# Allow ACME challenges on HTTP
+	handle /.well-known/acme/challenge/* {
+		respond "OK"
+	}
 
-    # Health check (no redirect)
-    handle /health {
-        respond "OK" 200
-    }
+	# Health check (no redirect)
+	handle /health {
+		respond "OK" 200
+	}
 }
 
 # HTTPS endpoint
 :443 {
-    # ── Security Headers ────────────────────────────────────────
-    header {
-        # HSTS - enforce HTTPS for 1 year
-        Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+	# ── Security Headers ────────────────────────────────────────
+	header {
+		# HSTS - enforce HTTPS for 1 year
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
 
-        # Prevent MIME type sniffing
-        X-Content-Type-Options "nosniff"
+		# Prevent MIME type sniffing
+		X-Content-Type-Options "nosniff"
 
-        # Prevent clickjacking
-        X-Frame-Options "DENY"
+		# Prevent clickjacking
+		X-Frame-Options "DENY"
 
-        # XSS protection (legacy but still helpful)
-        X-XSS-Protection "1; mode=block"
+		# XSS protection (legacy but still helpful)
+		X-XSS-Protection "1; mode=block"
 
-        # Referrer policy
-        Referrer-Policy "strict-origin-when-cross-origin"
+		# Referrer policy
+		Referrer-Policy "strict-origin-when-cross-origin"
 
-        # Permissions policy
-        Permissions-Policy "camera=(), microphone=(), geolocation=()"
+		# Permissions policy
+		Permissions-Policy "camera=(), microphone=(), geolocation=()"
 
-        # Remove server identification
-        -Server
-        -X-Powered-By
+		# Remove server identification
+		-Server
+		-X-Powered-By
 
-        # Security headers for API
-        -Authorization
-    }
+		# Security headers for API
+		-Authorization
+	}
 
-    # ── TLS Configuration ───────────────────────────────────────
-    tls {
-        protocols tls1.2 tls1.3
-        ciphers TLS_AES_128_GCM_SHA256 TLS_AES_256_GCM_SHA384 TLS_CHACHA20_POLY1305_SHA256
-    }
+	# ── TLS Configuration ───────────────────────────────────────
+	tls {
+		protocols tls1.2 tls1.3
+		ciphers TLS_AES_128_GCM_SHA256 TLS_AES_256_GCM_SHA384 TLS_CHACHA20_POLY1305_SHA256
+	}
 
-    # ── Compression ─────────────────────────────────────────────
-    encode gzip zstd
+	# ── Compression ─────────────────────────────────────────────
+	encode gzip zstd
 
-    # ── Rate Limiting (applied at edge) ─────────────────────────
-    @auth_paths {
-        path /api/v1/auth/login*
-        path /api/v1/auth/admin/login*
-        path /api/v1/auth/kasir/login*
-    }
+	# ── Rate Limiting (applied at edge) ─────────────────────────
+	@auth_paths {
+		path /api/v1/auth/login*
+		path /api/v1/auth/admin/login*
+		path /api/v1/auth/kasir/login*
+	}
 
-    handle @auth_paths {
-        rate_limit {
-            zone static {
-                key {remote_ip}
-                rate 5/m
-                burst 3
-            }
-        }
-        reverse_proxy nestjs-api:3000
-    }
+	handle @auth_paths {
+		rate_limit {
+			zone static {
+				key {remote_ip}
+				rate 5/m
+				burst 3
+			}
+		}
+		reverse_proxy nestjs-api:3000
+	}
 
-    # ── API Routes ─────────────────────────────────────────────
-    handle /api/* {
-        reverse_proxy nestjs-api:3000
-    }
+	# ── API Routes ─────────────────────────────────────────────
+	handle /api/* {
+		reverse_proxy nestjs-api:3000
+	}
 
-    # ── Storage (file uploads) ──────────────────────────────────
-    handle /storage/* {
-        reverse_proxy nestjs-api:3000
-    }
+	# ── Storage (file uploads) ──────────────────────────────────
+	handle /storage/* {
+		reverse_proxy nestjs-api:3000
+	}
 
-    # ── Webhooks ───────────────────────────────────────────────
-    # Note: Midtrans IPs are validated in NestJS controller
-    handle /webhooks/* {
-        reverse_proxy nestjs-api:3000
-    }
+	# ── Webhooks ───────────────────────────────────────────────
+	# Note: Midtrans IPs are validated in NestJS controller
+	handle /webhooks/* {
+		reverse_proxy nestjs-api:3000
+	}
 
-    # ── Health Check ────────────────────────────────────────────
-    handle /health {
-        respond "OK" 200
-    }
+	# ── Health Check ────────────────────────────────────────────
+	handle /health {
+		respond "OK" 200
+	}
 
-    # ── Static Files (Frontend SPA) ────────────────────────────
-    handle {
-        root * /srv
-        try_files {path} /index.html
-        file_server
-    }
+	# ── Static Files (Frontend SPA) ────────────────────────────
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
 }
 
 # ── Error Pages ────────────────────────────────────────────────
 handle_errors {
-    respond "{err.status_code} {err.status_text}" 200
+	respond "{err.status_code} {err.status_text}" 200
 }
