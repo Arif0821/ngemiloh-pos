@@ -37,6 +37,7 @@ if [ -f "frontend/.env.example" ]; then
 fi
 
 # Compress old backups (keep last 30 days)
+find "$BACKUP_DIR" -name "Caddyfile.*" -mtime +30 -delete 2>/dev/null
 find "$BACKUP_DIR" -name "*.yml.*" -mtime +30 -delete 2>/dev/null
 find "$BACKUP_DIR" -name "*.example.*" -mtime +30 -delete 2>/dev/null
 
