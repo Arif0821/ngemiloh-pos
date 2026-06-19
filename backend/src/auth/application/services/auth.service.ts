@@ -185,7 +185,7 @@ export class AuthService {
     const jti = crypto.randomUUID();
     const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET ?? '',
-      expiresIn: '20h',
+      expiresIn: '365d',
       jwtid: jti,
     });
 
@@ -193,7 +193,7 @@ export class AuthService {
 
     if (res) {
       set_cookie(res, 'access_token', accessToken, {
-        maxAge: 72000, // 20 hours in seconds
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 365 days in milliseconds
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
@@ -518,7 +518,7 @@ export class AuthService {
     const jti = crypto.randomUUID();
     const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET ?? '',
-      expiresIn: '20h',
+      expiresIn: '365d',
       jwtid: jti,
     });
 
@@ -526,7 +526,7 @@ export class AuthService {
 
     if (res) {
       set_cookie(res, 'access_token', accessToken, {
-        maxAge: 72000, // 20 hours in seconds
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 365 days in milliseconds
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
