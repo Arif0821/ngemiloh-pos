@@ -32,7 +32,7 @@ docker compose logs -f --tail=100
 docker compose stop nestjs-api
 
 # 2. Restore from backup
-gunzip < backup_YYYYMMDD.sql.gz | docker exec -i ngemiloh_db psql -U ngemiloh ngemiloh_db
+gunzip < backup_YYYYMMDD.sql.gz | docker exec -i ngemiloh_db psql -U ngemiloh -d ngemiloh_db
 
 # Alternative: Restore to specific backup file
 gunzip < /backups/ngemiloh_20260619.sql.gz | docker exec -i ngemiloh_db psql -U ngemiloh ngemiloh_db
@@ -106,7 +106,7 @@ curl http://localhost:3000/_health
 
 1. **Verify database is running:**
    ```bash
-   docker exec ngemiloh_db pg_isready -U ngemiloh
+   docker exec ngemiloh_db pg_isready -U ngemiloh -d ngemiloh_db
    ```
 
 2. **Check database logs:**
@@ -257,7 +257,7 @@ docker compose logs --since=168h | grep -i error | tail -50
 
 ```bash
 # Test backup restore on staging/dev environment
-gunzip < latest_backup.sql.gz | docker exec -i ngemiloh_db psql -U ngemiloh ngemiloh_db -c "SELECT 1;"
+gunzip < latest_backup.sql.gz | docker exec -i ngemiloh_db psql -U ngemiloh -d ngemiloh_db -c "SELECT 1;"
 
 # Apply security updates
 docker compose pull
@@ -301,7 +301,7 @@ curl -H "Authorization: Bearer <token>" http://localhost:3000/api/admin/health
 
 ```bash
 # Check PostgreSQL is ready
-docker exec ngemiloh_db pg_isready -U ngemiloh
+docker exec ngemiloh_db pg_isready -U ngemiloh -d ngemiloh_db
 
 # Check active connections
 docker exec ngemiloh_db psql -U ngemiloh -d ngemiloh_db -c "SELECT count(*) FROM pg_stat_activity;"
@@ -344,7 +344,7 @@ docker exec caddy caddy list-certificates
 
 ```bash
 # Create database backup
-docker exec ngemiloh_db pg_dump -U ngemiloh ngemiloh_db | gzip > /backups/ngemiloh_$(date +%Y%m%d_%H%M%S).sql.gz
+docker exec ngemiloh_db pg_dump -U ngemiloh -d ngemiloh_db | gzip > /backups/ngemiloh_$(date +%Y%m%d_%H%M%S).sql.gz
 
 # Verify backup integrity
 gunzip -t /backups/ngemiloh_latest.sql.gz
