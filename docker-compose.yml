@@ -69,8 +69,6 @@ services:
       - postgres_data:/var/lib/postgresql/data
     networks:
       - backend_network
-    # FIX: Run as non-root user
-    user: "1000:1000"
     # FIX: Drop all capabilities
     cap_drop:
       - ALL
@@ -104,7 +102,7 @@ services:
     command: >
       redis-server
       --appendonly yes
-      --requirepass /run/secrets/redis_password
+      --requirepass redis_secure_password_2026
       --loglevel warning
       --maxmemory 200mb
       --maxmemory-policy allkeys-lru
@@ -118,7 +116,6 @@ services:
       - redis_data:/data
     networks:
       - backend_network
-    user: "1000:1000"
     cap_drop:
       - ALL
     security_opt:
@@ -129,7 +126,7 @@ services:
           memory: 256M
           cpus: '0.25'
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a $(cat /run/secrets/redis_password) ping"]
+      test: ["CMD-SHELL", "redis-cli -a redis_secure_password_2026 ping"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -153,7 +150,7 @@ services:
       - DATABASE_URL=postgresql://ngemiloh@postgres:5432/ngemiloh_db?sslmode=require
       - DIRECT_URL=postgresql://ngemiloh@postgres:5432/ngemiloh_db?sslmode=require
       # FIX: Redis with password auth
-      - REDIS_URL=redis://:$(cat /run/secrets/redis_password)@redis:6379
+      - REDIS_URL=redis://:redis_secure_password_2026@redis:6379
       # JWT settings from secrets
       - JWT_ACCESS_SECRET_FILE=/run/secrets/jwt_access_secret
       - PIN_PEPPER_SECRET_FILE=/run/secrets/pin_pepper_secret

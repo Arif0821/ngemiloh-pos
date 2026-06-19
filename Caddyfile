@@ -132,7 +132,14 @@
 }
 
 # ── Error Pages ────────────────────────────────────────────────
-handle_errors {
+@errors {
+	error 400
+	error 404
+	error 500
+	error 503
+}
+
+handle @errors {
 	rewrite * /{err.status_code}.html
 	file_server {
 		root /etc/caddy/error_pages

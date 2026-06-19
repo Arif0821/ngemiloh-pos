@@ -128,7 +128,10 @@
         {
           "diagnostics": {
             "ignoreCodes": [
-              "TS151002"
+              "TS151002",
+              "TS1370",
+              "TS7006",
+              "TS7009"
             ]
           }
         }
