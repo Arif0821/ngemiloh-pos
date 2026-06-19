@@ -67,6 +67,21 @@ async function bootstrap() {
   // Validate all required secrets before starting
   validateSecrets();
 
+  // ========================================
+  // JSON LOGGING FOR PRODUCTION
+  // ========================================
+  if (process.env.NODE_ENV === 'production') {
+    // Enable JSON logging for production (structured logs for log aggregation)
+    logger.log(
+      JSON.stringify({
+        event: 'app_start',
+        message: 'Starting NestJS application in production mode',
+        timestamp: new Date().toISOString(),
+        version: process.env.npm_package_version || '1.0.0',
+      }),
+    );
+  }
+
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
 
@@ -215,7 +230,20 @@ async function bootstrap() {
   // ========================================
   await app.listen(process.env.PORT ?? 3000, '0.0.0.0');
 
-  logger.log(`Application running on port ${process.env.PORT ?? 3000}`);
-  logger.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  const port = process.env.PORT ?? 3000;
+
+  // Replace console.log with structured JSON log
+  logger.log(
+    JSON.stringify({
+      event: 'app_ready',
+      message: `Application running on port ${port}`,
+      port,
+      timestamp: new Date().toISOString(),
+    }),
+  );
+
+  if (process.env.NODE_ENV !== 'production') {
+    logger.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  }
 }
 bootstrap();
