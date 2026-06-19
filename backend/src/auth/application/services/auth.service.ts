@@ -472,29 +472,6 @@ export class AuthService {
     };
   }
 
-  async logout(token: string) {
-    if (!token) return;
-    try {
-      const payload = this.jwtService.verify<{
-        sub: string;
-        jti?: string;
-        exp?: number;
-      }>(token, {
-        secret: process.env.JWT_ACCESS_SECRET ?? '',
-      });
-
-      const expiresAt = new Date((payload.exp ?? 0) * 1000);
-
-      // Store the JWT's jti claim as the revocation key so validate()
-      // can efficiently look it up by jti instead of re-hashing the token.
-      const jti =
-        payload.jti ?? crypto.createHash('sha256').update(token).digest('hex');
-      await this.authRepository.revokeToken(jti, payload.sub, expiresAt);
-    } catch {
-      // Ignore invalid token during logout
-    }
-  }
-
   async changePin(
     userId: string,
     currentPin: string,

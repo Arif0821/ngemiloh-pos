@@ -1,6 +1,6 @@
 generator client {
   provider      = "prisma-client-js"
-  binaryTargets = ["native", "debian-openssl-3.0.x"]
+  binaryTargets = ["native", "debian-openssl-3.0.x", "linux-musl-openssl-3.0.x"]
 }
 
 datasource db {
@@ -83,7 +83,6 @@ model User {
   feature_flags      FeatureFlag[]
   settings           Setting[]
   audit_logs         AuditLog[]
-  revoked_tokens     RevokedToken[]
   stock_movements    StockMovement[]
   price_histories    RawMaterialPriceHistory[]
 
@@ -425,17 +424,6 @@ model AuditLog {
   @@index([actor_id, action, created_at(sort: Desc)])
   // PERFORMANCE: Index for entity-specific audit queries
   @@index([entity_type, entity_id])
-}
-
-model RevokedToken {
-  jti        String   @id @db.VarChar(64)
-  user_id    String   @db.Uuid
-  expires_at DateTime @db.Timestamptz
-  revoked_at DateTime @default(now()) @db.Timestamptz
-
-  user User @relation(fields: [user_id], references: [id])
-
-  @@index([expires_at])
 }
 
 // --- FASE 2: LOYALITAS & BAHAN BAKU ---

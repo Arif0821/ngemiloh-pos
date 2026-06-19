@@ -1,13 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { AuthRepositoryInterface } from '../../domain/interfaces/auth.repository.interface';
-import {
-  User,
-  IpLockout,
-  RevokedToken,
-  AuditLog,
-  Prisma,
-} from '@prisma/client';
+import { User, IpLockout, AuditLog, Prisma } from '@prisma/client';
 
 @Injectable()
 export class PrismaAuthRepository implements AuthRepositoryInterface {
@@ -103,26 +97,6 @@ export class PrismaAuthRepository implements AuthRepositoryInterface {
         entity_type: entityType,
         entity_id: entityId,
         new_value: newValue,
-      },
-    });
-  }
-
-  async findRevokedToken(token: string): Promise<RevokedToken | null> {
-    return this.prisma.revokedToken.findUnique({ where: { jti: token } });
-  }
-
-  async revokeToken(
-    token: string,
-    userId: string,
-    expiresAt: Date,
-  ): Promise<RevokedToken> {
-    return this.prisma.revokedToken.upsert({
-      where: { jti: token },
-      update: {},
-      create: {
-        jti: token,
-        user_id: userId,
-        expires_at: expiresAt,
       },
     });
   }

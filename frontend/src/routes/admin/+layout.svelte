@@ -34,13 +34,10 @@
 		if (is_logging_out) return;
 		is_logging_out = true;
 		try {
-			// BUG-07 FIX: Call POST /auth/logout to revoke token (PRD AUTH-11)
-			await api.post('/auth/logout');
-		} catch {
-			// Ignore API errors, still clear local state
-		} finally {
+			// Clear local state (no backend logout needed - tokens expire automatically)
 			localStorage.removeItem('user');
 			localStorage.removeItem('pending_pin_change');
+		} finally {
 			goto('/login-admin');
 		}
 	}

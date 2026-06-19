@@ -2,9 +2,8 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { JwtService } from '@nestjs/jwt';
 import {
   UnauthorizedException,
-  HttpException,
-  HttpStatus,
   BadRequestException,
+  HttpStatus,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
 import { AUTH_REPOSITORY } from '../../domain/interfaces/auth.repository.interface';
@@ -14,7 +13,7 @@ import { createMockUser, createMockIpLockout } from '../../../test/mocks';
 import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
 
-// Mock bcrypt
+// Mock bcrypt globally
 jest.mock('bcrypt', () => ({
   compare: jest.fn().mockResolvedValue(true),
   hash: jest.fn().mockResolvedValue('$2b$12$mocked-hash'),
@@ -28,9 +27,6 @@ describe('AuthService', () => {
   let mockRedisService: any;
 
   beforeEach(async () => {
-    // Reset bcrypt mock before each test
-    (bcrypt.compare as jest.Mock).mockResolvedValue(true);
-
     // Set required environment variable for AuthService
     process.env.PIN_PEPPER_SECRET = 'test-pepper-secret-for-testing';
 
@@ -45,8 +41,6 @@ describe('AuthService', () => {
       lockIpAddress: jest.fn(),
       resetUserFailedLogin: jest.fn(),
       resetIpLockout: jest.fn(),
-      findRevokedToken: jest.fn(),
-      revokeToken: jest.fn(),
       findUserByUsername: jest.fn(),
       createAuditLog: jest.fn(),
     };
@@ -374,72 +368,13 @@ describe('AuthService', () => {
     });
   });
 
-  describe('logout', () => {
-    const validAccessToken = 'valid-access-token';
-    const tokenPayload = {
-      sub: 'user-123',
-      role: Role.kasir,
-      exp: Math.floor(Date.now() / 1000) + 3600,
-    };
-
-    it('should successfully logout with valid access token', async () => {
-      // Arrange: Valid access token
-      mockJwtService.verify.mockReturnValue(tokenPayload);
-      mockAuthRepository.revokeToken.mockResolvedValue({
-        token_hash: 'some-hash',
-        user_id: tokenPayload.sub,
-        expires_at: new Date(tokenPayload.exp * 1000),
-      });
-
-      // Act: Perform logout
-      await service.logout(validAccessToken);
-
-      // Assert: Token should be revoked
-      expect(mockAuthRepository.revokeToken).toHaveBeenCalled();
-    });
-
-    it('should handle logout with empty access token gracefully', async () => {
-      // Act& Assert: Should not throw, just return
-      await expect(service.logout('')).resolves.not.toThrow();
-      await expect(service.logout(null as any)).resolves.not.toThrow();
-      await expect(service.logout(undefined as any)).resolves.not.toThrow();
-
-      // Verify no repository calls were made
-      expect(mockAuthRepository.revokeToken).not.toHaveBeenCalled();
-    });
-
-    it('should handle logout with invalid access token gracefully', async () => {
-      // Arrange: Invalid token throws during verify
-      mockJwtService.verify.mockImplementation(() => {
-        throw new Error('Invalid token');
-      });
-
-      // Act & Assert: Should not throw, just ignore invalid token
-      await expect(service.logout('invalid-token')).resolves.not.toThrow();
-      expect(mockAuthRepository.revokeToken).not.toHaveBeenCalled();
-    });
-
-    it('should revoke token with correct hash and expiration', async () => {
-      // Arrange: Valid access token
-      mockJwtService.verify.mockReturnValue(tokenPayload);
-      mockAuthRepository.revokeToken.mockResolvedValue({} as any);
-
-      // Act: Perform logout
-      await service.logout(validAccessToken);
-
-      // Assert: Verify revokeToken was called with correct parameters
-      expect(mockAuthRepository.revokeToken).toHaveBeenCalledWith(
-        expect.any(String), // token hash
-        tokenPayload.sub, // user id
-        expect.any(Date), // expires at
-      );
-    });
-  });
-
   describe('validateAdminCredentials', () => {
     const mockIpAddress = '192.168.1.1';
 
     it('should successfully validate admin with valid credentials', async () => {
+      // Reset and configure bcrypt mock for this test
+      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
+
       const mockUser = createMockUser({
         id: 'admin-456',
         username: 'admin',
@@ -455,6 +390,8 @@ describe('AuthService', () => {
       mockAuthRepository.resetIpLockout.mockResolvedValue(
         createMockIpLockout(),
       );
+      mockAuthRepository.incrementUserFailedLogin.mockResolvedValue({ ...mockUser, failed_login_count: 0 });
+      mockAuthRepository.incrementIpLockout.mockResolvedValue({ ...createMockIpLockout(), failed_count: 0 });
 
       const validPassword = 'ValidP@ssw0rd123!';
       const result = await service.validateAdminCredentials(
@@ -716,9 +653,7 @@ describe('AuthService', () => {
       });
 
       // Setup redis mock with correct sequence
-      let callCount = 0;
       mockRedisService.get.mockImplementation((key: string) => {
-        callCount++;
         if (key === `otp:email:${mockAdminEmail.toLowerCase()}`) {
           return Promise.resolve(mockUserId);
         }

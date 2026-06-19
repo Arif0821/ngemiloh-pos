@@ -11,6 +11,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Key capabilities: offline-first POS, QRIS payment (Midtrans), shift management, audit logging, multi-kasir support.
 
+## User Preferences
+
+1. **No Phase Development** - Complete all features in one go, no splitting into phases
+2. **Always Use Skills** - Every task must use `superpowers` + `agent-skills` combined
+3. **snake_case naming** for all code
+4. **Simple, readable code** - No unnecessary complexity
+5. **Deep analysis** - Analyze thoroughly before implementing
+6. **Best practice solutions** - Provide options with pros/cons
+7. **Strict Verification** - **MANDATORY** for every code change (see below)
+
 ## Commands
 
 ### Backend (./backend)
@@ -94,9 +104,9 @@ Use `SELECT ... FOR UPDATE` pattern for idempotent state transitions (payment, v
 All reports filter by `shift_start`..`shift_end`, NOT `created_at::date`. Shift crosses midnight = still same business day.
 
 ### JWT Auth (no refresh tokens)
-- Kasir: 20-hour access token, PIN only
+- Kasir: 365-day access token (unlimited - admin controls via PIN reset/delete)
 - Admin: 12-hour access token, email + 6-digit OTP
-- RevokedToken table for logout/security revoke only
+- No logout/revoke mechanism - tokens expire automatically
 
 ## Security
 - JWT + bcrypt password hashing
@@ -111,6 +121,37 @@ All reports filter by `shift_start`..`shift_end`, NOT `created_at::date`. Shift 
 - Frontend: Vitest with `@testing-library/svelte`
 - CI: `.github/workflows/ci.yml` runs lint → typecheck → test → build
 
+## Strict Verification (MANDATORY)
+
+**Every code change MUST be verified before claiming completion:**
+
+### Backend Verification Order
+```bash
+cd backend
+npm run lint          # 1. ESLint check
+npm run build         # 2. TypeScript compile
+npm run test          # 3. Unit tests
+npm run test:cov      # 4. Coverage (optional)
+```
+
+### Frontend Verification Order
+```bash
+cd frontend
+npm run lint          # 1. ESLint + Prettier check
+npm run check         # 2. TypeScript + Svelte check
+npm run test          # 3. Unit tests
+npm run build         # 4. Production build
+```
+
+### Rules
+- **Evidence before assertions** - Show output proving success, don't just claim
+- **Test failures = incomplete** - If tests fail, the feature is NOT complete
+- **Build failed = incomplete** - Don't proceed if build fails
+- **Lint warnings = fix** - Don't ignore lint warnings
+
+### Exception
+- Plan Mode: Verification is POSTPONED until user approves plan and I exit plan mode
+
 ## Agent Skills
 23 workflow skills available in `agent-skills/skills/`:
 - Define: `interview-me`, `idea-refine`, `spec-driven-development`
@@ -121,3 +162,13 @@ All reports filter by `shift_start`..`shift_end`, NOT `created_at::date`. Shift 
 - Ship: `git-workflow-and-versioning`, `ci-cd-and-automation`, `shipping-and-launch`
 
 Quick reference: `SKILLS_SUMMARY.md`
+
+## Memory Files
+
+User preferences stored in: `%USERPROFILE%\.claude\projects\C--POS-Nabil\memory\`
+- `no-phase-development.md` - No phased work
+- `always-use-skills.md` - Use skills always
+- `backend-debugging-findings.md` - Past fixes
+- `naming-convention-snake-case.md` - Code naming rules
+- `code-simplicity-rule.md` - Code simplicity guidelines
+- `strict-verification.md` - Mandatory build + test + type check for all code changes

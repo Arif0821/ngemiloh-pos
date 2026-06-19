@@ -79,28 +79,6 @@ export class AuthController {
     };
   }
 
-  @Post('logout')
-  @UseGuards(JwtAuthGuard)
-  @HttpCode(HttpStatus.OK)
-  async logout(
-    @Req() req: Request,
-    @Res({ passthrough: true }) response: Response,
-  ) {
-    const accessToken = req.cookies['access_token'];
-    // Only call logout if we have a valid token string
-    if (
-      accessToken &&
-      typeof accessToken === 'string' &&
-      accessToken.length > 0
-    ) {
-      await this.authService.logout(accessToken);
-    }
-
-    response.clearCookie('access_token');
-    response.clearCookie('csrf_token');
-    return { success: true, message: 'Logged out successfully' };
-  }
-
   // PATCH /api/v1/auth/change-pin — Kasir ganti PIN sendiri (AUTH-13)
   @UseGuards(JwtAuthGuard)
   @Patch('change-pin')
