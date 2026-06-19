@@ -310,7 +310,9 @@ describe('AuthService', () => {
 
       // Verify lockIpAddress was called
       expect(mockAuthRepository.lockIpAddress).toHaveBeenCalled();
-      expect(mockAuthRepository.incrementIpLockout).toHaveBeenCalledWith(mockIpAddress);
+      expect(mockAuthRepository.incrementIpLockout).toHaveBeenCalledWith(
+        mockIpAddress,
+      );
     });
 
     it('should trigger account lockout after 5 failed attempts and send alert email', async () => {
@@ -505,7 +507,11 @@ describe('AuthService', () => {
       mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
 
       await expect(
-        service.validateAdminCredentials('admin@ngemiloh.com', 'short', mockIpAddress),
+        service.validateAdminCredentials(
+          'admin@ngemiloh.com',
+          'short',
+          mockIpAddress,
+        ),
       ).rejects.toThrow('Password must be at least 16 characters');
     });
 
@@ -637,9 +643,7 @@ describe('AuthService', () => {
       mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
       // Set last request to 30 seconds ago (within 60s cooldown)
       // remaining = (60000 - 30000) / 1000 = 30 seconds
-      mockRedisService.get.mockResolvedValue(
-        (Date.now() - 30000).toString(),
-      );
+      mockRedisService.get.mockResolvedValue((Date.now() - 30000).toString());
 
       await expect(service.sendOtp(mockAdminEmail)).rejects.toMatchObject({
         status: 400,
@@ -658,9 +662,7 @@ describe('AuthService', () => {
 
       mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockUser);
       // Set last request to 61 seconds ago (past 60s cooldown)
-      mockRedisService.get.mockResolvedValue(
-        (Date.now() - 61000).toString(),
-      );
+      mockRedisService.get.mockResolvedValue((Date.now() - 61000).toString());
       mockRedisService.set.mockResolvedValue('OK');
 
       await expect(service.sendOtp(mockAdminEmail)).resolves.not.toThrow();
@@ -681,7 +683,9 @@ describe('AuthService', () => {
         email: mockAdminEmail,
       });
 
-      mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(mockKasirUser);
+      mockAuthRepository.findUserByUsernameOrEmail.mockResolvedValue(
+        mockKasirUser,
+      );
 
       await expect(service.sendOtp(mockAdminEmail)).rejects.toThrow(
         UnauthorizedException,
@@ -722,7 +726,9 @@ describe('AuthService', () => {
           return Promise.resolve(null);
         }
         if (key === `otp:admin:${mockUserId}`) {
-          return Promise.resolve(JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }));
+          return Promise.resolve(
+            JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }),
+          );
         }
         return Promise.resolve(null);
       });
@@ -730,7 +736,9 @@ describe('AuthService', () => {
 
       mockAuthRepository.findUserById.mockResolvedValue(mockUser);
       mockAuthRepository.resetUserFailedLogin.mockResolvedValue(mockUser);
-      mockAuthRepository.resetIpLockout.mockResolvedValue(createMockIpLockout());
+      mockAuthRepository.resetIpLockout.mockResolvedValue(
+        createMockIpLockout(),
+      );
 
       const result = await service.verifyOtp(
         mockAdminEmail,
@@ -746,19 +754,21 @@ describe('AuthService', () => {
       });
 
       // Verify OTP keys were deleted
-      expect(mockRedisService.del).toHaveBeenCalledWith(`otp:admin:${mockUserId}`);
+      expect(mockRedisService.del).toHaveBeenCalledWith(
+        `otp:admin:${mockUserId}`,
+      );
       expect(mockRedisService.del).toHaveBeenCalledWith(
         `otp:email:${mockAdminEmail.toLowerCase()}`,
       );
     });
 
     it('should reject verification when email is empty', async () => {
-      await expect(service.verifyOtp('', validOtp, mockIpAddress)).rejects.toThrow(
-        BadRequestException,
-      );
-      await expect(service.verifyOtp('', validOtp, mockIpAddress)).rejects.toThrow(
-        'Email is required',
-      );
+      await expect(
+        service.verifyOtp('', validOtp, mockIpAddress),
+      ).rejects.toThrow(BadRequestException);
+      await expect(
+        service.verifyOtp('', validOtp, mockIpAddress),
+      ).rejects.toThrow('Email is required');
     });
 
     it('should reject verification when no pending OTP exists', async () => {
@@ -805,7 +815,9 @@ describe('AuthService', () => {
           return Promise.resolve(null);
         }
         if (key === `otp:admin:${mockUserId}`) {
-          return Promise.resolve(JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }));
+          return Promise.resolve(
+            JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }),
+          );
         }
         return Promise.resolve(null);
       });
@@ -830,7 +842,9 @@ describe('AuthService', () => {
           return Promise.resolve(null);
         }
         if (key === `otp:admin:${mockUserId}`) {
-          return Promise.resolve(JSON.stringify({ code_hash: '$2b$10$hash', attempts: 2 })); // Already 2 failed
+          return Promise.resolve(
+            JSON.stringify({ code_hash: '$2b$10$hash', attempts: 2 }),
+          ); // Already 2 failed
         }
         return Promise.resolve(null);
       });
@@ -851,7 +865,9 @@ describe('AuthService', () => {
         300,
       );
       // Verify OTP data was deleted on lockout
-      expect(mockRedisService.del).toHaveBeenCalledWith(`otp:admin:${mockUserId}`);
+      expect(mockRedisService.del).toHaveBeenCalledWith(
+        `otp:admin:${mockUserId}`,
+      );
       expect(mockRedisService.del).toHaveBeenCalledWith(
         `otp:email:${mockAdminEmail.toLowerCase()}`,
       );
@@ -868,7 +884,9 @@ describe('AuthService', () => {
           return Promise.resolve(lockoutExpiry.toString()); // Active lockout
         }
         if (key === `otp:admin:${mockUserId}`) {
-          return Promise.resolve(JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }));
+          return Promise.resolve(
+            JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }),
+          );
         }
         return Promise.resolve(null);
       });
@@ -893,7 +911,9 @@ describe('AuthService', () => {
           return Promise.resolve(null);
         }
         if (key === `otp:admin:${mockUserId}`) {
-          return Promise.resolve(JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }));
+          return Promise.resolve(
+            JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }),
+          );
         }
         return Promise.resolve(null);
       });
@@ -925,7 +945,9 @@ describe('AuthService', () => {
           return Promise.resolve(null);
         }
         if (key === `otp:admin:${mockUserId}`) {
-          return Promise.resolve(JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }));
+          return Promise.resolve(
+            JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }),
+          );
         }
         return Promise.resolve(null);
       });
@@ -933,12 +955,18 @@ describe('AuthService', () => {
 
       mockAuthRepository.findUserById.mockResolvedValue(mockUser);
       mockAuthRepository.resetUserFailedLogin.mockResolvedValue(mockUser);
-      mockAuthRepository.resetIpLockout.mockResolvedValue(createMockIpLockout());
+      mockAuthRepository.resetIpLockout.mockResolvedValue(
+        createMockIpLockout(),
+      );
 
       await service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress);
 
-      expect(mockAuthRepository.resetUserFailedLogin).toHaveBeenCalledWith(mockUserId);
-      expect(mockAuthRepository.resetIpLockout).toHaveBeenCalledWith(mockIpAddress);
+      expect(mockAuthRepository.resetUserFailedLogin).toHaveBeenCalledWith(
+        mockUserId,
+      );
+      expect(mockAuthRepository.resetIpLockout).toHaveBeenCalledWith(
+        mockIpAddress,
+      );
     });
   });
 });

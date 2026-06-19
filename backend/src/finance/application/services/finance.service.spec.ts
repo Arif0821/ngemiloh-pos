@@ -296,7 +296,9 @@ describe('FinanceService', () => {
       );
 
       expect(result.id).toBe('opex-1');
-      expect(mockFinanceRepository.createOperationalExpense).toHaveBeenCalledWith(
+      expect(
+        mockFinanceRepository.createOperationalExpense,
+      ).toHaveBeenCalledWith(
         expect.objectContaining({
           category: 'electricity',
           created_by: 'admin-1',

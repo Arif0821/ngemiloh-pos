@@ -169,10 +169,18 @@ describe('InventoryService', () => {
       mockRepository.executeInTransaction.mockImplementation(async (fn) => {
         return fn(mockRepository);
       });
-      mockRepository.createInventoryTransaction.mockResolvedValue({ id: 'tx-1' });
+      mockRepository.createInventoryTransaction.mockResolvedValue({
+        id: 'tx-1',
+      });
       mockRepository.updateRawMaterialStock.mockResolvedValue(mockUpdated);
 
-      const result = await service.adjustStock('rm-1', 10, 'in', 'Restock', 'user-1');
+      const result = await service.adjustStock(
+        'rm-1',
+        10,
+        'in',
+        'Restock',
+        'user-1',
+      );
 
       expect(result).toEqual(mockUpdated);
       expect(mockRepository.createInventoryTransaction).toHaveBeenCalledWith({
@@ -196,10 +204,18 @@ describe('InventoryService', () => {
       mockRepository.executeInTransaction.mockImplementation(async (fn) => {
         return fn(mockRepository);
       });
-      mockRepository.createInventoryTransaction.mockResolvedValue({ id: 'tx-1' });
+      mockRepository.createInventoryTransaction.mockResolvedValue({
+        id: 'tx-1',
+      });
       mockRepository.updateRawMaterialStock.mockResolvedValue(mockUpdated);
 
-      const result = await service.adjustStock('rm-1', 10, 'out', 'Used', 'user-1');
+      const result = await service.adjustStock(
+        'rm-1',
+        10,
+        'out',
+        'Used',
+        'user-1',
+      );
 
       expect(result).toEqual(mockUpdated);
       expect(mockRepository.updateRawMaterialStock).toHaveBeenCalledWith(
@@ -216,7 +232,9 @@ describe('InventoryService', () => {
       mockRepository.executeInTransaction.mockImplementation(async (fn) => {
         return fn(mockRepository);
       });
-      mockRepository.createInventoryTransaction.mockResolvedValue({ id: 'tx-1' });
+      mockRepository.createInventoryTransaction.mockResolvedValue({
+        id: 'tx-1',
+      });
       mockRepository.updateRawMaterialStock.mockResolvedValue(mockUpdated);
 
       await service.adjustStock('rm-1', 5, 'waste', 'Spoiled', 'user-1');
@@ -235,10 +253,18 @@ describe('InventoryService', () => {
       mockRepository.executeInTransaction.mockImplementation(async (fn) => {
         return fn(mockRepository);
       });
-      mockRepository.createInventoryTransaction.mockResolvedValue({ id: 'tx-1' });
+      mockRepository.createInventoryTransaction.mockResolvedValue({
+        id: 'tx-1',
+      });
       mockRepository.updateRawMaterialStock.mockResolvedValue(mockUpdated);
 
-      await service.adjustStock('rm-1', 10, 'adjustment', 'Count correction', 'user-1');
+      await service.adjustStock(
+        'rm-1',
+        10,
+        'adjustment',
+        'Count correction',
+        'user-1',
+      );
 
       expect(mockRepository.updateRawMaterialStock).toHaveBeenCalledWith(
         'rm-1',
@@ -264,7 +290,9 @@ describe('InventoryService', () => {
         return fn(mockRepository);
       });
       mockRepository.findManyRawMaterialsByIds.mockResolvedValue(mockMaterials);
-      mockRepository.createInventoryTransaction.mockResolvedValue({ id: 'tx-1' });
+      mockRepository.createInventoryTransaction.mockResolvedValue({
+        id: 'tx-1',
+      });
       mockRepository.updateRawMaterialStock.mockResolvedValue(mockUpdated);
 
       const result = await service.submitOpname(items, 'user-1');
@@ -294,7 +322,9 @@ describe('InventoryService', () => {
         return fn(mockRepository);
       });
       mockRepository.findManyRawMaterialsByIds.mockResolvedValue(mockMaterials);
-      mockRepository.createInventoryTransaction.mockResolvedValue({ id: 'tx-1' });
+      mockRepository.createInventoryTransaction.mockResolvedValue({
+        id: 'tx-1',
+      });
       mockRepository.updateRawMaterialStock.mockResolvedValue(mockUpdated);
 
       const result = await service.submitOpname(items, 'user-1');
@@ -375,8 +405,18 @@ describe('InventoryService', () => {
         ],
       };
       const mockBatches = [
-        { id: 'batch-1', raw_material_id: 'rm-1', qty_remaining: 15, cost_per_unit: 1000 },
-        { id: 'batch-2', raw_material_id: 'rm-2', qty_remaining: 10, cost_per_unit: 2000 },
+        {
+          id: 'batch-1',
+          raw_material_id: 'rm-1',
+          qty_remaining: 15,
+          cost_per_unit: 1000,
+        },
+        {
+          id: 'batch-2',
+          raw_material_id: 'rm-2',
+          qty_remaining: 10,
+          cost_per_unit: 2000,
+        },
       ];
 
       mockRepository.findOrderWithIngredients.mockResolvedValue(mockOrder);
@@ -385,16 +425,26 @@ describe('InventoryService', () => {
       });
       mockRepository.findAvailableBatches.mockResolvedValue(mockBatches);
       mockRepository.decrementBatchStock.mockResolvedValue({ id: 'mv-1' });
-      mockRepository.createInventoryTransaction.mockResolvedValue({ id: 'tx-1' });
-      mockRepository.updateRawMaterialStock.mockResolvedValue({ id: 'rm-1', current_stock: 0 });
+      mockRepository.createInventoryTransaction.mockResolvedValue({
+        id: 'tx-1',
+      });
+      mockRepository.updateRawMaterialStock.mockResolvedValue({
+        id: 'rm-1',
+        current_stock: 0,
+      });
       mockRepository.updateOrderCogs.mockResolvedValue({ id: 'order-1' });
 
       await service.reduceStockForOrder('order-1');
 
       // 2 items * 10 = 20 units for rm-1, 2 items * 5 = 10 units for rm-2
-      expect(mockRepository.createInventoryTransaction).toHaveBeenCalledTimes(2);
+      expect(mockRepository.createInventoryTransaction).toHaveBeenCalledTimes(
+        2,
+      );
       expect(mockRepository.updateRawMaterialStock).toHaveBeenCalledTimes(2);
-      expect(mockRepository.updateOrderCogs).toHaveBeenCalledWith('order-1', expect.any(Number));
+      expect(mockRepository.updateOrderCogs).toHaveBeenCalledWith(
+        'order-1',
+        expect.any(Number),
+      );
     });
 
     it('should skip items without BOM recipes', async () => {
@@ -414,7 +464,9 @@ describe('InventoryService', () => {
       mockRepository.executeInTransaction.mockImplementation(async (fn) => {
         return fn(mockRepository);
       });
-      mockRepository.createInventoryTransaction.mockResolvedValue({ id: 'tx-1' });
+      mockRepository.createInventoryTransaction.mockResolvedValue({
+        id: 'tx-1',
+      });
       mockRepository.updateRawMaterialStock.mockResolvedValue({ id: 'rm-1' });
       mockRepository.updateOrderCogs.mockResolvedValue({ id: 'order-1' });
 
@@ -440,7 +492,12 @@ describe('InventoryService', () => {
         ],
       };
       const mockBatches = [
-        { id: 'batch-1', raw_material_id: 'rm-1', qty_remaining: 10, cost_per_unit: 1000 },
+        {
+          id: 'batch-1',
+          raw_material_id: 'rm-1',
+          qty_remaining: 10,
+          cost_per_unit: 1000,
+        },
       ];
 
       mockRepository.findOrderWithIngredients.mockResolvedValue(mockOrder);
@@ -449,14 +506,22 @@ describe('InventoryService', () => {
       });
       mockRepository.findAvailableBatches.mockResolvedValue(mockBatches);
       mockRepository.decrementBatchStock.mockResolvedValue({ id: 'mv-1' });
-      mockRepository.createInventoryTransaction.mockResolvedValue({ id: 'tx-1' });
-      mockRepository.updateRawMaterialStock.mockResolvedValue({ id: 'rm-1', current_stock: 0 });
+      mockRepository.createInventoryTransaction.mockResolvedValue({
+        id: 'tx-1',
+      });
+      mockRepository.updateRawMaterialStock.mockResolvedValue({
+        id: 'rm-1',
+        current_stock: 0,
+      });
       mockRepository.updateOrderCogs.mockResolvedValue({ id: 'order-1' });
 
       await service.reduceStockForOrder('order-1');
 
       // COGS = 5 units * 1000 = 5000
-      expect(mockRepository.updateOrderCogs).toHaveBeenCalledWith('order-1', 5000);
+      expect(mockRepository.updateOrderCogs).toHaveBeenCalledWith(
+        'order-1',
+        5000,
+      );
     });
 
     it('should handle remaining stock not covered by batches', async () => {
@@ -475,7 +540,12 @@ describe('InventoryService', () => {
       };
       // Only 20 units available in batches
       const mockBatches = [
-        { id: 'batch-1', raw_material_id: 'rm-1', qty_remaining: 20, cost_per_unit: 1000 },
+        {
+          id: 'batch-1',
+          raw_material_id: 'rm-1',
+          qty_remaining: 20,
+          cost_per_unit: 1000,
+        },
       ];
 
       mockRepository.findOrderWithIngredients.mockResolvedValue(mockOrder);
@@ -488,14 +558,22 @@ describe('InventoryService', () => {
         id: 'rm-1',
         cost_per_unit: 1500,
       });
-      mockRepository.createInventoryTransaction.mockResolvedValue({ id: 'tx-1' });
-      mockRepository.updateRawMaterialStock.mockResolvedValue({ id: 'rm-1', current_stock: 0 });
+      mockRepository.createInventoryTransaction.mockResolvedValue({
+        id: 'tx-1',
+      });
+      mockRepository.updateRawMaterialStock.mockResolvedValue({
+        id: 'rm-1',
+        current_stock: 0,
+      });
       mockRepository.updateOrderCogs.mockResolvedValue({ id: 'order-1' });
 
       await service.reduceStockForOrder('order-1');
 
       // COGS = (20 * 1000) + (30 * 1500) = 20000 + 45000 = 65000
-      expect(mockRepository.updateOrderCogs).toHaveBeenCalledWith('order-1', 65000);
+      expect(mockRepository.updateOrderCogs).toHaveBeenCalledWith(
+        'order-1',
+        65000,
+      );
     });
   });
 
@@ -527,9 +605,16 @@ describe('InventoryService', () => {
       mockRepository.executeInTransaction.mockImplementation(async (fn) => {
         return fn(mockRepository);
       });
-      mockRepository.findStockMovementByOrderId.mockResolvedValue({ id: 'mv-1' });
-      mockRepository.createInventoryTransaction.mockResolvedValue({ id: 'tx-1' });
-      mockRepository.updateRawMaterialStock.mockResolvedValue({ id: 'rm-1', current_stock: 120 });
+      mockRepository.findStockMovementByOrderId.mockResolvedValue({
+        id: 'mv-1',
+      });
+      mockRepository.createInventoryTransaction.mockResolvedValue({
+        id: 'tx-1',
+      });
+      mockRepository.updateRawMaterialStock.mockResolvedValue({
+        id: 'rm-1',
+        current_stock: 120,
+      });
 
       await service.restoreStockForOrder('order-1');
 
@@ -568,8 +653,13 @@ describe('InventoryService', () => {
         return fn(mockRepository);
       });
       mockRepository.findStockMovementByOrderId.mockResolvedValue(null);
-      mockRepository.createInventoryTransaction.mockResolvedValue({ id: 'tx-1' });
-      mockRepository.updateRawMaterialStock.mockResolvedValue({ id: 'rm-1', current_stock: 105 });
+      mockRepository.createInventoryTransaction.mockResolvedValue({
+        id: 'tx-1',
+      });
+      mockRepository.updateRawMaterialStock.mockResolvedValue({
+        id: 'rm-1',
+        current_stock: 105,
+      });
 
       await service.restoreStockForOrder('order-1');
 
@@ -600,7 +690,9 @@ describe('InventoryService', () => {
       mockRepository.executeInTransaction.mockImplementation(async (fn) => {
         return fn(mockRepository);
       });
-      mockRepository.createInventoryTransaction.mockResolvedValue({ id: 'tx-1' });
+      mockRepository.createInventoryTransaction.mockResolvedValue({
+        id: 'tx-1',
+      });
       mockRepository.updateRawMaterialStock.mockResolvedValue({ id: 'rm-1' });
 
       await service.restoreStockForOrder('order-1');
@@ -637,15 +729,24 @@ describe('InventoryService', () => {
       mockRepository.executeInTransaction.mockImplementation(async (fn) => {
         return fn(mockRepository);
       });
-      mockRepository.findStockMovementByOrderId.mockResolvedValue({ id: 'mv-1' });
-      mockRepository.createInventoryTransaction.mockResolvedValue({ id: 'tx-1' });
-      mockRepository.updateRawMaterialStock.mockResolvedValue({ id: 'rm-1', current_stock: 100 });
+      mockRepository.findStockMovementByOrderId.mockResolvedValue({
+        id: 'mv-1',
+      });
+      mockRepository.createInventoryTransaction.mockResolvedValue({
+        id: 'tx-1',
+      });
+      mockRepository.updateRawMaterialStock.mockResolvedValue({
+        id: 'rm-1',
+        current_stock: 100,
+      });
 
       await service.restoreStockForOrder('order-1');
 
       // rm-1: (2 * 10) + (3 * 10) = 50
       // rm-2: (2 * 5) = 10
-      expect(mockRepository.createInventoryTransaction).toHaveBeenCalledTimes(2);
+      expect(mockRepository.createInventoryTransaction).toHaveBeenCalledTimes(
+        2,
+      );
     });
   });
 });

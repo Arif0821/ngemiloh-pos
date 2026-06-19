@@ -3,9 +3,17 @@ import { set_cookie, clear_cookie } from './cookie';
 describe('cookie utilities', () => {
   // Create a mock that simulates express Response
   const createMockResponse = () => {
-    const cookies: Array<{ name: string; value: string; options: Record<string, unknown> }> = [];
+    const cookies: Array<{
+      name: string;
+      value: string;
+      options: Record<string, unknown>;
+    }> = [];
     return {
-      cookie: (name: string, value: string, options: Record<string, unknown> = {}) => {
+      cookie: (
+        name: string,
+        value: string,
+        options: Record<string, unknown> = {},
+      ) => {
         cookies.push({ name, value, options });
       },
       _getCookies: () => cookies,
@@ -26,13 +34,19 @@ describe('cookie utilities', () => {
     it('should set HttpOnly flag', () => {
       const mock_res = createMockResponse();
       set_cookie(mock_res, 'token', 'abc123');
-      expect(mock_res._getLastCookie().options).toHaveProperty('httpOnly', true);
+      expect(mock_res._getLastCookie().options).toHaveProperty(
+        'httpOnly',
+        true,
+      );
     });
 
     it('should set SameSite=Strict', () => {
       const mock_res = createMockResponse();
       set_cookie(mock_res, 'token', 'abc123');
-      expect(mock_res._getLastCookie().options).toHaveProperty('sameSite', 'strict');
+      expect(mock_res._getLastCookie().options).toHaveProperty(
+        'sameSite',
+        'strict',
+      );
     });
 
     it('should set Max-Age for session cookies', () => {
@@ -62,7 +76,10 @@ describe('cookie utilities', () => {
     it('should set cookie with custom domain', () => {
       const mock_res = createMockResponse();
       set_cookie(mock_res, 'session', 'abc123', { domain: '.example.com' });
-      expect(mock_res._getLastCookie().options).toHaveProperty('domain', '.example.com');
+      expect(mock_res._getLastCookie().options).toHaveProperty(
+        'domain',
+        '.example.com',
+      );
     });
   });
 
@@ -86,8 +103,14 @@ describe('cookie utilities', () => {
     it('should include security flags when clearing', () => {
       const mock_res = createMockResponse();
       clear_cookie(mock_res, 'token');
-      expect(mock_res._getLastCookie().options).toHaveProperty('httpOnly', true);
-      expect(mock_res._getLastCookie().options).toHaveProperty('sameSite', 'strict');
+      expect(mock_res._getLastCookie().options).toHaveProperty(
+        'httpOnly',
+        true,
+      );
+      expect(mock_res._getLastCookie().options).toHaveProperty(
+        'sameSite',
+        'strict',
+      );
     });
   });
 });

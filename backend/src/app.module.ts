@@ -8,7 +8,8 @@ import { AuthModule } from './auth/auth.module';
 import { ProductsModule } from './products/products.module';
 import { OrdersModule } from './orders/orders.module';
 import { InventoryModule } from './inventory/inventory.module';
-import { ThrottlerModule, ThrottlerGuard } from '@nestjs/throttler';
+import { ThrottlerModule } from '@nestjs/throttler';
+import { ThrottlerLoggerGuard } from './auth/guards/throttler-logger.guard';
 import { APP_GUARD } from '@nestjs/core';
 import { DiscountsModule } from './discounts/discounts.module';
 import { UsersModule } from './users/users.module';
@@ -98,7 +99,7 @@ import { PaymentModule } from './payment/payment.module';
     AppService,
     {
       provide: APP_GUARD,
-      useClass: ThrottlerGuard, // Apply rate limiting globally
+      useClass: ThrottlerLoggerGuard, // Apply rate limiting globally with logging
     },
     {
       provide: APP_INTERCEPTOR,

@@ -44,7 +44,9 @@ export class AppController {
   @SkipThrottle()
   @Get('_health')
   async internalHealth(@Res() res: Response) {
-    return res.status(200).json({ ok: true, timestamp: new Date().toISOString() });
+    return res
+      .status(200)
+      .json({ ok: true, timestamp: new Date().toISOString() });
   }
 
   // Public: info toko untuk struk (nama, alamat, WA) — tidak perlu auth

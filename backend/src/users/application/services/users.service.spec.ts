@@ -164,9 +164,9 @@ describe('UsersService', () => {
       await expect(service.createCashier(createCashierDto)).rejects.toThrow(
         BadRequestException,
       );
-      await expect(
-        service.createCashier(createCashierDto),
-      ).rejects.toThrow('Username already taken');
+      await expect(service.createCashier(createCashierDto)).rejects.toThrow(
+        'Username already taken',
+      );
     });
 
     it('should hash PIN with pepper before storing', async () => {
@@ -270,12 +270,12 @@ describe('UsersService', () => {
     it('should throw NotFoundException if cashier not found', async () => {
       mockUserRepo.findById.mockResolvedValue(null);
 
-      await expect(
-        service.resetCashierPin(cashierId, newPin),
-      ).rejects.toThrow(NotFoundException);
-      await expect(
-        service.resetCashierPin(cashierId, newPin),
-      ).rejects.toThrow('Cashier not found');
+      await expect(service.resetCashierPin(cashierId, newPin)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.resetCashierPin(cashierId, newPin)).rejects.toThrow(
+        'Cashier not found',
+      );
     });
 
     it('should throw NotFoundException if user is not a cashier', async () => {
@@ -285,12 +285,12 @@ describe('UsersService', () => {
       };
       mockUserRepo.findById.mockResolvedValue(adminUser);
 
-      await expect(
-        service.resetCashierPin(cashierId, newPin),
-      ).rejects.toThrow(NotFoundException);
-      await expect(
-        service.resetCashierPin(cashierId, newPin),
-      ).rejects.toThrow('Cashier not found');
+      await expect(service.resetCashierPin(cashierId, newPin)).rejects.toThrow(
+        NotFoundException,
+      );
+      await expect(service.resetCashierPin(cashierId, newPin)).rejects.toThrow(
+        'Cashier not found',
+      );
     });
 
     it('should clear failed login count and locked_until', async () => {
@@ -405,9 +405,8 @@ describe('UsersService', () => {
     it('should throw if PIN_PEPPER_SECRET is not set', async () => {
       // Must require the service AFTER deleting the env variable
       // to avoid cached module with old env
-      const { UsersService: FreshUsersService } = await import(
-        './users.service'
-      );
+      const { UsersService: FreshUsersService } =
+        await import('./users.service');
 
       const localMockUserRepo = mockUserRepository();
       localMockUserRepo.findByUsername.mockResolvedValue(null);
@@ -422,7 +421,8 @@ describe('UsersService', () => {
         ],
       }).compile();
 
-      const serviceWithoutPepper = module.get<FreshUsersService>(FreshUsersService);
+      const serviceWithoutPepper =
+        module.get<FreshUsersService>(FreshUsersService);
 
       await expect(
         serviceWithoutPepper.createCashier({
@@ -440,7 +440,14 @@ describe('UsersService', () => {
   describe('customer methods', () => {
     it('should return all customers', async () => {
       const mockCustomers = [
-        { id: '1', name: 'Customer 1', phone: '081234567890', loyalty_points: 100, created_at: new Date(), updated_at: new Date() },
+        {
+          id: '1',
+          name: 'Customer 1',
+          phone: '081234567890',
+          loyalty_points: 100,
+          created_at: new Date(),
+          updated_at: new Date(),
+        },
       ];
       mockUserRepo.findCustomers.mockResolvedValue(mockCustomers);
 

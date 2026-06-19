@@ -20,7 +20,11 @@ function validateSecrets(): void {
   const errors: string[] = [];
 
   // Required string secrets (must exist and not be empty/whitespace)
-  const requiredSecrets = ['JWT_ACCESS_SECRET', 'PIN_PEPPER_SECRET', 'CSRF_SECRET'];
+  const requiredSecrets = [
+    'JWT_ACCESS_SECRET',
+    'PIN_PEPPER_SECRET',
+    'CSRF_SECRET',
+  ];
 
   for (const secret of requiredSecrets) {
     const value = process.env[secret];
@@ -32,7 +36,9 @@ function validateSecrets(): void {
   // Midtrans key validation based on environment
   const midtransEnv = process.env.MIDTRANS_ENV || 'sandbox';
   const serverKeyEnvVar =
-    midtransEnv === 'production' ? 'MIDTRANS_SERVER_KEY_PRODUCTION' : 'MIDTRANS_SERVER_KEY_SANDBOX';
+    midtransEnv === 'production'
+      ? 'MIDTRANS_SERVER_KEY_PRODUCTION'
+      : 'MIDTRANS_SERVER_KEY_SANDBOX';
   const serverKey = process.env[serverKeyEnvVar];
   if (!serverKey || serverKey.trim() === '') {
     errors.push(
@@ -85,10 +91,7 @@ async function bootstrap() {
   // Midtrans allowed domains for CSP (configurable via CSP_MIDTRANS_DOMAINS)
   const midtransFrameDomains = process.env.CSP_MIDTRANS_DOMAINS
     ? process.env.CSP_MIDTRANS_DOMAINS.split(',').map((d) => d.trim())
-    : [
-        'https://app.sandbox.midtrans.com',
-        'https://app.midtrans.com',
-      ];
+    : ['https://app.sandbox.midtrans.com', 'https://app.midtrans.com'];
 
   const midtransConnectDomains = process.env.CSP_MIDTRANS_DOMAINS
     ? process.env.CSP_MIDTRANS_DOMAINS.split(',')
@@ -97,10 +100,7 @@ async function bootstrap() {
           // Convert app.* to api.* for connect-src
           return d.replace('app.', 'api.');
         })
-    : [
-        'https://api.sandbox.midtrans.com',
-        'https://api.midtrans.com',
-      ];
+    : ['https://api.sandbox.midtrans.com', 'https://api.midtrans.com'];
 
   app.use(
     helmet({

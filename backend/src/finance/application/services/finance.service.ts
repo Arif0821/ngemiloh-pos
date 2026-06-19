@@ -350,7 +350,9 @@ export class FinanceService {
     const new_lifespan = data.useful_life_months;
 
     let parsed_value =
-      new_value !== undefined ? Number(new_value) : Number(asset.purchase_price);
+      new_value !== undefined
+        ? Number(new_value)
+        : Number(asset.purchase_price);
     let parsed_lifespan =
       new_lifespan !== undefined
         ? Number(new_lifespan)
