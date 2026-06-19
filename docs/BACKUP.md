@@ -59,8 +59,8 @@ pg_dump -h localhost -U postgres -d ngemiloh_db | gzip > backup_$(date +%Y%m%d).
 1. Decrypt the backup file:
 
 ```bash
-openssl enc -d -aes-256-cbc -salt -in db_backup_YYYYMMDD_HHMMSS.sql.gz.enc \
-  -out db_backup_YYYYMMDD_HHMMSS.sql.gz -k "$BACKUP_ENCRYPTION_KEY"
+openssl enc -d -aes-256-cbc -in db_backup_YYYYMMDD_HHMMSS.sql.gz.enc \
+  -out db_backup_YYYYMMDD_HHMMSS.sql.gz -pass pass:"$BACKUP_ENCRYPTION_KEY"
 ```
 
 2. Restore the database:

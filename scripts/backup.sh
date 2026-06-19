@@ -35,21 +35,50 @@ if [ $? -ne 0 ]; then
   exit 1
 fi
 
-# Step 2: Compress and encrypt (using gzip and openssl)
-echo "Compressing and encrypting..."
+# Step 2: Compress
+echo "Compressing..."
 gzip "$FILENAME"
-openssl enc -aes-256-cbc -salt -in "$ZIPNAME" -out "$ZIPNAME.enc" -k "$ENCRYPTION_KEY"
 
-if [ $? -eq 0 ]; then
-  # Step 3: Cleanup raw and unencrypted files
+if [ $? -ne 0 ]; then
+  echo "Compression failed!"
+  exit 1
+fi
+
+# Step 3: Encrypt using password file (avoids key exposure in process list/history)
+# Create temp file with key, set restrictive perms, use it, then remove
+echo "Encrypting..."
+TMP_KEY_FILE=$(mktemp)
+chmod 600 "$TMP_KEY_FILE"
+echo "$ENCRYPTION_KEY" > "$TMP_KEY_FILE"
+
+openssl enc -aes-256-cbc -salt -in "$ZIPNAME" -out "$ZIPNAME.enc" -pass file:"$TMP_KEY_FILE"
+ENCRYPT_RESULT=$?
+
+# Cleanup temp key file
+shred -u "$TMP_KEY_FILE"
+
+if [ $ENCRYPT_RESULT -eq 0 ]; then
+  # Step 4: Verify encrypted file exists and is non-empty before cleanup
+  if [ -s "$ZIPNAME.enc" ]; then
+    echo "Verification passed: backup file exists and is non-empty"
+  else
+    echo "ERROR: Encrypted backup file is missing or empty"
+    exit 1
+  fi
+
+  # Step 5: Generate SHA-256 checksum
+  sha256sum "$ZIPNAME.enc" > "$ZIPNAME.enc.sha256"
+  echo "Checksum generated: $ZIPNAME.enc.sha256"
+
+  # Step 6: Cleanup raw and unencrypted files
   rm "$ZIPNAME"
   echo "Backup successfully encrypted: $ZIPNAME.enc"
-  
-  # Step 4: Retention Policy (Keep 30 days)
-  echo "Applying retention policy (deleting older than 30 days)..."
-  find "$BACKUP_DIR" -type f -name "*.enc" -mtime +30 -exec rm {} \;
 
-  # Step 5: Upload to Cloud Storage (e.g. Backblaze B2/AWS S3 via rclone/awscli)
+  # Step 7: Retention Policy (Keep 30 days)
+  echo "Applying retention policy (deleting older than 30 days)..."
+  find "$BACKUP_DIR" -type f \( -name "*.enc" -o -name "*.sha256" \) -mtime +30 -exec rm {} \;
+
+  # Step 8: Upload to Cloud Storage (e.g. Backblaze B2/AWS S3 via rclone/awscli)
   # rclone copy "$ZIPNAME.enc" remote:my-bucket/backups/
 else
   echo "Encryption failed!"
