@@ -13,18 +13,53 @@ import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { SentryErrorInterceptor } from './common/interceptors/sentry-error.interceptor';
 import { setupSwagger } from './common/swagger/swagger.setup';
 
+// ========================================
+// SECRETS VALIDATION
+// ========================================
+function validateSecrets(): void {
+  const errors: string[] = [];
+
+  // Required string secrets (must exist and not be empty/whitespace)
+  const requiredSecrets = ['JWT_ACCESS_SECRET', 'PIN_PEPPER_SECRET', 'CSRF_SECRET'];
+
+  for (const secret of requiredSecrets) {
+    const value = process.env[secret];
+    if (!value || value.trim() === '') {
+      errors.push(`Missing or empty required secret: ${secret}`);
+    }
+  }
+
+  // Midtrans key validation based on environment
+  const midtransEnv = process.env.MIDTRANS_ENV || 'sandbox';
+  const serverKeyEnvVar =
+    midtransEnv === 'production' ? 'MIDTRANS_SERVER_KEY_PRODUCTION' : 'MIDTRANS_SERVER_KEY_SANDBOX';
+  const serverKey = process.env[serverKeyEnvVar];
+  if (!serverKey || serverKey.trim() === '') {
+    errors.push(
+      `Missing or empty required secret: ${serverKeyEnvVar} (MIDTRANS_ENV=${midtransEnv})`,
+    );
+  }
+
+  if (errors.length > 0) {
+    const errorMsg = `\n\n==========================================================
+FATAL ERROR: Secrets Validation Failed!
+
+The following issues must be resolved:
+${errors.map((v) => `- ${v}`).join('\n')}
+
+The server cannot start without these security secrets.
+==========================================================\n`;
+    console.error(errorMsg);
+    // Wait for log flush before exiting
+    setTimeout(() => process.exit(1), 100);
+  }
+}
+
 async function bootstrap() {
   const logger = new Logger('Bootstrap');
-  const requiredEnvVars = ['JWT_ACCESS_SECRET', 'PIN_PEPPER_SECRET'];
-  const missingVars = requiredEnvVars.filter((envVar) => !process.env[envVar]);
 
-  if (missingVars.length > 0) {
-    const errorMsg = `\n\n==========================================================\nFATAL ERROR: Missing Required Environment Variables!\n\nThe following variables MUST be set in Coolify / .env:\n${missingVars.map((v) => `- ${v}`).join('\n')}\n\nThe server cannot start without these security secrets.\n==========================================================\n`;
-    console.error(errorMsg);
-    // Wait a moment so the log is flushed to stdout before crashing
-    await new Promise((resolve) => setTimeout(resolve, 100));
-    process.exit(1);
-  }
+  // Validate all required secrets before starting
+  validateSecrets();
 
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
   app.set('trust proxy', ['loopback', 'linklocal', 'uniquelocal']);
