@@ -46,6 +46,27 @@ async function bootstrap() {
   // ========================================
   // SECURITY HEADERS (Helmet)
   // ========================================
+
+  // Midtrans allowed domains for CSP (configurable via CSP_MIDTRANS_DOMAINS)
+  const midtransFrameDomains = process.env.CSP_MIDTRANS_DOMAINS
+    ? process.env.CSP_MIDTRANS_DOMAINS.split(',').map((d) => d.trim())
+    : [
+        'https://app.sandbox.midtrans.com',
+        'https://app.midtrans.com',
+      ];
+
+  const midtransConnectDomains = process.env.CSP_MIDTRANS_DOMAINS
+    ? process.env.CSP_MIDTRANS_DOMAINS.split(',')
+        .map((d) => d.trim())
+        .map((d) => {
+          // Convert app.* to api.* for connect-src
+          return d.replace('app.', 'api.');
+        })
+    : [
+        'https://api.sandbox.midtrans.com',
+        'https://api.midtrans.com',
+      ];
+
   app.use(
     helmet({
       contentSecurityPolicy: {
@@ -59,16 +80,8 @@ async function bootstrap() {
           imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
           fontSrc: ["'self'", 'data:'],
           formAction: ["'self'"],
-          frameSrc: [
-            "'self'",
-            'https://app.sandbox.midtrans.com',
-            'https://app.midtrans.com',
-          ], // Midtrans sandbox + production
-          connectSrc: [
-            "'self'",
-            'https://api.sandbox.midtrans.com',
-            'https://api.midtrans.com',
-          ], // Midtrans sandbox + production
+          frameSrc: ["'self'", ...midtransFrameDomains], // Midtrans
+          connectSrc: ["'self'", ...midtransConnectDomains], // Midtrans
           // HIGH FIX S-04: Removed Tailwind CDN - CSS is bundled at build time
           scriptSrc: ["'self'"],
           styleSrc: ["'self'"],
