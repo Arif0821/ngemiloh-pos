@@ -123,5 +123,8 @@
 
 # ── Error Pages ────────────────────────────────────────────────
 handle_errors {
-	respond "{err.status_code} {err.status_text}" 200
+	rewrite * /error_pages/{err.status_code}.html
+	file_server {
+		root /etc/caddy/error_pages
+	}
 }

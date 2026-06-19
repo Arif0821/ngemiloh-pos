@@ -31,5 +31,8 @@ RUN apk upgrade -U --available -X https://dl-cdn.alpinelinux.org/alpine/edge/mai
 
 COPY Caddyfile /etc/caddy/Caddyfile
 
+# Copy error pages
+COPY caddy/error_pages /etc/caddy/error_pages
+
 # Copy hasil build frontend ke Caddy
 COPY --from=builder /app/build /srv
