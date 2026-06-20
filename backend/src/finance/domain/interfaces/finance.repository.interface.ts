@@ -9,6 +9,20 @@ import {
   CashRegister,
 } from '@prisma/client';
 
+/**
+ * Interface for profit share detail record returned from createManyAndReturn
+ */
+export interface ProfitShareDetailResult {
+  id: string;
+  order_id: string;
+  cashier_id: string;
+  gross_profit: number;
+  kasir_share: number;
+  hq_share: number;
+  created_at: Date;
+  updated_at: Date;
+}
+
 export const FINANCE_REPOSITORY = Symbol('FINANCE_REPOSITORY');
 
 export interface IFinanceRepository {
@@ -64,7 +78,7 @@ export interface IFinanceRepository {
   ): Promise<ProfitShareDetail>;
   createManyProfitShareDetails(
     data: Prisma.ProfitShareDetailUncheckedCreateInput[],
-  ): Promise<Prisma.BatchPayload>;
+  ): Promise<ProfitShareDetailResult[]>;
   findClosedCashRegistersForPeriod(
     start: Date,
     end: Date,

@@ -1,5 +1,8 @@
 import { Injectable } from '@nestjs/common';
-import { IFinanceRepository } from '../../domain/interfaces/finance.repository.interface';
+import {
+  IFinanceRepository,
+  ProfitShareDetailResult,
+} from '../../domain/interfaces/finance.repository.interface';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 
@@ -102,9 +105,10 @@ export class PrismaFinanceRepository implements IFinanceRepository {
 
   async createManyProfitShareDetails(
     data: Prisma.ProfitShareDetailUncheckedCreateInput[],
-  ) {
+  ): Promise<ProfitShareDetailResult[]> {
     // F19: Use createManyAndReturn for PostgreSQL to get created records with IDs
-    return this.prisma.profitShareDetail.createManyAndReturn({ data }) as any;
+    const result = await this.prisma.profitShareDetail.createManyAndReturn({ data });
+    return result as unknown as ProfitShareDetailResult[];
   }
 
   async findClosedCashRegistersForPeriod(start: Date, end: Date) {
