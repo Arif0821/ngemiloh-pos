@@ -34,7 +34,7 @@ import type { ProductWithModifiers } from '../../domain/interfaces/order.reposit
  * - Removes or escapes newlines and carriage returns that could inject CSV rows
  * - Escapes quotes and wraps in quotes if contains comma, quote, or newline
  */
-function escapeCsvField(value: unknown): string {
+function escape_csv_field(value: unknown): string {
   if (value === null || value === undefined) return '';
   const str = String(value);
   // SECURITY: Remove control characters and newlines that could inject CSV rows
@@ -1106,16 +1106,18 @@ export class OrdersService {
     for (const o of orders) {
       const date = o.created_at.toISOString();
       const id = o.client_uuid || o.id;
-      const cashier = escapeCsvField(o.cashier?.name || 'Unknown');
+      const cashier = escape_csv_field(o.cashier?.name || 'Unknown');
       const method = o.payment_method;
       const status = o.status;
 
       if (o.items && o.items.length > 0) {
         for (const item of o.items) {
-          const itemName = escapeCsvField(item.product_name_snapshot || 'Item');
+          const itemName = escape_csv_field(
+            item.product_name_snapshot || 'Item',
+          );
           const qty = item.quantity;
           const basePrice = String(item.base_price);
-          const discountName = escapeCsvField(item.discount?.name || '-');
+          const discountName = escape_csv_field(item.discount?.name || '-');
           const discountAmt =
             Number(item.base_price) - Number(item.discounted_base);
           const finalPrice = String(item.final_price);

@@ -60,14 +60,25 @@ export class AuthController {
       return { success: true, data: result.user };
     }
 
-    // Admin: validate credentials first, then send OTP via email
-    // validateAdminCredentials throws if invalid; sendOtp handles hashing, Redis storage, and email delivery
+    // Admin: validate credentials first, then proceed
+    // validateAdminCredentials throws if invalid
     await this.authService.validateAdminCredentials(
       loginIdentifier,
       loginSecret,
       this.getClientIp(req),
       response,
     );
+
+    // Skip OTP in development mode for easier testing
+    if (process.env.NODE_ENV === 'development') {
+      const result = await this.authService.login(
+        loginIdentifier,
+        loginSecret,
+        this.getClientIp(req),
+        response,
+      );
+      return { success: true, data: result.user };
+    }
 
     // Generate and send OTP via email
     await this.authService.sendOtp(loginIdentifier);
