@@ -603,12 +603,12 @@ export class FinanceService {
     if (existing)
       throw new BadRequestException('Kasir masih memiliki shift aktif.');
 
-    // Count closed shifts in single query
-    const closedShifts = await this.financeRepository.findManyCashRegisters({
+    // PERFORMANCE: Use count instead of findMany when only counting records
+    const closedShiftCount = await this.financeRepository.countCashRegisters({
       cashier_id: cashierId,
       status: 'closed',
     });
-    const shift_number = closedShifts.length + 1;
+    const shift_number = closedShiftCount + 1;
 
     // Default planned_close_at: 04:00 WIB next day (or next 04:00 if before 04:00)
     let planned_close: Date;

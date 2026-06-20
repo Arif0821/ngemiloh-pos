@@ -89,6 +89,10 @@ export class PrismaFinanceRepository implements IFinanceRepository {
     return this.prisma.cashRegister.update({ where: { id }, data });
   }
 
+  async countCashRegisters(where: Prisma.CashRegisterWhereInput): Promise<number> {
+    return this.prisma.cashRegister.count({ where });
+  }
+
   async findManyCashRegisters(
     where?: Prisma.CashRegisterWhereInput,
     orderBy?: Prisma.CashRegisterOrderByWithRelationInput,
