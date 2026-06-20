@@ -199,10 +199,18 @@ export class AuthService {
         sameSite: 'strict',
         path: '/',
       });
+      // SECURITY FIX F-01: Set CSRF token as httpOnly cookie (not accessible to JavaScript)
+      set_cookie(res, 'csrf_token', csrfToken, {
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 365 days in milliseconds
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+      });
     }
 
     return {
-      csrfToken,
+      csrfToken, // Kept for backward compatibility, but frontend should use cookie
       user: {
         id: user.id,
         name: user.name,
@@ -302,10 +310,18 @@ export class AuthService {
         sameSite: 'strict',
         path: '/',
       });
+      // SECURITY FIX F-01: Set CSRF token as httpOnly cookie (not accessible to JavaScript)
+      set_cookie(res, 'csrf_token', csrfToken, {
+        maxAge: 43200, // 12 hours
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+      });
     }
 
     return {
-      csrfToken,
+      csrfToken, // Kept for backward compatibility, but frontend should use cookie
       userId: user.id,
       email: user.email,
       name: user.name,
@@ -464,10 +480,18 @@ export class AuthService {
         sameSite: 'strict',
         path: '/',
       });
+      // SECURITY FIX F-01: Set CSRF token as httpOnly cookie (not accessible to JavaScript)
+      set_cookie(res, 'csrf_token', csrfToken, {
+        maxAge: 43200, // 12 hours
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+      });
     }
 
     return {
-      csrfToken,
+      csrfToken, // Kept for backward compatibility, but frontend should use cookie
       user: { id: user.id, name: user.name, role: user.role },
     };
   }
@@ -509,10 +533,18 @@ export class AuthService {
         sameSite: 'strict',
         path: '/',
       });
+      // SECURITY FIX F-01: Set CSRF token as httpOnly cookie (not accessible to JavaScript)
+      set_cookie(res, 'csrf_token', csrfToken, {
+        maxAge: 365 * 24 * 60 * 60 * 1000, // 365 days in milliseconds
+        httpOnly: true,
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        path: '/',
+      });
     }
 
     return {
-      csrfToken,
+      csrfToken, // Kept for backward compatibility, but frontend should use cookie
       user: {
         id: user.id,
         name: user.name,

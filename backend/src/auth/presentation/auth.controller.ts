@@ -60,8 +60,8 @@ export class AuthController {
       return { success: true, data: result.user };
     }
 
-    // Admin: validate credentials first, then send OTP (AUTH-02/03)
-    // Validate credentials (throws if invalid)
+    // Admin: validate credentials first, then send OTP via email
+    // validateAdminCredentials throws if invalid; sendOtp handles hashing, Redis storage, and email delivery
     await this.authService.validateAdminCredentials(
       loginIdentifier,
       loginSecret,
@@ -69,7 +69,7 @@ export class AuthController {
       response,
     );
 
-    // Generate and send OTP via email — sendOtp handles hashing, Redis storage, and email delivery
+    // Generate and send OTP via email
     await this.authService.sendOtp(loginIdentifier);
 
     return {

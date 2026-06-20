@@ -25,27 +25,36 @@ import { ReceiptsModule } from './receipts/receipts.module';
 import { JobsModule } from './jobs/jobs.module';
 import { PaymentModule } from './payment/payment.module';
 
+// Skip throttling for health check endpoints (used by Docker healthcheck)
+const skipThrottleForHealth = (context: {
+  switchToHttp: () => { getRequest: () => { url: string; method: string } };
+}) => {
+  const req = context.switchToHttp().getRequest();
+  const url = req.url;
+  return url === '/_health' || url === '/health';
+};
+
 @Module({
   imports: [
     BullModule.forRoot({
       connection: (() => {
-        // Support both REDIS_URL (dari docker-compose) dan REDIS_HOST+REDIS_PORT
         const redisUrl = process.env.REDIS_URL;
         if (redisUrl) {
           try {
             const url = new URL(redisUrl);
             const host = url.hostname;
             const port = Number(url.port) || 6379;
+            const password = url.password || undefined;
             if (!host) throw new Error('Invalid hostname in REDIS_URL');
-            return { host, port };
+            return { host, port, password }; // Include password for auth
           } catch {
-            // Log warning but use fallback
             console.warn(`Invalid REDIS_URL: ${redisUrl}, using fallback`);
           }
         }
         return {
           host: process.env.REDIS_HOST || 'localhost',
           port: Number(process.env.REDIS_PORT) || 6379,
+          password: process.env.REDIS_PASSWORD || undefined,
         };
       })(),
     }),
@@ -64,21 +73,25 @@ import { PaymentModule } from './payment/payment.module';
         name: 'short',
         ttl: 60000,
         limit: 100, // 100 requests per minute per IP
+        skipIf: skipThrottleForHealth,
       },
       {
         name: 'medium',
         ttl: 300000, // 5 mins
         limit: 300, // 300 requests per 5 mins
+        skipIf: skipThrottleForHealth,
       },
       {
         name: 'login',
         ttl: 600000, // 10 mins
         limit: 5, // 5 login attempts per 10 mins
+        skipIf: skipThrottleForHealth,
       },
       {
         name: 'long',
         ttl: 3600000, // 1 hour
         limit: 1000, // 1000 requests per hour
+        skipIf: skipThrottleForHealth,
       },
     ]),
     EventEmitterModule.forRoot(),

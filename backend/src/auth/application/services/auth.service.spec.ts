@@ -390,8 +390,14 @@ describe('AuthService', () => {
       mockAuthRepository.resetIpLockout.mockResolvedValue(
         createMockIpLockout(),
       );
-      mockAuthRepository.incrementUserFailedLogin.mockResolvedValue({ ...mockUser, failed_login_count: 0 });
-      mockAuthRepository.incrementIpLockout.mockResolvedValue({ ...createMockIpLockout(), failed_count: 0 });
+      mockAuthRepository.incrementUserFailedLogin.mockResolvedValue({
+        ...mockUser,
+        failed_login_count: 0,
+      });
+      mockAuthRepository.incrementIpLockout.mockResolvedValue({
+        ...createMockIpLockout(),
+        failed_count: 0,
+      });
 
       const validPassword = 'ValidP@ssw0rd123!';
       const result = await service.validateAdminCredentials(
