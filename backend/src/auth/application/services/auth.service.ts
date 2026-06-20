@@ -55,6 +55,18 @@ export class AuthService {
     return bcrypt.compare(pin + this.pepper, hash);
   }
 
+  private verifyOtpHash(otpCode: string, storedHash: string): boolean {
+    const inputHash = crypto.createHash('sha256').update(otpCode).digest('hex');
+    // Use timing-safe comparison to prevent timing attacks
+    if (inputHash.length !== storedHash.length) {
+      return false;
+    }
+    return crypto.timingSafeEqual(
+      Buffer.from(inputHash),
+      Buffer.from(storedHash),
+    );
+  }
+
   validatePasswordRequirements(password: string): void {
     const minLength = 16;
     const hasUpperCase = /[A-Z]/.test(password);
@@ -355,12 +367,13 @@ export class AuthService {
       }
     }
 
-    // FIX H10: Audit log OTP request
-    this.logger.log(`OTP requested for admin: ${user.email}`);
+    // FIX H10: Audit log OTP request (use user ID, not email - PII protection)
+    this.logger.log(`OTP requested for user: ${user.id}`);
 
     // FIX H9: Use 6-digit OTP instead of 8-digit (standard practice, reduces brute-force space)
     const otpCode = crypto.randomInt(100000, 999999).toString();
-    const otpHash = await bcrypt.hash(otpCode, 10);
+    // FIX H11: Use SHA256 for OTP hashing (OTP is rate-limited, no need for slow bcrypt)
+    const otpHash = crypto.createHash('sha256').update(otpCode).digest('hex');
 
     await this.redisService.set(
       `otp:admin:${user.id}`,
@@ -418,7 +431,7 @@ export class AuthService {
       throw new BadRequestException('Invalid OTP session');
     }
 
-    const isValid = await bcrypt.compare(otpCode, otpData.code_hash);
+    const isValid = this.verifyOtpHash(otpCode, otpData.code_hash);
     if (!isValid) {
       otpData.attempts += 1;
 
