@@ -108,7 +108,10 @@ export class OrdersController {
 
   @Get('orders/shift')
   @UseGuards(JwtAuthGuard)
-  async getShiftSummary(@Req() req: AuthenticatedRequest) {
+  async getShiftSummary(
+    @Req() req: AuthenticatedRequest,
+    @Query('kasir_id', new ParseUUIDPipe({ optional: true })) kasirId?: string,
+  ) {
     // SECURITY: Kasir can only see their own shift, superadmin can see any by query param
     let filterKasir: string;
     if (req.user.role === 'kasir') {
@@ -116,7 +119,7 @@ export class OrdersController {
       filterKasir = req.user.id;
     } else if (req.user.role === Role.superadmin) {
       // Superadmin can query by kasir_id or default to themselves
-      filterKasir = String(req.query.kasir_id || req.user.id);
+      filterKasir = kasirId || req.user.id;
     } else {
       throw new ForbiddenException('Invalid role for shift summary');
     }
