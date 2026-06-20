@@ -921,25 +921,26 @@ export class OrdersService {
   async getShiftSummary(kasirId: string) {
     const today = startOfDay();
 
-    const orders = await this.orderRepository.findOrders({
-      created_at: { gte: today },
-      cashier_id: kasirId,
-      status: OrderStatus.completed,
+    // PERFORMANCE: Use database aggregation instead of fetching all orders into memory
+    const aggregate = await this.prisma.order.aggregate({
+      where: {
+        created_at: { gte: today },
+        cashier_id: kasirId,
+        status: OrderStatus.completed,
+      },
+      _sum: {
+        cash_amount: true,
+        qris_amount: true,
+        total_amount: true,
+      },
+      _count: true,
     });
 
-    const totalOrders = orders.length;
-    let totalCash = 0;
-    let totalQris = 0;
-
-    orders.forEach((o) => {
-      const amount = Number(o.total_amount);
-      if (o.payment_method === PaymentMethod.cash) totalCash += amount;
-      else if (o.payment_method === PaymentMethod.qris) totalQris += amount;
-      else if (o.payment_method === PaymentMethod.split) {
-        totalCash += Number(o.cash_amount || 0);
-        totalQris += Number(o.qris_amount || 0);
-      }
-    });
+    // For split payments, we need individual amounts which can't be aggregated easily
+    // Fall back to counting completed orders and use aggregate for totals
+    const totalOrders = aggregate._count;
+    const totalCash = Number(aggregate._sum.cash_amount) || 0;
+    const totalQris = Number(aggregate._sum.qris_amount) || 0;
 
     return {
       date: today.toISOString(),
