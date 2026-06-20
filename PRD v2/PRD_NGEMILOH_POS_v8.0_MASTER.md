@@ -1896,7 +1896,7 @@ async startShift(dto: StartShiftDto) {
 
 | Requirement | Implementation |
 |-------------|----------------|
-| JWT Access Token | 8h for kasir, 12h for admin |
+| JWT Access Token | 12h for kasir, 12h for admin | Generated automatically on login, not manually provided |
 | PIN Hashing | bcrypt 12 rounds + pepper |
 | Rate Limiting | 20 req/min per user |
 | CSRF Protection | Enabled |
