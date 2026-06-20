@@ -10,6 +10,7 @@ import {
   FINANCE_REPOSITORY,
 } from '../../domain/interfaces/finance.repository.interface';
 import { EmailService } from '../../../email/email.service';
+import { PrismaService } from '../../../prisma/prisma.service';
 import { Prisma, Order } from '@prisma/client';
 import {
   CreateAssetDto,
@@ -24,6 +25,7 @@ export class FinanceService {
     @Inject(FINANCE_REPOSITORY)
     private readonly financeRepository: IFinanceRepository,
     private emailService: EmailService,
+    private prisma: PrismaService,
   ) {}
 
   async getDashboardKpi(date: string) {
@@ -32,18 +34,35 @@ export class FinanceService {
     const end = new Date(date);
     end.setHours(23, 59, 59, 999);
 
-    const orders = await this.financeRepository.findOrders(
-      { created_at: { gte: start, lte: end }, status: { not: 'voided' } },
-      { items: true },
-    );
+    // PERFORMANCE: Use database aggregation instead of fetching all orders into memory
+    const [aggregateResult, paymentCounts] = await Promise.all([
+      this.prisma.order.aggregate({
+        where: {
+          created_at: { gte: start, lte: end },
+          status: { not: 'voided' },
+        },
+        _sum: {
+          total_amount: true,
+          cogs_total: true,
+        },
+        _count: true,
+      }),
+      // Get payment method distribution using GROUP BY
+      this.prisma.$queryRaw<{ payment_method: string; count: bigint }[]>`
+        SELECT payment_method, COUNT(*)::bigint as count
+        FROM orders
+        WHERE created_at >= ${start}
+          AND created_at <= ${end}
+          AND status != 'voided'
+        GROUP BY payment_method
+      `,
+    ]);
 
-    const revenue = orders.reduce((sum, o) => sum + Number(o.total_amount), 0);
-    const hpp = orders.reduce(
-      (sum, o) =>
-        sum + Number((o as Order & { cogs_total?: number }).cogs_total || 0),
-      0,
-    );
+    const revenue = Number(aggregateResult._sum.total_amount) || 0;
+    const hpp = Number(aggregateResult._sum.cogs_total) || 0;
     const laba = revenue - hpp;
+    const transactions = aggregateResult._count;
+
     // FIX: Use environment variable instead of hardcoded target
     const dailyRevenueTarget = Number(
       process.env.DAILY_REVENUE_TARGET || 5000000,
@@ -54,14 +73,19 @@ export class FinanceService {
         ? Math.min(100, Math.round((revenue / dailyRevenueTarget) * 100))
         : 0;
 
-    const transactions = orders.length;
     const avg = transactions > 0 ? revenue / transactions : 0;
 
+    // Build payment distribution from raw query result
     const paymentDistribution = {
-      cash: orders.filter((o) => o.payment_method === 'cash').length,
-      qris: orders.filter((o) => o.payment_method === 'qris').length,
-      split: orders.filter((o) => o.payment_method === 'split').length,
+      cash: 0,
+      qris: 0,
+      split: 0,
     };
+    for (const row of paymentCounts) {
+      if (row.payment_method in paymentDistribution) {
+        paymentDistribution[row.payment_method as keyof typeof paymentDistribution] = Number(row.count);
+      }
+    }
 
     return {
       revenue,
