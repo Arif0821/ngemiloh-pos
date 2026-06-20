@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { FinanceService } from './finance.service';
 import { EmailService } from '../../../email/email.service';
+import { PrismaService } from '../../../prisma/prisma.service';
 import { FINANCE_REPOSITORY } from '../../domain/interfaces/finance.repository.interface';
 
 const mockFinanceRepository = {
@@ -18,10 +19,18 @@ const mockFinanceRepository = {
   createOperationalExpense: jest.fn(),
   findAssets: jest.fn(),
   findManyCashRegisters: jest.fn(),
+  countCashRegisters: jest.fn(),
 };
 
 const mockEmailService = {
   sendAlert: jest.fn().mockResolvedValue(undefined),
+};
+
+const mockPrismaService = {
+  order: {
+    aggregate: jest.fn(),
+  },
+  $queryRaw: jest.fn(),
 };
 
 describe('FinanceService', () => {
@@ -33,6 +42,7 @@ describe('FinanceService', () => {
       providers: [
         FinanceService,
         { provide: FINANCE_REPOSITORY, useValue: mockFinanceRepository },
+        { provide: PrismaService, useValue: mockPrismaService },
         EmailService,
       ],
     })
@@ -243,21 +253,18 @@ describe('FinanceService', () => {
 
   describe('getDashboardKpi', () => {
     it('should calculate KPI correctly', async () => {
-      const mockOrders = [
-        {
-          id: 'order-1',
-          total_amount: 500000,
-          cogs_total: 200000,
-          payment_method: 'cash',
+      // Mock aggregate result for new implementation
+      mockPrismaService.order.aggregate.mockResolvedValue({
+        _sum: {
+          total_amount: 800000,
+          cogs_total: 320000,
         },
-        {
-          id: 'order-2',
-          total_amount: 300000,
-          cogs_total: 120000,
-          payment_method: 'qris',
-        },
-      ];
-      mockFinanceRepository.findOrders.mockResolvedValue(mockOrders);
+        _count: 2,
+      });
+      mockPrismaService.$queryRaw.mockResolvedValue([
+        { payment_method: 'cash', count: 1n },
+        { payment_method: 'qris', count: 1n },
+      ]);
 
       const result = await service.getDashboardKpi('2026-06-18');
 
@@ -269,7 +276,11 @@ describe('FinanceService', () => {
     });
 
     it('should handle zero transactions', async () => {
-      mockFinanceRepository.findOrders.mockResolvedValue([]);
+      mockPrismaService.order.aggregate.mockResolvedValue({
+        _sum: { total_amount: null, cogs_total: null },
+        _count: 0,
+      });
+      mockPrismaService.$queryRaw.mockResolvedValue([]);
 
       const result = await service.getDashboardKpi('2026-06-18');
 

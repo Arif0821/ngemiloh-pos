@@ -12,12 +12,26 @@ import { RedisService } from '../../../common/redis/redis.service';
 import { createMockUser, createMockIpLockout } from '../../../test/mocks';
 import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
+import * as crypto from 'crypto';
 
 // Mock bcrypt globally
 jest.mock('bcrypt', () => ({
   compare: jest.fn().mockResolvedValue(true),
   hash: jest.fn().mockResolvedValue('$2b$12$mocked-hash'),
 }));
+
+// Mock crypto globally - keep timingSafeEqual as real implementation
+jest.mock('crypto', () => {
+  const actual = jest.requireActual('crypto');
+  return {
+    ...actual,
+    timingSafeEqual: jest.fn().mockImplementation((a: Buffer, b: Buffer) => {
+      if (a.length !== b.length) return false;
+      // For testing: return true if buffers are equal
+      return a.equals(b);
+    }),
+  };
+});
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -196,7 +210,7 @@ describe('AuthService', () => {
       await expect(
         service.login('admin@example.com', 'Password1234567890', mockIpAddress),
       ).rejects.toThrow(
-        'Password must contain uppercase, lowercase, number, and symbol',
+        'Password must contain at least one special character (!@#$%^&*)',
       );
     });
 
@@ -474,7 +488,7 @@ describe('AuthService', () => {
           mockIpAddress,
         ),
       ).rejects.toThrow(
-        'Password must contain uppercase, lowercase, number, and symbol',
+        'Password must contain at least one uppercase letter',
       );
     });
 
@@ -641,13 +655,12 @@ describe('AuthService', () => {
     const mockUserId = 'admin-789';
     const mockIpAddress = '192.168.1.100';
     const validOtp = '123456';
+    // SHA256 hash of '123456' for mocking
+    const validOtpHash = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92';
 
     beforeEach(() => {
       // Clear all call history
       jest.clearAllMocks();
-
-      // Reset bcrypt to return true by default
-      (bcrypt.compare as jest.Mock).mockResolvedValue(true);
     });
 
     it('should verify OTP successfully', async () => {
@@ -668,7 +681,7 @@ describe('AuthService', () => {
         }
         if (key === `otp:admin:${mockUserId}`) {
           return Promise.resolve(
-            JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }),
+            JSON.stringify({ code_hash: validOtpHash, attempts: 0 }),
           );
         }
         return Promise.resolve(null);
@@ -746,7 +759,8 @@ describe('AuthService', () => {
     });
 
     it('should reject verification with incorrect OTP code', async () => {
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+      // Mock timingSafeEqual to return false for wrong OTP
+      (crypto.timingSafeEqual as jest.Mock).mockReturnValue(false);
 
       mockRedisService.get.mockImplementation((key: string) => {
         if (key === `otp:email:${mockAdminEmail.toLowerCase()}`) {
@@ -757,7 +771,7 @@ describe('AuthService', () => {
         }
         if (key === `otp:admin:${mockUserId}`) {
           return Promise.resolve(
-            JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }),
+            JSON.stringify({ code_hash: validOtpHash, attempts: 0 }),
           );
         }
         return Promise.resolve(null);
@@ -773,7 +787,8 @@ describe('AuthService', () => {
     });
 
     it('should trigger OTP lockout after 3 failed attempts', async () => {
-      (bcrypt.compare as jest.Mock).mockResolvedValue(false);
+      // Mock timingSafeEqual to return false for wrong OTP
+      (crypto.timingSafeEqual as jest.Mock).mockReturnValue(false);
 
       mockRedisService.get.mockImplementation((key: string) => {
         if (key === `otp:email:${mockAdminEmail.toLowerCase()}`) {
@@ -826,7 +841,7 @@ describe('AuthService', () => {
         }
         if (key === `otp:admin:${mockUserId}`) {
           return Promise.resolve(
-            JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }),
+            JSON.stringify({ code_hash: validOtpHash, attempts: 0 }),
           );
         }
         return Promise.resolve(null);
@@ -853,7 +868,7 @@ describe('AuthService', () => {
         }
         if (key === `otp:admin:${mockUserId}`) {
           return Promise.resolve(
-            JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }),
+            JSON.stringify({ code_hash: validOtpHash, attempts: 0 }),
           );
         }
         return Promise.resolve(null);
@@ -887,7 +902,7 @@ describe('AuthService', () => {
         }
         if (key === `otp:admin:${mockUserId}`) {
           return Promise.resolve(
-            JSON.stringify({ code_hash: '$2b$10$hash', attempts: 0 }),
+            JSON.stringify({ code_hash: validOtpHash, attempts: 0 }),
           );
         }
         return Promise.resolve(null);

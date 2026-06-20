@@ -124,6 +124,10 @@ describe('OrdersService', () => {
       findOrderById: jest.fn(),
       createAuditLog: jest.fn(),
       findOrders: jest.fn(),
+      aggregateOrders: jest.fn().mockResolvedValue({
+        _sum: { cash_amount: null, qris_amount: null, total_amount: null },
+        _count: 0,
+      }),
       findCurrentShift: jest.fn(),
       createShift: jest.fn(),
       getSetting: jest.fn(),
@@ -1124,27 +1128,15 @@ describe('OrdersService', () => {
     today.setHours(0, 0, 0, 0);
 
     it('should calculate correct totals for completed orders', async () => {
-      const completedOrders = [
-        {
-          ...mockOrder,
-          payment_method: PaymentMethod.cash,
-          total_amount: 25000,
+      // Mock aggregate result instead of findOrders
+      mockOrderRepository.aggregateOrders.mockResolvedValue({
+        _sum: {
+          cash_amount: 40000, // 25000 + 15000 for cash payments
+          qris_amount: 35000,
+          total_amount: 75000,
         },
-        {
-          ...mockOrder,
-          id: 'order-002',
-          payment_method: PaymentMethod.qris,
-          total_amount: 35000,
-        },
-        {
-          ...mockOrder,
-          id: 'order-003',
-          payment_method: PaymentMethod.cash,
-          total_amount: 15000,
-        },
-      ];
-
-      mockOrderRepository.findOrders.mockResolvedValue(completedOrders);
+        _count: 3,
+      });
 
       const result = await service.getShiftSummary('kasir-001');
 
@@ -1152,14 +1144,17 @@ describe('OrdersService', () => {
         date: today.toISOString(),
         kasir_id: 'kasir-001',
         total_orders: 3,
-        total_cash: 40000, // 25000 + 15000
+        total_cash: 40000,
         total_qris: 35000,
         grand_total: 75000,
       });
     });
 
     it('should return zero totals for empty orders', async () => {
-      mockOrderRepository.findOrders.mockResolvedValue([]);
+      mockOrderRepository.aggregateOrders.mockResolvedValue({
+        _sum: { cash_amount: null, qris_amount: null, total_amount: null },
+        _count: 0,
+      });
 
       const result = await service.getShiftSummary('kasir-001');
 

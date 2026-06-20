@@ -22,6 +22,12 @@ export type ProductWithModifiers = Product & {
 export interface OrderRepositoryInterface {
   findOrderByClientUuid(clientUuid: string): Promise<Order | null>;
   findActiveDiscounts(): Promise<Discount[]>;
+  aggregateOrders(
+    where: Prisma.OrderWhereInput,
+  ): Promise<{
+    _sum: { cash_amount: number | null; qris_amount: number | null; total_amount: number | null };
+    _count: number;
+  }>;
   findProductWithModifiers(
     productId: string,
   ): Promise<ProductWithModifiers | null>;

@@ -40,7 +40,7 @@ export class FinanceCronService {
     }
 
     // PERFORMANCE: Close shifts in parallel instead of sequentially
-    await Promise.all(overdueShifts.map(shift => this.autoCloseShift(shift)));
+    await Promise.all(overdueShifts.map((shift) => this.autoCloseShift(shift)));
   }
 
   // Run every 15 minutes to send 90-minute warnings

@@ -300,7 +300,7 @@ Bulan sepi, operasional minus. Kasir *freelance* tidak ada *base salary*.
     *   *Kelebihan:* Pegawai terjamin.
     *   *Kekurangan:* Sangat rumit diimplementasi. Sistem jadi memiliki fitur Bank/Kreditur. *(Saran: Gunakan Opsi A, beri bonus manual dari kantong owner di luar sistem jika iba).*
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:** Opsi A (Pool Kasir Rp 0), tapi mungkin saya berikan gaji iba karena sudah menjalankan bisnis saya
 
 
 ### 25. Discrepancy Plus (Uang Berlebih > Rp 10.000)
@@ -311,7 +311,7 @@ Bulan sepi, operasional minus. Kasir *freelance* tidak ada *base salary*.
     *   *Kelebihan:* Kasir senang.
     *   *Kekurangan:* Berbahaya. Kasir bisa dengan sengaja menipu/kurang memberi kembalian pelanggan untuk memperbesar tip pribadinya.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:** Opsi A (Uang Masuk Kas Perusahaan)
 
 
 ### 26. Tax Inclusive (PPN 11%)
@@ -322,7 +322,7 @@ Bulan sepi, operasional minus. Kasir *freelance* tidak ada *base salary*.
     *   *Kelebihan:* Pool kasir utuh 40%, sistem gampang.
     *   *Kekurangan:* Harus rombak sistem total di masa depan jika diwajibkan.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi A (Ekstrak PPN dari Harga Jual), walaupun mungkin saat ini saya masih tidak dikenakan pajak, tetapi dengan bantuan laporan perpajakan kita bisa mempersiapkan dini ketika sudah dikenakan pajak. tapi saya masih bingung untuk perhitungan pajak ini, bisa kamu jelaskan secara rinci?
 
 
 ### 27. Manual Cash Refund
@@ -334,7 +334,7 @@ Pelanggan menolak penggantian barang, ingin uang kembali.
     *   *Kelebihan:* Alur uang masuk aman, anti kasir nakal yang pura-pura refund padahal ambil uang.
     *   *Kekurangan:* Kaku jika berhadapan dengan pelanggan marah besar.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:** Opsi B (Mutlak Hanya Replacement/Void, Tanpa Refund Tunai)
 
 
 ---
@@ -349,7 +349,7 @@ Pelanggan menolak penggantian barang, ingin uang kembali.
     *   *Kelebihan:* 100% *compliant* dengan UU PDP.
     *   *Kekurangan:* Semua *order* yang berelasi dengan member ini akan ter-NULL-kan kolom relasinya, memecah integritas laporan. *(Saran Senior Eng: Gunakan Opsi A)*.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi A (Anonimisasi - *Soft Delete*) untuk nama customer sebenarnya tidak masalah, tetapi nomor handphone perlu disembunyikan karena itu yang krusial
 
 
 ### 29. Grace Period Saat Server Downtime
@@ -360,7 +360,7 @@ Pelanggan menolak penggantian barang, ingin uang kembali.
     *   *Kelebihan:* Sistem tidak usah dirubah.
     *   *Kekurangan:* Berpotensi mendapat keluhan dari pelanggan loyalis.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Abaikan, Masa Aktif Tetap Berjalan) bisa kamu jelaskan lebih rinci?
 
 
 ### 30. Validasi Pendaftaran Member (Cegah Fraud)
@@ -371,7 +371,7 @@ Pelanggan menolak penggantian barang, ingin uang kembali.
     *   *Kelebihan:* Mulus dan gratis.
     *   *Kekurangan:* Celah *fraud* besar. Kasir bisa *scan* struk pelanggan yang dibuang, dan mendaftarkan nomor temannya.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Tanpa Validasi OTP), menurut saya jika Kasir bisa *scan* struk pelanggan yang dibuang, dan mendaftarkan nomor temannya. tidak masalah karena 1 ID/member 1 nomor handphone
 
 
 ### 31. Promo No-Stacking (Resolusi Bentrok Diskon)
@@ -383,7 +383,7 @@ Gold (15%) VS Promo Event (20%).
     *   *Kelebihan:* Member merasa punya kontrol atas *benefit*-nya.
     *   *Kekurangan:* Menambah 1 step extra UI yang memperlambat antrean. *(Saran: Opsi A)*.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi A (Auto-Select Highest) menurut saya diskon terbesar hanya diberikan kepada member tier gold, dan untuk promo event tertentu diskonnya tidak sebesar member gold
 
 
 ### 32. Free Item Benefit & Waste Log
@@ -395,7 +395,7 @@ Pemberian bonus barang dari *Loyalty Tier*.
     *   *Kelebihan:* Sangat gampang, PRD saat ini sudah *support*. HPP tetap tercatat tanpa repot ke Jurnal Opex.
     *   *Kekurangan:* Laporan Diskon akan terlihat membengkak besar.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Hitung Normal Harga 0) tapi bisa kamu jelaskan lebih rinci lagi?
 
 
 ---
@@ -411,7 +411,7 @@ Midtrans Normal, tapi WiFi Cabang mati total.
     *   *Kelebihan:* Jika koneksi mati-nyala (intermiten), kasir bisa *spam* tekan bayar sampai tembus.
     *   *Kekurangan:* Rawan *false-positive* pembayaran ter-potong di HP pelanggan tapi time-out di POS. *(Saran mutlak: Opsi A - Disable QRIS kalau Offline).*
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi A (Nonaktifkan UI QRIS Saat Offline)
 
 
 ### 34. Batas Limit 50 Sync Offline (Dexie.js)
@@ -423,7 +423,7 @@ Pemadaman internet > 24 jam. Limit 50 transaksi tercapai.
     *   *Kelebihan:* Bisa bertahan offline seminggu penuh.
     *   *Kekurangan:* Risiko *sync conflict* saat internet nyala (seperti *timestamp* berantakan) sangat tinggi.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi A (Hard Limit - POS Terkunci) limit transaksi saya 100 transaksi perhari maksimal.
 
 
 ### 35. Cash Drawer Kick (Membuka Laci Otomatis)
@@ -434,7 +434,7 @@ Pemadaman internet > 24 jam. Limit 50 transaksi tercapai.
     *   *Kelebihan:* Development printer lebih cepat rampung.
     *   *Kekurangan:* Kasir capek/lambat saat jam sibuk karena harus memutar kunci manual.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Abaikan, Manual Pakai Kunci)
 
 
 ### 36. Double-Tap Blocker UI
@@ -445,7 +445,7 @@ Pemadaman internet > 24 jam. Limit 50 transaksi tercapai.
     *   *Kelebihan:* UI modern, elegan.
     *   *Kekurangan:* User masih bisa klik-klik area lain di POS yang mungkin memicu re-render atau merusak *state*. *(Saran: Opsi A).*
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi A (Full Screen Overlay Blocker)
 
 
 ### 37. Penulisan Nama Kasir di Struk
@@ -456,7 +456,7 @@ Pemadaman internet > 24 jam. Limit 50 transaksi tercapai.
     *   *Kelebihan:* Ramah, elegan.
     *   *Kekurangan:* Kalau ada 2 kasir bernama Rina, Owner bingung melacak *discrepancy* via struk kertas.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi A (Format `Nama Kasir + [Kode Huruf]`)
 
 
 ### 38. Split Payment - QRIS Kadaluarsa
@@ -468,7 +468,7 @@ Sudah terima Cash Rp 10.000, tapi QRIS (Rp 15.000) *expired* karena pelanggan la
     *   *Kelebihan:* Backend aman dan *stateless*.
     *   *Kekurangan:* Kasir & pelanggan frustrasi. *(Saran Senior Eng: Wajib buat Opsi A demi pengalaman pengguna).*
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi A (Regenerate QRIS Only)
 
 
 ### 39. Auto-Close Shift (BullMQ Cron Stuck)
@@ -480,7 +480,7 @@ Jam 23:59 Cron Job mati, shift kasir masih "Buka" sampai esok siangnya.
     *   *Kelebihan:* Integritas data *timestamp* terkontrol manual dan akurat.
     *   *Kekurangan:* Menyebalkan bagi kasir kalau Superadmin belum bangun tidur.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi A (Force Close di Login Berikutnya), bagaimana jika kasir masih buka hingga pukul 02.00 subuh/pagi ? logicnya seperti apa saran kamu?
 
 
 ### 40. Partisi Tabel Orders (Persiapan Scale-Up)
@@ -492,7 +492,7 @@ Ekspansi 10 cabang akan membuat baris tabel meledak dari 36 ribu ke 360 ribu bar
     *   *Kelebihan:* PostgreSQL 17 mampu menghandle hingga 5 Juta baris data transaksi tanpa partisi asalkan index kolom `created_at` dan `outlet_id` dikonfigurasi sempurna. Cepat di-develop.
     *   *Kekurangan:* Setelah 3 tahun, *query* bulanan mungkin akan mulai terasa lemot (> 500ms). *(Saran: Opsi B, Postgres 17 sudah sangat powerful).*
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Tunda sampai Fase 4 - Gunakan Index Saja)
 
 
 ## F. Audit Trail, Hardware & Advanced Edge Cases
@@ -506,7 +506,7 @@ Ketika harga produk atau resep HPP diubah, perlukah sistem melacak "Siapa yang m
     *   *Kelebihan:* Sangat mudah dan ringan.
     *   *Kekurangan:* Tidak ada pertanggungjawaban personal jika terjadi insiden kesalahan harga fatal.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**  perlukah sistem melacak "Siapa yang mengubah" dan "Kapan diubah"? = menurut saya cukup log kapan diubah saja karena sudah pasti saya sendiri yang mengubah harga produk atau resep HPP sebagai admin dan owner
 
 
 ### 42. Timezone (Zona Waktu Lintas Daerah)
@@ -518,7 +518,7 @@ Jika kelak cabang Ngemiloh buka di Bali (WITA) sementara pusat di Jakarta (WIB).
     *   *Kelebihan:* Sangat mudah bagi developer. Laporan harian sinkron 100%.
     *   *Kekurangan:* Kasir di Bali akan bingung melihat jam struknya telat 1 jam dari jam dinding mereka. *(Saran: Gunakan Opsi A sejak awal agar tahan banting).*
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Sapu Rata Pakai Jam WIB)
 
 
 ### 43. Fractional Inventory (Stok Desimal)
@@ -530,7 +530,7 @@ Apakah resep HPP akan sangat detail hingga gram? (Misal: 1 porsi butuh 0.015 Kg 
     *   *Kelebihan:* Membaca laporan lebih masuk akal.
     *   *Kekurangan:* Rawan *bug* pembulatan di JavaScript (Misal: 0.1 + 0.2 = 0.30000000004). *(Saran: Gunakan Opsi A untuk backend, konversi ke Kg hanya di sisi UI).*
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi A (Simpan dalam Satuan Terkecil / Gramase)
 
 
 ### 44. Hardware (Printer Auto-Cut)
@@ -542,7 +542,7 @@ Apakah printer Bluetooth PUTIAN802 yang Anda pilih punya fitur pemotong kertas o
     *   *Kelebihan:* Tidak butuh *coding* tambahan.
     *   *Kekurangan:* Ujung kertas sering sobek berantakan kalau kasir menariknya tidak hati-hati.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Hanya Tear-Bar / Sobek Manual)
 
 
 ### 45. Refund Midtrans via Core API
@@ -554,7 +554,7 @@ Jika ada refund pembatalan, apakah pengembalian saldo (Dana/Gopay/Shopeepay) dip
     *   *Kelebihan:* Pelanggan langsung menerima uang dalam 5 menit, *brand image* naik.
     *   *Kekurangan:* Repot bagi Anda karena harus bolak-balik buka M-Banking.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:** lebih baik pengembalian dana tunai langsung dari kasir, tetapi buat laporannya refund pembatalan
 
 
 ### 46. WebSockets vs Long Polling (Real-time Dashboard)
@@ -566,7 +566,7 @@ Apakah Dashboard Superadmin Anda butuh *real-time push* kalau ada omzet/transaks
     *   *Kelebihan:* Sangat stabil, *stateless*, 0 konfigurasi *server*.
     *   *Kekurangan:* Ada *delay* 1 menit dari saat kasir jualan sampai laporannya muncul di HP Anda. *(Saran Senior Eng: Gunakan Opsi B untuk sistem POS)*.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (SWR / Polling tiap 120 detik)
 
 
 ### 47. Fallback Payment Gateway
@@ -578,7 +578,7 @@ Jika Midtrans mati total secara nasional seharian (Server Down).
     *   *Kelebihan:* Simpel, tidak perlu koding integrasi Gateway kedua.
     *   *Kekurangan:* Rawan salah input/verifikasi mutasi palsu (struk m-banking editan).
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Alihkan ke Cash)
 
 
 ### 48. Penghapusan Produk (Soft-Delete vs Hard-Delete)
@@ -590,7 +590,7 @@ Bagaimana jika produk "Es Teh Manis" dihapus dari menu untuk selamanya?
     *   *Kelebihan:* Database bersih.
     *   *Kekurangan:* Mustahil dilakukan. PostgreSQL akan *error* (Foreign Key Constraint) karena produk ini terkait dengan ribuan struk lama di tabel `orders`. *(Saran Mutlak: Opsi A).*
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi A (Soft-Delete)
 
 
 ### 49. Batas Limit Hardware Perangkat Kasir
@@ -602,7 +602,7 @@ Aplikasi berbasis *Web* (*SvelteKit/Dexie*) memakan RAM HP/Tablet.
     *   *Kelebihan:* Bisa pakai HP Android bekas murahan.
     *   *Kekurangan:* Butuh optimasi kode Svelte 5 (*virtual scrolling* list menu, pembersihan *garbage collection*) yang memakan waktu lama saat *development*.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Optimasi Ekstrim untuk RAM 2-3GB)
 
 
 ### 50. SLA (Service Level Agreement) Internal
@@ -614,7 +614,7 @@ Berapa komitmen *uptime* yang Anda janjikan ke para manajer cabang Anda?
     *   *Kelebihan:* Masuk akal untuk *startup/UMKM* dengan budget VPS di bawah Rp 200rb/bulan.
     *   *Kekurangan:* Jika *down* di siang hari sibuk, kasir terpaksa bergantung total pada mode *Offline* (yang punya limitasi 50 struk).
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Target 99.0% Uptime):** Boleh mati maksimal 7 jam per bulan (Umumnya saat tengah malam untuk *maintenance*).kasir terpaksa bergantung total pada mode *Offline* melalui pembayaran tunai saja
 
 
 ## G. Ojek Online, Akuntansi Gudang & POS Fraud (The Ultimate Edge Cases)
@@ -628,7 +628,7 @@ Saat ini PRD menetapkan "Takeaway Only". Bagaimana jika Ngemiloh didaftarkan ke 
     *   *Kelebihan:* PRD saat ini sudah *support* 100% tanpa ubahan.
     *   *Kekurangan:* Laporan margin keuntungan (Laba Bersih) Anda akan palsu dan terlihat lebih besar dari aslinya (karena potongan 20% Grab tidak tercatat).
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi A (Buat Tipe Order Khusus dengan Harga Mark-up)
 
 
 ### 52. Metode Perhitungan HPP (Costing Method)
@@ -640,7 +640,7 @@ Jika kemarin Anda belanja Tepung seharga Rp 10.000/kg, dan hari ini harga tepung
     *   *Kelebihan:* Sangat akurat secara fisik gudang nyata.
     *   *Kekurangan:* Query database jauh lebih berat karena harus *tracking batch* pembelian bahan baku satu per satu. *(Saran: Gunakan WAC - Opsi A).*
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi A (WAC - Weighted Average Cost / Harga Rata-rata)
 
 
 ### 53. POS Fraud: "The Ghost Order"
@@ -652,7 +652,7 @@ Bagaimana mencegah Kasir curang: Kasir menginput pesanan, mencetak struk (untuk 
     *   *Kelebihan:* Operasional mulus tanpa hambatan, namun *owner* tetap bisa memecat kasir curang besok harinya.
     *   *Kekurangan:* Uang terlanjur hilang pada hari kejadian.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Log Print Count & Void Alerts)Sistem membiarkan kasir melakukan Void, tapi jika terdeteksi struk sudah pernah di-print > 0 kali, *alert* Email otomatis terkirim ke Owner berupa pemberitahuan saja. saya cukup bingung dengan opsi B ini, bisa kamu jelaskan lebih rinci
 
 
 ### 54. Metode Pembayaran EDC Fisik (BCA / Mandiri)
@@ -664,7 +664,7 @@ Selain QRIS Midtrans, apakah Anda memiliki mesin gesek kartu (EDC) fisik di waru
     *   *Kelebihan:* Setup sistem simpel sesuai PRD saat ini.
     *   *Kekurangan:* Pelanggan yang hanya membawa Kartu ATM Debit/Kredit mungkin tidak bisa belanja.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Tidak Pakai EDC Fisik, Hanya Midtrans QRIS & Cash)
 
 
 ### 55. Retur Bahan Baku ke Supplier (Purchase Returns)
@@ -676,7 +676,7 @@ Bagaimana jika bahan baku yang baru tiba dari *supplier* ternyata busuk/rusak da
     *   *Kelebihan:* Menghemat waktu *development*.
     *   *Kekurangan:* Laporan *Waste* bulanan akan terlihat sangat besar padahal bukan salah pegawai (tapi salah supplier).
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:** lebih baik saya sendiri sebagai owner yang menerima langsung memberi tahu supplier bahwa barang rusak tanpa dimasukan kesistem. sistem berguna untuk menyimpan data barang baru masuk saja khusus bahan baku dan atribut lainnya.
 
 
 ### 56. Handover Shift (Serah Terima Fisik)
@@ -688,7 +688,7 @@ Saat Shift Pagi selesai dan Shift Malam masuk, apakah uang fisik di laci benar-b
     *   *Kelebihan:* Tutup shift sangat cepat.
     *   *Kekurangan:* Jika uangnya hanya Rp 490.000, kasir bisa diam-diam nombok 10rb dari dompetnya tanpa melapor, menyembunyikan masalah yang sebenarnya.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi A (Blind Closing / Blind Handover)
 
 
 ### 57. Data Retention (Penyimpanan Data Lama)
@@ -700,7 +700,7 @@ Jika bisnis sudah berjalan 5 tahun, database Anda akan membesar. Berapa lama str
     *   *Kelebihan:* Dashboard analitik bisa membandingkan "Januari 2026 vs Januari 2023" dalam sekejap.
     *   *Kekurangan:* Ukuran file `.bak` database akan membengkak jadi puluhan Gigabyte (biaya VPS naik).
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Keep Forever) tapi kemungkinan saya akan backup manual untuk data lama, dan juga bisa menghapus data lama jika sudah dibackup guna membuat database ringan
 
 
 ### 58. Promo Voucher Manual (Kode Diskon)
@@ -712,7 +712,7 @@ Selain Diskon Tier Member (Gold) dan Event (Weekend), apakah Anda butuh Kupon/Vo
     *   *Kelebihan:* Simpel. Sesuai PRD.
     *   *Kekurangan:* Tidak bisa melacak apakah pembeli datang dari Iklan Instagram atau organik.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Hanya Diskon Event Otomatis)
 
 
 ### 59. Auto-Scaling saat Jam Buka Puasa (Peak Hour Spike)
@@ -724,7 +724,7 @@ Di bulan Ramadhan, 80% transaksi per hari bisa terjadi hanya dalam *window* wakt
     *   *Kelebihan:* 0 biaya infrastruktur tambahan. Transaksi dijamin kilat (karena simpan di RAM HP).
     *   *Kekurangan:* Dashboard Superadmin akan mati/buta total (laporan 0) selama jam sibuk tersebut. *(Saran: Opsi A).*
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi A (Siapkan Database Connection Pooling Khusus)
 
 
 ### 60. Keamanan Akses Superadmin
@@ -736,7 +736,7 @@ Dashboard Superadmin mengendalikan nyawa bisnis Anda (Harga, HPP, Cabang).
     *   *Kelebihan:* Gampang masuk tanpa buka HP.
     *   *Kekurangan:* Jika IP internet rumah Anda dinamis (Indihome/Biznet), Anda sering gagal login sendiri.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Cukup Password + Whitelist IP Rumah Anda), atau bisa juga menciptakan kode OTP sendiri dimana sistem mengirimnya ke email kita otomatis. tapi muncul pertanyaan apakah perlu bayar tambahan layanan khusus?
 
 
 ## H. Distributed Systems, Enterprise Accounting & Core Security (The "Billion Dollar" Edge Cases)
@@ -750,7 +750,7 @@ Pencairan dana Midtrans masuk ke rekening bank Anda pada H+1 atau H+2.
     *   *Kelebihan:* Sangat mudah di-develop.
     *   *Kekurangan:* Sangat menguras waktu *owner* tiap pagi. Rawan keliru baca laporan.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Manual Bank Reconciliation)
 
 
 ### 62. Masalah "Noisy Neighbor" pada Database Multi-Outlet
@@ -762,7 +762,7 @@ Jika Anda menggabungkan semua data cabang ke dalam satu tabel tunggal `orders` (
     *   *Kelebihan:* Sederhana dan cepat dibangun.
     *   *Kekurangan:* Rawan kiamat *Noisy Neighbor* (satu cabang narik data berat, semua cabang lain aplikasinya nge-lag/blank). *(Saran: Gunakan Opsi B namun optimalkan Index dan batasi filter tanggal maksimal 30 hari).*
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Shared Table dengan Index Khusus): optimalkan Index dan batasi filter tanggal maksimal 30 hari dan filter percabang saja. tapi saya bingung dengan metode ini karena sekalipun banyak outlet atau cabang tapi yang memiliki nya saya sendiri, bukannya pemborosan fitur?
 
 
 ### 63. State Rollback (Void & Refund Batal)
@@ -774,7 +774,7 @@ Jika sebuah pesanan di-Void, apakah bahan baku gudang yang sudah terpakai otomat
     *   *Kelebihan:* Akuntansi gudang sangat presisi di segala skenario.
     *   *Kekurangan:* Menambah 1 langkah interaksi di UI Kasir saat membatalkan struk. *(Saran Mutlak: Gunakan Opsi B).*
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Pilih Alasan Void: "Kembali ke Gudang" vs "Buang/Waste")
 
 
 ### 64. Idempotency Key (Mencegah Bayar Midtrans Double)
@@ -786,7 +786,7 @@ Kasir berada di area susah sinyal. Saat ia menekan "Generate QRIS", aplikasinya 
     *   *Kelebihan:* Mudah dibuat.
     *   *Kekurangan:* Jika internet mati di detik yang sama tombol diklik, status UI akan macet tak berkesudahan, dan saat di-refresh, *request* bisa terkirim ulang tanpa disadari. *(Saran: Wajib Opsi A untuk semua API Keuangan).*
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi A (Implementasi Idempotency-Key Header)
 
 
 ### 65. Rounding Consistency (Beda Rp 1 Bikin Gagal Bayar)
@@ -798,7 +798,7 @@ JavaScript Frontend menggunakan *Floating Point* (0.1 + 0.2 = 0.30004), sedangka
     *   *Kelebihan:* UI Instan dan *real-time*.
     *   *Kekurangan:* Harus *refactor* (merombak) semua logika hitungan harga di Svelte. *(Saran: Gunakan Opsi B).*
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Gunakan Library Big.js di Frontend), jangan gunakan angka desimal, lebih baik di rounding saja / dibulatkan nominalnya
 
 
 ### 66. Employee Sweet-Hearting (Pencurian Poin Tipe Halus)
@@ -810,7 +810,7 @@ Kasir secara diam-diam menggunakan Nomor HP (Member Gold) miliknya sendiri setia
     *   *Kelebihan:* Tidak ada beban *coding*.
     *   *Kekurangan:* Poin telanjur dicuri dan *free item* melayang sebelum ketahuan.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**psi A (Fraud Detection Algorithm), bisa jelaskan lebih rinci terkait opsi ini?
 
 
 ### 67. Limit Uang Laci (Safe Drop Lockout)
@@ -822,7 +822,7 @@ Untuk mencegah perampokan fisik di warung malam hari.
     *   *Kelebihan:* POS simpel.
     *   *Kekurangan:* Jika warung dirampok jam 11 malam, kerugian bisa belasan juta karena uang numpuk di laci kasir.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Tergantung SOP Manual Kasir Saja) ini merupakan tanggung jawab kasir bukan saya
 
 
 ### 68. Versioning Resep (HPP Immutability)
@@ -835,7 +835,7 @@ Jika Anda menarik ulang laporan laba-rugi bulan Januari, apakah HPP-nya dihitung
     *   *Kelebihan:* Sangat mudah, database ramping.
     *   *Kekurangan:* Bencana besar. Laba-rugi bulan Januari Anda akan berubah drastis dan "rusak" saat resep Februari di-update. *(Saran Mutlak: Wajib Opsi A).*
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi A (Snapshot/Immutability per Transaksi)
 
 
 ### 69. Conflict Resolution pada Offline-First
@@ -847,7 +847,7 @@ Kasir 1 di tablet A mengubah harga diskon manual (kondisi Offline). Kasir 2 di t
     *   *Kelebihan:* Tidak akan pernah terjadi *conflict resolution*. Sangat aman.
     *   *Kekurangan:* Jika POS offline, kasir tidak bisa mengganti harga produk atau mengubah nama menu. Harus menunggu online. *(Saran: Gunakan Opsi B).*
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi B (Pemisahan Tanggung Jawab / No-Conflict Design)
 
 
 ### 70. Crash Recovery (Listrik Padam Tiba-tiba)
@@ -859,9 +859,410 @@ Kasir sedang menginput 20 daftar barang belanjaan, belum sempat memencet bayar. 
     *   *Kelebihan:* *Stateless*, tidak usah memikirkan *cache browser*.
     *   *Kekurangan:* Kasir emosi karena harus men-scan/menginput ulang 20 item saat listrik nyala.
 
-**Pilihan/Jawaban Anda:**
+**Pilihan/Jawaban Anda:**Opsi A (Auto-Save Cart State to LocalStorage)
+
+
+*Silakan jawab 5 pertanyaan konfirmasi terakhir ini. Setelah ini selesai, kita punya fondasi arsitektur besi yang tak tertembus!*
+
+## J. PERTANYAAN LANJUTAN (RONDE 2: THE FINAL REFINEMENT)
+Jawaban Anda memicu beberapa skenario tajam baru yang butuh keputusan Anda:
+
+### 71. Masalah Upload Foto Opex (Follow-up Soal 8)
+Anda ingin kasir bisa upload foto struk/nota pengeluaran. Aplikasi POS Anda berbasis Web (SvelteKit) di Tablet RAM 2-3GB (Soal 49). Memfoto dari kamera HP/Tablet rata-rata ukurannya besar (3MB - 5MB). Jika kasir upload langsung, aplikasi kasir bisa *Crash/Out of Memory*, dan biaya *Storage* VPS Anda bengkak.
+*   **Opsi A (Auto-Compress di Frontend):** Menggunakan library JS untuk mengecilkan foto jadi 100KB sebelum dikirim ke server.
+    *   *Kelebihan:* Hemat biaya server, aplikasi tidak crash.
+    *   *Kekurangan:* Tulisan di nota mungkin agak buram saat Anda periksa.
+*   **Opsi B (Catat Nominal Saja, Nota Disimpan Manual):** Kasir hanya ketik angka Opex di POS, kertas nota fisiknya dijepit di laci untuk Anda periksa saat kunjungan/tutup buku bulanan.
+    *   *Kelebihan:* Aplikasi luar biasa ringan dan cepat dibuat.
+    *   *Kekurangan:* Anda harus cek fisik kertas secara manual.
+
+**Pilihan/Jawaban Anda:**Opsi B (Catat Nominal Saja, Nota Disimpan Manual) dan kasir berikan bukti fisik kepada owner
+
+
+### 72. Refund Tunai Lintas Metode Pembayaran (Follow-up Soal 45)
+Anda memilih agar kasir melakukan *Refund* dengan memberikan uang Tunai fisik dari laci untuk pesanan yang batal. BAGAIMANA JIKA pesanan aslinya dibayar menggunakan QRIS Midtrans? Jika kasir mengambil uang fisik di laci untuk mengganti saldo QRIS, uang fisik laci akan MINUS/kurang saat tutup shift.
+*   **Opsi A (Sistem Menyesuaikan "Expected Cash"):** Sistem otomatis mengurangi target uang fisik laci di laporan akhir shift jika terjadi Refund Tunai dari QRIS.
+    *   *Kelebihan:* Hitungan kasir saat tutup shift (*Blind Closing*) tetap balance.
+    *   *Kekurangan:* Rumit dalam rekonsiliasi akuntansi.
+*   **Opsi B (Larangan Keras Refund Lintas Metode):** Bayar pakai QRIS = Wajib ditransfer manual oleh Owner ke rekening pelanggan. Bayar pakai Tunai = Refund ambil dari laci Kasir.
+    *   *Kelebihan:* Sangat rapi secara aliran arus kas.
+    *   *Kekurangan:* Pelanggan QRIS harus menunggu Owner mentransfer.
+
+**Pilihan/Jawaban Anda:**Opsi A (Sistem Menyesuaikan "Expected Cash")
+
+
+### 73. Server VPS Pakai GPU? (Follow-up Soal 16)
+Anda menyebutkan ingin "menambah RAM VPS dan 2 core GPU lagi". NestJS, SvelteKit, dan PostgreSQL sama sekali tidak bisa menggunakan GPU (Graphic Processing Unit). Teknologi ini murni bergantung pada CPU. 
+*   **Opsi A (Maksud Anda adalah CPU Core/vCPU):** Kita tambah spesifikasi VPS menjadi misal 4 vCPU & 8GB RAM.
+*   **Opsi B (Memang Butuh GPU):** Apakah Anda berencana memasukkan fitur *Artificial Intelligence* (AI) seperti CCTV pengenal wajah kasir atau Analisa Prediksi Menu menggunakan Machine Learning di server yang sama?
+
+**Pilihan/Jawaban Anda:**Opsi A (Maksud Anda adalah CPU Core/vCPU) maaf saya typo
+
+
+### 74. Fitur Archive Tool Dashboard (Follow-up Soal 57)
+Anda ingin membersihkan/menghapus data transaksi lama secara berkala agar database ringan. Menghapus ratusan ribu baris data langsung via *Database SQL* sangat berbahaya (bisa bikin database *Lock* / Macet saat jam sibuk).
+*   **Opsi A (Buat Tombol "Archive" di Dashboard):** Fitur Superadmin di mana Anda bisa memilih "Arsipkan Tahun 2024". Sistem akan otomatis mengekspornya jadi file CSV/Excel untuk di-download, lalu menghapus data di DB secara perlahan (*chunking* per 500 baris) di tengah malam.
+    *   *Kelebihan:* Sangat aman, tidak akan membuat warung nge-lag.
+    *   *Kekurangan:* Menambah daftar pekerjaan *coding* backend di Fase 3.
+*   **Opsi B (Biar Saya Hapus Manual Saja via DBeaver/TablePlus):** Anda yang akan mengeksekusi *query SQL Delete* sendiri kapan-kapan kalau server mulai penuh.
+
+**Pilihan/Jawaban Anda:**Opsi B (Biar Saya Hapus Manual Saja via DBeaver/TablePlus) saya bisa query sendiri
+
+
+### 75. Status Keuangan "Gaji Iba" (Follow-up Soal 24)
+Jika Laba bersih rugi, pool kasir = Rp 0. Tapi Anda ingin memberi "Gaji Iba".
+*   **Opsi A (Catat sebagai Pengeluaran Resmi di Sistem):** Gaji iba dimasukkan sebagai Opex khusus (Owner Expense) di POS.
+    *   *Kelebihan:* Terekam jelas.
+    *   *Kekurangan:* Membuat metrik Laba Rugi warung Anda terlihat semakin "Berdarah-darah" (semakin minus besar).
+*   **Opsi B (Off-the-Books / Uang Pribadi Murni):** Sistem POS menolak mencatatnya (di sistem tetap tertulis gaji kasir Rp 0). Uang santunan Anda transfer manual dari dompet pribadi di luar urusan laporan POS.
+    *   *Kelebihan:* Laporan performa bisnis murni dan obyektif.
+
+**Pilihan/Jawaban Anda:**Opsi B (Off-the-Books / Uang Pribadi Murni)
 
 
 ---
-*Catatan Akhir: Ini dia, 70 ASPEK KRUSIAL ("The Billion-Dollar Questions"). Anda telah membuktikan dedikasi luar biasa dengan mengizinkan saya me-roasting arsitektur sistem POS Anda hingga ke level ekstrim yang setara dengan sistem raksasa (Toast / Moka POS). Silakan ambil waktu Anda, dan hubungi saya bila Anda siap.*
+
+## K. RONDE 3: THE BILLION-DOLLAR ENTERPRISE EDGE CASES
+Anda meminta *brainstorming* maksimal. Berikut adalah 25 studi kasus tingkat lanjut (Skala *Enterprise / Startup Unicorn*) yang sering meruntuhkan sistem POS bernilai miliaran rupiah jika tidak dirancang dengan benar. Silakan jawab untuk menguji ketahanan arsitektur Anda!
+
+### 76. Event Sourcing vs CRUD (Jejak Transaksi)
+Bagaimana Anda melacak riwayat mutasi sebuah pesanan? Misalnya: Pesanan dibuat -> Dibayar Sebagian -> Ditambah Item -> Di-Void Sebagian -> Dilunasi.
+*   **Opsi A (CRUD Biasa):** Database hanya menyimpan hasil akhir pesanan (Status: Lunas).
+*   **Opsi B (Event Sourcing / Ledger):** Database mencatat setiap ketukan tombol kasir dalam tabel log riwayat secara berurutan.
+
+**Pilihan/Jawaban Anda:**berikan saya opsi terbaik kamu beserta penjelasan rinci
+
+
+### 77. Delta Syncing (Bencana Sinkronisasi Offline)
+Sinyal kembali menyala, tablet kasir mencoba men-sync 500 transaksi offline ke server secara bersamaan.
+*   **Opsi A (Bulk Insert):** Kirim 500 data sekaligus dalam 1 *request* JSON raksasa. (Risiko: Jika koneksi putus di tengah jalan, seluruh request gagal).
+*   **Opsi B (Chunking / Queueing):** Kirim data per 10 baris. Jika gagal, coba lagi dari baris terakhir yang sukses.
+
+**Pilihan/Jawaban Anda:**Opsi B (Chunking / Queueing)
+
+
+### 78. Resolusi Konflik Tingkat Lanjut
+Anda di rumah mengubah nama "Es Kopi" menjadi "Kopi Susu". Di detik yang sama, POS Kasir yang sedang *Offline* menjual "Es Kopi" tersebut. Saat tablet kasir online, apa yang terjadi pada struk transaksi tersebut?
+*   **Opsi A:** Nama di struk berubah otomatis jadi "Kopi Susu" mengikuti Master Data terbaru.
+*   **Opsi B:** Nama di struk tetap "Es Kopi" (karena nama *di-snapshot/di-copy* secara mentah saat transaksi terjadi).
+
+**Pilihan/Jawaban Anda:**Opsi A
+
+
+### 79. Saga Pattern (Kegagalan Microservice)
+Pelanggan membayar via QRIS. API Midtrans berkata "BERHASIL", tapi saat sistem memotong stok gudang, ternyata database Gudang sedang *Down/Error*. 
+*   **Opsi A:** Biarkan transaksi menggantung (Uang masuk, tapi stok tidak terpotong). Owner harus perbaiki manual besoknya.
+*   **Opsi B (Compensating Transaction):** Sistem otomatis mengirim perintah pembatalan (Refund) ke Midtrans karena gagal memotong gudang.
+
+**Pilihan/Jawaban Anda:***Opsi A: saya setuju opsi A tapi perbaiki manual yang kamu maksud seperti apa? berikan penjelasan rinci
+
+
+### 80. Penyalahgunaan Multi-Login Kasir
+Kasir membagikan PIN/Password miliknya ke temannya. Mereka login dari Tablet Warung dan dari HP Pribadi di rumah secara bersamaan.
+*   **Opsi A (Single Device Enforcer):** Jika HP di rumah login, Tablet di warung otomatis *Logout* (terpental) seketika.
+*   **Opsi B (Biarkan Multi-login):** Kasir bebas login di 5 HP sekaligus.
+
+**Pilihan/Jawaban Anda:**Opsi A (Single Device Enforcer) = 1 pin kasir jika sedang login = hanya 1 akun yang bisa login jika ada yang mencoba login menggunakan perangkat lain sedangkan kasir sedang online/login, langsung tolak otomatis
+
+
+### 81. Zero-Downtime Database Migration
+Warung sedang sangat ramai. Anda sebagai *Developer* harus menambahkan kolom baru `customer_age` di tabel `Orders` siang itu juga.
+*   **Opsi A:** Matikan server 5 menit (Maintenance Mode), kasir dipaksa offline sebentar, *Deploy*, nyalakan lagi.
+*   **Opsi B:** Gunakan teknik *Zero-Downtime Migration* (Prisma Expand/Contract). Server tetap hidup, transaksi tetap masuk saat kolom ditambahkan.
+
+**Pilihan/Jawaban Anda:**Opsi B: saya tidak akan menambahkan kolom baru `customer_age` di tabel `Orders` 
+
+
+### 82. Pencurian Data Pelanggan (Data Leak)
+Seorang kasir nakal yang kebetulan tahu password Manager mencoba men-download data (Nomor HP) 10.000 pelanggan dari Dashboard untuk dijual ke *Pinjaman Online*.
+*   **Opsi A:** Biarkan saja (Sistem berasumsi Manager berhak melihat semua data).
+*   **Opsi B (Rate Limiting Export + Alert):** Sistem membatasi export data maksimal 100 baris, jika lebih, butuh verifikasi OTP ke HP Owner.
+
+**Pilihan/Jawaban Anda:**Opsi A , tidak logis kasir tau email + password admin. karena saya tidak share hal seperti itu kesembarangan orang
+
+
+### 83. Hardware Printer Terputus di Tengah Jalan
+Printer Bluetooth mencetak struk berisi 50 item menu. Tiba-tiba di item ke-10, kertas habis atau Bluetooth terputus.
+*   **Opsi A:** Kasir harus memencet "Re-print" dan printer akan mencetak ulang dari awal item ke-1 sampai 50.
+*   **Opsi B:** Aplikasi menyimpan *State* baris yang terpotong, lalu setelah kertas diisi, printer melanjutkan hanya dari item ke-11. (Sangat sulit di-*coding*).
+
+**Pilihan/Jawaban Anda:**Opsi A
+
+
+### 84. Race Condition Stok Terakhir (Flash Sale)
+Sisa stok Nasi Goreng di database tinggal 1 porsi. Dua kasir di dua terminal berbeda memencet tombol "Bayar" secara bersamaan di detik dan milidetik yang sama.
+*   **Opsi A:** Database kecolongan, stok menjadi -1 (Minus Satu) karena dua-duanya tembus. Dapur akan bingung.
+*   **Opsi B (Pessimistic Locking):** Row database "Nasi Goreng" dikunci selama 0.1 detik oleh kasir 1. Kasir 2 akan mendapat pesan *Error: Barang kehabisan saat diproses*.
+
+**Pilihan/Jawaban Anda:** sebenarnya opsi kamu berikan bagus hanya saja stok disetiap outlet berbeda-beda karena tergantung jumlah transaksinya hari itu. misal setiap kasir mendapatkan porsi bahan baku untuk dijual 50 porsi, ternyata kasir 1 sudah menghabiskan/terjual habis, sedangkan kasir 2 masih tersisa 20 porsi. dari sini kita bisa tau siapa yang jelas sudah sold out dan yang belum sold out.
+
+
+### 85. Pencurian via Refund Kasir (The Keep & Steal)
+Pelanggan komplain makanan basi, kasir mem-Void/Refund pesanan di sistem. Tapi kasir tidak mengembalikan uang tunai Rp 50.000 ke pelanggan tersebut (pelanggan sudah pergi). Kasir mengambil Rp 50.000 itu untuk masuk kantongnya sendiri, sementara di laporan uang laci sudah *Balance* (karena sistem mencatat uang itu keluar untuk Refund).
+*   **Opsi A:** Sulit dideteksi. Andalkan rekaman CCTV fisik saja.
+*   **Opsi B (SMS Konfirmasi Refund):** Saat Void terjadi, sistem otomatis mengirim SMS/WA ke pelanggan: *"Maaf pesanan Anda batal, apakah Anda sudah menerima uang kembali Rp 50.000?"*.
+
+**Pilihan/Jawaban Anda:**Opsi A:
+
+
+### 86. Idempotency pada Tombol VOID
+Koneksi internet nge-lag. Kasir emosi dan memencet tombol "VOID ORDER" sebanyak 5 kali berturut-turut dengan cepat.
+*   **Opsi A:** Sistem memproses 5 Void sekaligus, stok gudang bertambah 5x lipat dari yang seharusnya.
+*   **Opsi B (Idempotent Key):** Backend menyadari itu adalah *Request Void* yang sama (berdasarkan ID Transaksi yang sama), dan hanya memprosesnya 1 kali saja.
+
+**Pilihan/Jawaban Anda:**Opsi B (Idempotent Key)
+
+
+### 87. Dynamic / Surge Pricing (Harga Jam Sibuk)
+Anda mengatur jam 17:00 - 19:00 harga semua menu naik Rp 2.000. Pelanggan mulai mengantri jam 16:55. Kasir baru memproses pesanannya jam 17:02. Harga mana yang berlaku?
+*   **Opsi A (Harga saat ditekan "Bayar"):** Pelanggan kena harga mahal (Rp 2.000 lebih tinggi) dan mungkin protes karena dia antri sebelum jam 17:00.
+*   **Opsi B (Harga saat kasir membuat *Draft* keranjang):** Harga dikunci mengikuti waktu pertama kali barang dimasukkan ke keranjang (16:55), sehingga tetap harga murah.
+
+**Pilihan/Jawaban Anda:** saya tidak akan mengubah harga ketika kasir bekerja dijam operasional bisa saya lihat didashboard sistem admin apakah ada kasir yang online atau tidak. saya akan update harga ketika mereka offline saja
+
+
+### 88. HPP (COGS) Retroactive Changes
+Supplier merevisi tagihan bulan lalu: Harga gula yang sudah Anda beli ternyata lebih mahal Rp 50.000 karena salah hitung.
+*   **Opsi A:** Ubah HPP bulan lalu. Laporan Laba Rugi bulan lalu ikut berubah seketika.
+*   **Opsi B (Jurnal Penyesuaian / Adjusting Entry):** Laporan bulan lalu dikunci permanen. Rp 50.000 dimasukkan sebagai pengeluaran tambahan (*Opex/Loss*) di bulan ini.
+
+**Pilihan/Jawaban Anda:**Opsi B (Jurnal Penyesuaian / Adjusting Entry)
+
+
+### 89. Gagal Sebagian pada Split Payment
+Tagihan Rp 100.000. Pelanggan bayar pakai Poin Member (Rp 30.000) dan QRIS (Rp 70.000). Saat QRIS di-scan, sistem Midtrans *Error Time-Out*. Poin member telanjur terpotong di database.
+*   **Opsi A (Auto-Revert):** Poin otomatis dikembalikan jika transaksi Midtrans tidak kunjung sukses dalam 10 menit.
+*   **Opsi B (Manual CS):** Kasir harus melaporkan ke Superadmin untuk mengembalikan poin pelanggan secara manual via Dashboard.
+
+**Pilihan/Jawaban Anda:**Opsi A (Auto-Revert)
+
+
+### 90. Time Travel Exploit (Manipulasi Jam HP)
+Kasir mengganti jam kalender di Tablet Android menjadi jam 23:00 untuk memicu Diskon "Midnight Sale" di siang bolong.
+*   **Opsi A (Andalkan Jam Lokal/Tablet):** Sistem tertipu dan memberikan diskon.
+*   **Opsi B (Validasi Server Time):** Meski jam di tablet menipu, saat memencet bayar, Server mengecek jam aslinya (UTC). Transaksi ditolak karena manipulasi jam.
+
+**Pilihan/Jawaban Anda:**Opsi B (Validasi Server Time) jangan tolak transaksinya cukup gunakan waktu server atau WIB.
+
+
+### 91. Sinkronisasi KDS (Kitchen Display System)
+Anda memakai layar sentuh di Dapur. Kasir sudah "LUNAS", tapi WiFi di dapur tiba-tiba mati sesaat. Koki tidak melihat pesanan masuk.
+*   **Opsi A (Fire and Forget):** Kasir menganggap tugasnya selesai. Koki kebingungan saat pelanggan menagih makanan.
+*   **Opsi B (Acknowledge Ping):** POS kasir baru mau mencetak struk JIKA layar Dapur sudah merespons balik "Pesanan Diterima". Jika dapur Offline, layar kasir akan memperingatkan: "DAPUR OFFLINE, TERIAKKAN PESANAN MANUAL".
+
+**Pilihan/Jawaban Anda:**saya tidak butuh fitur dapur karena kasir melihat sendiri pesanan customer dari struk yang diprint 2x ketika pembeli bayar lunas
+
+
+### 92. Pencurian Uang Tip
+Pelanggan memberikan uang Tip tunai Rp 10.000 ke kasir, tapi kasir memasukannya ke dalam Laci POS agar tidak hilang. Saat tutup shift, uang fisik di laci *Over* (lebih) Rp 10.000 dari angka di sistem.
+*   **Opsi A:** Sistem mengklaim kelebihan uang itu sebagai *Other Income* milik Perusahaan. Kasir kehilangan Tip-nya.
+*   **Opsi B:** Buat tombol "Input Tip Masuk Laci" di POS agar kasir bisa mencatat titipan uang pribadinya tanpa merusak neraca warung.
+
+**Pilihan/Jawaban Anda:** biarkan saja TIP tersebut. intinya disistem balance, jika uang lebih biarkan saja bisa saya berikan kepada kasir kelebihan tersebut manual
+
+
+### 93. API Key Hardcoding (Keteledoran Developer)
+Anda menyewa Developer magang untuk membantu UI. Dia tidak sengaja mem-push *Midtrans Server Key* Anda secara *hardcoded* ke Github Publik.
+*   **Opsi A (Secret Scanning):** Anda menggunakan Github Advanced Security yang otomatis menolak (block) *commit* jika mendeteksi ada teks yang bentuknya mirip API Key.
+*   **Opsi B (Manual Review):** Berharap tidak ada *Hacker* yang men-scan Github Anda sebelum Anda menyadarinya.
+
+**Pilihan/Jawaban Anda:**Opsi A (Secret Scanning) bantu saya apa saja yang tidak boleh dipush ke github
+
+
+### 94. The Exit Strategy (Eksport Data Raksasa)
+Suatu hari Anda menjual *Franchise/Sistem* POS ini ke Investor senilai Rp 10 Miliar. Mereka meminta *Dump* (Eksport) seluruh data transaksi 5 tahun terakhir (1 Juta baris) dalam bentuk format `.csv` yang rapi.
+*   **Opsi A (Streaming Export):** Sistem membangun CSV sedikit demi sedikit (Streaming) agar RAM Server tidak meledak saat menarik 1 Juta baris.
+*   **Opsi B:** Tarik semua data ke RAM, *convert* ke CSV. (Dijamin 100% Server Crash Out-of-Memory).
+
+**Pilihan/Jawaban Anda:**Opsi A (Streaming Export)
+
+
+### 95. The Zombie Cashier (Akses Mantan Pegawai)
+Kasir sudah dipecat siang ini, namun token *Login/JWT* miliknya di HP Android-nya masih memiliki masa aktif (*expired*) 24 jam ke depan. Dia iseng mem-Void transaksi dari rumahnya malam harinya.
+*   **Opsi A (Stateless JWT):** Sistem tidak bisa menolak selama token belum expired. Kasir berhasil mem-Void.
+*   **Opsi B (Redis Blocklist / Session Revocation):** Saat dipecat di Dashboard, ID Kasir langsung dimasukkan ke daftar Hitam (*Blacklist*) di RAM Redis. Permintaan Void ditolak mentah-mentah meski Token masih valid.
+
+**Pilihan/Jawaban Anda:**Opsi B (Redis Blocklist / Session Revocation) saya juga akan menghapus langsung akun/PIN nya disistem ketika dipecat
+
+
+### 96. Fractional Tax Bracket (Pajak Pecahan)
+Tiga item masing-masing seharga Rp 3.333,33. Total harga Rp 10.000. Jika dihitung PPN 11% secara total (11% x 10rb) = Rp 1.100. TAPI jika PPN dihitung per item (11% x Rp 3.333,33 = Rp 366.66). Dikalikan 3 item = Rp 1.099,98. Ada selisih Rp 0.02.
+*   **Opsi A:** Hitung PPN dari Baris Total Akhir Keranjang (Lebih presisi untuk Akuntansi Negara).
+*   **Opsi B:** Hitung PPN di masing-masing item, lalu dijumlahkan. (Mudah dikoding, tapi rawan selisih pembulatan).
+
+**Pilihan/Jawaban Anda:**Opsi A, jangan masukan pajak ke struk pelanggan, cukup hitung di belakang layar 
+
+
+### 97. Pendaftaran Member Offline Palsu
+POS sedang Offline. Kasir Rina membuat "Member Baru" (Budi - 081122). Budi langsung belanja. Karena offline, DB lokal memberikan ID sementara (Misal: `temp_ID_1`). Kasir mencatatnya. Bagaimana nasib ID ini saat Online nanti?
+*   **Opsi A (UUIDv4):** Sejak awal aplikasi (meski offline) menghasilkan ID Acak panjang (`123e4567-e89b-12d3...`) agar tidak akan pernah bentrok dengan ID dari server pusat saat *sync*.
+*   **Opsi B (Auto-Increment Lokal):** Aplikasi membuat ID angka `1` atau `2`. Sangat dijamin akan bentrok / menimpa data member cabang lain saat *sync* ke server. *(Saran Mutlak: Gunakan UUID).*
+
+**Pilihan/Jawaban Anda:**Opsi A (UUIDv4) mungkin ketika sudah terhubung kembali sistem dapat meekstraksi ID acak menjadi ID baru yang sesuai, tapi ingat untuk pendaftaran member dilakukan VIA form bukan manual kasir.
+
+
+### 98. Serangan DDoS Internal (Virus di Tablet Kasir)
+Tablet Android kasir tidak sengaja terinstall aplikasi malware. Malware tersebut secara diam-diam me- *spam* klik tombol "Cek Stok" 1000 kali per detik ke server VPS Anda.
+*   **Opsi A:** VPS Anda *Down* karena dibombardir oleh perangkat Anda sendiri dari cabang.
+*   **Opsi B (IP + JWT Rate Limiting):** Server cerdas membatasi setiap kasir (berdasarkan Token JWT-nya) maksimal hanya boleh mengirim 50 *Request* per menit. Malware akan terkena *Block* 429 Too Many Requests.
+
+**Pilihan/Jawaban Anda:**Opsi B (IP + JWT Rate Limiting)maksimal hanya boleh mengirim 20 *Request* per menit/ 1 menit
+
+
+### 99. The God Mode (Audit Superadmin)
+Anda sebagai Owner memiliki akses tak terbatas. Anda mengubah HPP bahan baku di bulan lalu untuk menutupi kesalahan pajak. Apakah sistem harus melaporkan hal ini ke sistem audit pihak ketiga (Log eksternal) untuk menghindari penggelapan internal perusahaan (seperti skandal Enron)?
+*   **Opsi A (Write-Only Immutable Log Eksternal):** Semua aksi Superadmin dikirim diam-diam ke log terpisah yang bahkan Superadmin tidak bisa menghapusnya (Misalnya: Datadog / AWS CloudWatch).
+*   **Opsi B (Log di Database Sendiri):** Cukup catat di PostgreSQL. (Risikonya: Superadmin yang jago SQL bisa menghapus jejaknya sendiri).
+
+**Pilihan/Jawaban Anda:**Opsi B (Log di Database Sendiri)
+
+
+### 100. Discrepancy Shrinkage (Hantu Stok)
+Sistem (Software) mengatakan sisa Beras = 10 Kg.
+Sisa fisik di gudang dihitung manual = 8 Kg.
+Kemana hilangnya 2 Kg tersebut? Apakah dimakan tikus (Waste) atau dicuri karyawan (Theft)?
+*   **Opsi A (Input Langsung Penyesuaian Angka):** Anda langsung mengedit kolom stok dari 10 menjadi 8. Sistem kehilangan jejak.
+*   **Opsi B (Fitur Stock Opname Terdedikasi):** Anda harus membuat dokumen *Stock Opname* resmi. Sistem akan memaksa Anda memilih alasan "Penyusutan" untuk 2 Kg tersebut, dan nilainya akan otomatis dikalkulasi sebagai kerugian di Laporan Rugi-Laba agar metrik bisnis Anda tetap imbang.
+
+**Pilihan/Jawaban Anda:**Opsi B (Fitur Stock Opname Terdedikasi)
+---
+
+## III. ANALISA & JAWABAN DARI SENIOR ENGINEER (Atas Keraguan Anda)
+Berdasarkan 10 keraguan/pertanyaan yang Anda ajukan sebelumnya, berikut adalah penjabaran Opsi beserta Saran dan Solusi Terbaik dari kacamata arsitektur skala Enterprise:
+
+### 101. Penjelasan Grace Period Member (Follow-up Soal 29)
+Jika server down seharian, masa aktif tier "Gold" pelanggan hangus tanpa kompensasi.
+*   **Opsi A (Abaikan/Masa Bodoh):** Pelanggan gagal mendapat diskon keesokan harinya. (Hemat resource server, tapi berisiko komplain besar).
+*   **Opsi B (Script Tambah Hari Otomatis):** Server otomatis menambah masa aktif +1 hari ke seluruh member saat server menyala kembali.
+    *   **Rekomendasi Senior Engineer:** **Gunakan Opsi B**. Biaya komplain dan pelanggan yang *churn* (pindah ke kompetitor) jauh lebih mahal daripada baris kode *cron-job* sederhana ini.
+
+**Pilihan/Jawaban Anda:**Opsi B (Script Tambah Hari Otomatis)
+
+
+### 102. Penjelasan Free Item Harga Rp 0 (Follow-up Soal 32)
+Bagaimana mencatat barang gratisan secara akuntansi di sistem POS?
+*   **Opsi A (Beban Marketing/Opex):** Barang diproses normal dengan harga asli, tapi biayanya otomatis dipotongkan ke Jurnal Opex (Biaya Marketing). Sangat presisi secara akuntansi murni, tapi luar biasa rumit dibuat.
+*   **Opsi B (Diskon 100% / Harga Rp 0):** Barang diproses dengan Harga 0. Stok barang berkurang, tapi omzetnya 0. Laba Bersih otomatis berkurang secara alami mengikuti keluarnya HPP barang tersebut.
+    *   **Rekomendasi Senior Engineer:** **Gunakan Opsi B**. Skema database PRD Anda saat ini sudah sangat mendukung pendekatan ini, cepat dibuat dan cukup akurat secara bisnis F&B.
+
+**Pilihan/Jawaban Anda:**Opsi B (Diskon 100% / Harga Rp 0)
+
+
+### 103. Shift Kasir Buka Sampai Jam 02:00 Pagi (Follow-up Soal 39)
+Bagaimana memutus dan menutup shift kasir jika warung beroperasi melewati pergantian hari (tengah malam)?
+*   **Opsi A (Cut-off Kalender Jam 00:00):** Sistem memutus paksa transaksi tepat jam 23:59. Struk yang dicetak jam 00:01 masuk ke hari berikutnya. (Kaku dan membingungkan laporan harian warung).
+*   **Opsi B (Idle Timeout / Max Duration):** Jangan gunakan jam kalender 00:00. Shift otomatis ditutup jika POS "menganggur" (tidak ada transaksi) selama 4 jam berturut-turut, atau telah mencapai batas maksimum 16 jam sejak kasir *login*.
+    *   **Rekomendasi Senior Engineer:** **Gunakan Opsi B**. Penjualan jam 01:00 Pagi tetap akan masuk ke Laporan Omzet Hari H-1 (mengikuti *business day* warung Anda).
+
+**Pilihan/Jawaban Anda:**Opsi B (Idle Timeout / Max Duration)
+
+
+### 104. Deteksi Fraud "Ghost Order" (Follow-up Soal 53)
+Bagaimana cara sistem (Opsi B) mendeteksi Kasir yang mencetak struk tapi mengantongi uangnya?
+*   **Opsi A (Void dengan PIN):** Cara konvensional. Kasir tidak bisa membatalkan/menghapus pesanan tanpa diketikkan PIN oleh Manager.
+*   **Opsi B (Log Print Count + Anomaly Alert):** Sistem mencatat berapa kali printer mengeluarkan struk. Jika sebuah pesanan sudah pernah di-Print (Print Count = 1), namun di akhir hari pesanan tersebut dibatalkan (Clear Cart) oleh kasir, sistem menilainya sebagai "Anomali Uang Masuk Kantong" dan mengirim laporan email ke Owner.
+    *   **Rekomendasi Senior Engineer:** **Gunakan Opsi B**. Kasir bebas bergerak cepat melayani pelanggan tanpa harus teriak-teriak minta PIN Manager, namun pencurian uang 100% akan selalu ketahuan di laporan pagi hari Anda.
+
+**Pilihan/Jawaban Anda:**Opsi B (Log Print Count + Anomaly Alert)
+
+
+### 105. Biaya OTP Email untuk Superadmin (Follow-up Soal 60)
+Apakah Anda perlu membayar biaya tambahan/layanan khusus untuk OTP Email?
+*   **Opsi A (Layanan Email Berbayar AWS/Mailgun):** Sangat tangguh, namun Anda harus membayar biaya bulanan (sekitar $1 per 1000 email).
+*   **Opsi B (Layanan Free-Tier Resend.com / SendGrid):** Menggunakan API gratis yang memberikan jatah 3.000 email per bulan (100 email per hari) selamanya tanpa bayar.
+    *   **Rekomendasi Senior Engineer:** **Gunakan Opsi B**. Kebutuhan OTP hanya untuk Owner dan Manager Cabang (Sangat sedikit). 3.000 email gratis per bulan sudah lebih dari cukup. Anda tidak perlu bayar sepeser pun.
+
+**Pilihan/Jawaban Anda:**Opsi B (Layanan Free-Tier Resend.com / SendGrid) buat juga opsi matikan alert email ini di sistem admin karena terkadang saya lebih dominan liat dashboard admin.
+
+
+### 106. Noisy Neighbor pada Shared Table (Follow-up Soal 62)
+Kenapa harus repot membatasi filter tanggal pencarian di Database, padahal semua cabangnya milik Anda sendiri?
+*   **Opsi A (Tanpa Batasan Filter):** Anda bisa iseng men-download laporan seluruh cabang selama 5 tahun ke belakang sekaligus lewat HP Anda. Akibatnya: CPU VPS melonjak 100%. Kasir yang saat itu sedang melayani pelanggan akan mengalami *Error/Timeout/Lag* karena Server sibuk melayani *request* Anda.
+*   **Opsi B (Filter Tanggal Ketat Maksimal 30 Hari):** Dashboard mencegah tarikan data raksasa di UI utama. 
+    *   **Rekomendasi Senior Engineer:** **Gunakan Opsi B**. Jika Anda butuh men-download data 5 tahun, sistem harus diarahkan memakai fitur *Background Task* (seperti ekspor ke CSV lambat di latar belakang), agar Server Kasir Utama tetap ringan 60fps setiap saat.
+
+**Pilihan/Jawaban Anda:**Opsi B (Filter Tanggal Ketat Maksimal 30 Hari)
+
+
+### 107. Algoritma Employee Sweet-Hearting (Follow-up Soal 66)
+Bagaimana mencegah Kasir menscan Nomor HP Member miliknya sendiri ke semua pelanggan cash?
+*   **Opsi A (Validasi Manual / Audit Mata):** Anda selaku Owner memelototi laporan "Top Member" setiap bulan dan menebak-nebak mana yang mencurigakan.
+*   **Opsi B (Rate Limiting per ID):** Sistem cerdas di NestJS otomatis memblokir nomor member yang terdeteksi berbelanja lebih dari 3x dalam 1 shift. Nomor tersebut tidak akan mendapat poin lagi hari itu, dan ditandai merah (*flagged*) di Dashboard Superadmin.
+    *   **Rekomendasi Senior Engineer:** **Gunakan Opsi B**. Mengamankan stok hadiah/poin Anda dari "Pencurian Halus" tanpa perlu menambah *workload* pengecekan manual Anda.
+
+**Pilihan/Jawaban Anda:**Opsi B (Rate Limiting per ID)
+
+
+### 108. Kebijakan Redis Eviction (Follow-up Soal 13)
+Apa bedanya parameter `noeviction` dan `volatile-lru` di Redis saat memori RAM penuh?
+*   **Opsi A (`noeviction`):** Jika penuh, Redis menolak semua data baru. **Efek:** Kasir baru gagal *login*, transaksi macet total, sistem lumpuh.
+*   **Opsi B (`volatile-lru`):** Jika penuh, Redis akan secara otomatis menghapus data "sampah sementara" (misal: *Cache Menu Makanan*) demi mengosongkan ruang agar kasir bisa login dan transaksi (*Session*) tetap hidup.
+    *   **Rekomendasi Senior Engineer:** **Gunakan Opsi B (`volatile-lru`)**. Ini adalah sabuk pengaman yang memastikan operasional lapangan warung Anda tidak akan pernah lumpuh secara mendadak.
+
+**Pilihan/Jawaban Anda:**Opsi B (`volatile-lru`)
+
+
+### 109. Endpoint Health Check Docker (Follow-up Soal 14)
+Kenapa Docker butuh rute khusus untuk mengecek apakah aplikasi masih hidup?
+*   **Opsi A (Pengecekan lewat API Publik `/health`):** Rute publik diawasi oleh modul Keamanan Anti-Spam (Rate Limiting). Karena Docker nge-ping setiap 30 detik, Docker bisa dianggap sebagai *Spammer* dan diblokir oleh aplikasinya sendiri! Lalu Docker mengira aplikasinya mati dan me-*restart* Server Anda sia-sia.
+*   **Opsi B (Buat Rute VIP `/health-internal`):** Membuat pintu belakang khusus yang tidak dipasangi alat *Anti-Spam*, eksklusif hanya untuk di-cek oleh Docker.
+    *   **Rekomendasi Senior Engineer:** **Gunakan Opsi B**. Praktik wajib untuk *Containerized App* agar VPS Anda sangat stabil dan tidak *restart-looping*.
+
+**Pilihan/Jawaban Anda:**Opsi B (Buat Rute VIP `/health-internal`)
+
+
+### 110. Perhitungan PPN 11% Tax Inclusive (Follow-up Soal 26)
+Bagaimana rumus matematika sistem memecah harga yang sudah termasuk PPN?
+*   **Opsi A (Ekstrak PPN Otomatis dari Harga Jual):** Harga Es Teh di menu Rp 11.100. Pelanggan bayar Rp 11.100. Di balik layar, sistem membelahnya menjadi: **Omzet Asli Perusahaan = Rp 10.000**, dan **Titipan Pajak Negara = Rp 1.100**. Pembagian Bonus/Profit Kasir 40% HANYA dihitung dari Omzet Asli (Rp 10.000).
+*   **Opsi B (Abaikan PPN):** Laporan Omzet tercatat kotor Rp 11.100. Kasir menuntut bonus 40% dari angka tersebut (meskipun sebagian uang itu nantinya milik negara).
+    *   **Rekomendasi Senior Engineer:** **Gunakan Opsi A**. Wajib dirancang dari hari pertama agar ketika bisnis Anda resmi menjadi PKP (Pengusaha Kena Pajak), Anda tidak *collapse* karena membayari pajak dari kantong pribadi.
+
+**Pilihan/Jawaban Anda:**Opsi A (Ekstrak PPN Otomatis dari Harga Jual), untuk mekanisme pajak ini saya ingin pembulatan angka nya diangka RP.500 paling kecil karena mengembalikan uang RP.100,RP.200 cukup membuat kasir kesusahan. saya menghindari uang pecah/ kembalian dibawah 500 rupiah 
+
+---
+
+
+
+
+---
+---
+*Selesai! 100 Pertanyaan Arsitektur Tingkat Dewa. Jika sistem POS Anda bisa menjawab dan menangani sebagian besar studi kasus ini, Anda benar-benar sedang membangun Mahakarya Software yang siap digunakan oleh Ribuan Cabang!*
+
+## L. KLARIFIKASI FINAL DARI SENIOR ENGINEER (Follow-up Ronde 3)
+Berikut adalah penjelasan untuk 4 poin yang Anda tanyakan kembali di Ronde 3. Silakan berikan konfirmasi atau jawaban akhir Anda:
+
+### 111. Penjelasan Soal 76 (Event Sourcing vs CRUD)
+Anda meminta opsi terbaik. **Saran Terbaik:** Gunakan **CRUD Biasa** (Opsi A).
+*Penjelasan:* *Event Sourcing* itu seperti buku tabungan Bank (menyimpan riwayat setiap detik perubahan uang). Ini membuat *database* raksasa dan rumit. Untuk aplikasi POS, kita hanya butuh hasil akhir pesanan (Status Lunas/Batal). Pendekatan CRUD (memperbarui data secara langsung) jauh lebih ringan, cepat, dan masuk akal untuk warung/franchise.
+
+**Pilihan/Jawaban Anda:** saya setuju
+
+
+### 112. Penjelasan "Perbaiki Manual" di Soal 79 (Saga Pattern)
+Anda meminta penjelasan tentang perbaikan manual di Opsi A.
+*Penjelasan:* Pelanggan *scan* QRIS dan uangnya terpotong. Midtrans melempar sinyal ke server Anda. Tiba-tiba server *database* Anda putus sedetik, sehingga sistem gagal memotong stok gudang dan struk tidak keluar. Di layar kasir tertulis "Gagal". Pelanggan akan marah karena uangnya sudah terpotong. **"Perbaiki Manual"** berarti Anda (Owner) harus membuka aplikasi *dashboard Midtrans* di HP Anda, mencari transaksi tersebut, lalu menekan tombol **"Refund"** secara manual agar uangnya dikembalikan oleh sistem bank ke pelanggan.
+
+**Pilihan/Jawaban Anda:** sepertinya ini sedikit ambigu, bagaimana jika uang costumer sudah terbayar dari layar HPnya maka kasir langsung saja membuatkan pesanannya. tapi jadikan pesanan pelanggan notif/alert/ ditandai karena anomali karena kesalahan database/jaringan. bagaimana saran saya? apakah masuk akal?
+
+
+### 113. Daftar File yang "HARAM" Di-Push ke GitHub (Follow-up Soal 93)
+Anda meminta bantuan apa saja yang tidak boleh di-push. Agar sistem Anda aman dari peretas, **jangan pernah** mem-push hal berikut ke repositori GitHub Publik:
+1. File `.env` (Semua file yang mengandung kata `.env`).
+2. **Midtrans Server Key** dan **Client Key**.
+3. **JWT Secret Key** (Kunci rahasia untuk membuat token kasir).
+4. Password dan *Connection String* database PostgreSQL/Redis.
+5. *Private Keys* (.pem / .ppk / ssh keys) untuk masuk ke VPS Anda.
+
+**Pilihan/Jawaban Anda:** saya paham
+
+
+### 114. Logika Pembulatan Rp 500 (Follow-up Soal 110)
+Ide Anda soal pembulatan ke kelipatan Rp 500 terdekat (*Rounding to nearest 500*) ini sangat jenius secara operasional. Nantinya, sistem akan menghitung harga barang + pajak di belakang layar (Misal: Total = Rp 14.150). Sistem akan secara otomatis membulatkannya menjadi Rp 14.000 atau Rp 14.500 sebelum muncul di QRIS / layar kasir, agar kasir tidak pusing mencari uang kembalian receh. 
+*Apakah Anda setuju logika pembulatan otomatis ini diterapkan sebagai standar mutlak di backend?*
+
+**Pilihan/Jawaban Anda:** ya saya setuju, jangan lupa logic programnya
+
+
+---
+*Setelah Anda menjawab bagian L ini, sistem POS Ngemiloh benar-benar 100% siap dieksekusi tanpa ada satupun celah abu-abu yang tersisa!*
 

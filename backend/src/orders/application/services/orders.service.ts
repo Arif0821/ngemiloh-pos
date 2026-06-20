@@ -922,25 +922,15 @@ export class OrdersService {
     const today = startOfDay();
 
     // PERFORMANCE: Use database aggregation instead of fetching all orders into memory
-    const aggregate = await this.prisma.order.aggregate({
-      where: {
-        created_at: { gte: today },
-        cashier_id: kasirId,
-        status: OrderStatus.completed,
-      },
-      _sum: {
-        cash_amount: true,
-        qris_amount: true,
-        total_amount: true,
-      },
-      _count: true,
+    const aggregate = await this.orderRepository.aggregateOrders({
+      created_at: { gte: today },
+      cashier_id: kasirId,
+      status: OrderStatus.completed,
     });
 
-    // For split payments, we need individual amounts which can't be aggregated easily
-    // Fall back to counting completed orders and use aggregate for totals
     const totalOrders = aggregate._count;
-    const totalCash = Number(aggregate._sum.cash_amount) || 0;
-    const totalQris = Number(aggregate._sum.qris_amount) || 0;
+    const totalCash = aggregate._sum.cash_amount || 0;
+    const totalQris = aggregate._sum.qris_amount || 0;
 
     return {
       date: today.toISOString(),
