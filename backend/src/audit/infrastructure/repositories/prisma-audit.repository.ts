@@ -34,10 +34,9 @@ export class PrismaAuditRepository implements IAuditRepository {
       `);
 
       this.logger.log('Immutable Audit Log trigger applied to database.');
-    } catch (e) {
+    } catch {
       this.logger.error(
         'Failed to apply immutable trigger on AuditLog (Might be unsupported on SQLite/Other DBs)',
-        e,
       );
     }
   }

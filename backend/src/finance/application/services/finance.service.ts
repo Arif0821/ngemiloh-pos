@@ -83,7 +83,9 @@ export class FinanceService {
     };
     for (const row of paymentCounts) {
       if (row.payment_method in paymentDistribution) {
-        paymentDistribution[row.payment_method as keyof typeof paymentDistribution] = Number(row.count);
+        paymentDistribution[
+          row.payment_method as keyof typeof paymentDistribution
+        ] = Number(row.count);
       }
     }
 

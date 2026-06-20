@@ -34,7 +34,9 @@ export class PrismaOrderRepository implements OrderRepositoryInterface {
   async findActiveDiscounts(): Promise<Discount[]> {
     // PERFORMANCE: Cache active discounts with 60s TTL
     try {
-      const cached = await this.redisService.get(this.ACTIVE_DISCOUNTS_CACHE_KEY);
+      const cached = await this.redisService.get(
+        this.ACTIVE_DISCOUNTS_CACHE_KEY,
+      );
       if (cached) {
         return JSON.parse(cached);
       }

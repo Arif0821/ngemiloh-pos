@@ -107,7 +107,9 @@ export class PrismaFinanceRepository implements IFinanceRepository {
     data: Prisma.ProfitShareDetailUncheckedCreateInput[],
   ): Promise<ProfitShareDetailResult[]> {
     // F19: Use createManyAndReturn for PostgreSQL to get created records with IDs
-    const result = await this.prisma.profitShareDetail.createManyAndReturn({ data });
+    const result = await this.prisma.profitShareDetail.createManyAndReturn({
+      data,
+    });
     return result as unknown as ProfitShareDetailResult[];
   }
 
