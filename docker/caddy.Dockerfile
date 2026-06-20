@@ -29,10 +29,12 @@ FROM mirror.gcr.io/library/caddy:2-alpine
 RUN apk upgrade -U --available -X https://dl-cdn.alpinelinux.org/alpine/edge/main && \
     apk add --no-cache openssl
 
-COPY Caddyfile /etc/caddy/Caddyfile
+COPY ../Caddyfile /etc/caddy/Caddyfile
 
 # Copy error pages
-COPY caddy/error_pages /etc/caddy/error_pages
+COPY ../caddy/error_pages /etc/caddy/error_pages
 
 # Copy hasil build frontend ke Caddy
 COPY --from=builder /app/build /srv
+
+# Note: Base image (caddy:2-alpine) already includes HEALTHCHECK

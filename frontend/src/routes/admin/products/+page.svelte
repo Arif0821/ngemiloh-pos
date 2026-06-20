@@ -3,6 +3,8 @@
 	import { format_rp } from '$lib/utils/format';
 	import { onMount } from 'svelte';
 	import { toast } from '$lib/stores/toast.store.svelte';
+	import { sanitize_product_name, parse_safe_number } from '$lib/utils/sanitize';
+	import { focus_trap } from '$lib/utils/a11y';
 
 	import type { ProductItem, ModifierGroup } from '$lib/domain/models/types';
 
@@ -59,13 +61,22 @@
 
 	async function save_product(e: Event) {
 		e.preventDefault();
+		// SECURITY FIX F-03: Sanitize inputs before sending to backend
+		const sanitized_name = sanitize_product_name(p_name);
+		const sanitized_price = parse_safe_number(p_base_price);
+
+		if (!sanitized_name.trim()) {
+			toast.error('Nama produk tidak boleh kosong');
+			return;
+		}
+
 		try {
 			const url = is_editing ? `/products/${p_id}` : `/products`;
 			const method = is_editing ? 'PATCH' : 'POST';
 
 			const payload = {
-				name: p_name,
-				base_price: Number(p_base_price),
+				name: sanitized_name,
+				base_price: sanitized_price,
 				is_out_of_stock: p_is_out_of_stock,
 				is_active: p_is_active
 			};
@@ -356,14 +367,20 @@
 
 <!-- Modal Form Produk -->
 {#if show_product_modal}
-	<div class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/75 p-4">
-		<div class="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl">
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/75 p-4"
+		onkeydown={(e) => e.key === 'Escape' && (show_product_modal = false)}
+		onclick={(e) => e.target === e.currentTarget && (show_product_modal = false)}
+	>
+		<div class="w-full max-w-lg overflow-hidden rounded-2xl bg-white shadow-xl" use:focus_trap>
 			<div class="flex items-center justify-between border-b border-slate-200 bg-slate-50 p-6">
 				<h3 class="text-xl font-bold text-slate-800">
 					{is_editing ? 'Edit Produk' : 'Tambah Produk Baru'}
 				</h3>
 				<button
 					onclick={() => (show_product_modal = false)}
+					aria-label="Tutup modal"
 					class="text-slate-400 hover:text-slate-600">X</button
 				>
 			</div>

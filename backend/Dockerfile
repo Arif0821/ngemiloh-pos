@@ -1,8 +1,8 @@
 # ============================================================
 # Stage 1: Builder - Compile TypeScript
-# Using node:22-alpine (LTS) - fewer CVEs than node:20
+# Using node:20-alpine (LTS) - standardized across all Dockerfiles and CI
 # ============================================================
-FROM --platform=linux/amd64 node:22-alpine AS builder
+FROM --platform=linux/amd64 node:20-alpine AS builder
 
 # Set build arguments for better caching
 ARG NODE_ENV=development
@@ -29,22 +29,21 @@ RUN npx prisma generate && \
     echo "=== Build complete ==="
 
 # ============================================================
-# Stage 2: Production Runtime - Alpine Linux (Minimal + Shell)
+# Stage 2: Production Runtime - Alpine Linux (Minimal)
 # ============================================================
-FROM --platform=linux/amd64 node:22-alpine AS production
+FROM --platform=linux/amd64 node:20-alpine AS production
 
 # Metadata
 LABEL maintainer="Ngemiloh POS"
 LABEL description="Ngemiloh POS - NestJS Backend API"
 
-# Security: Install only what's needed
-# Note: curl has unfixed CVEs, but we need it for health checks
-# Consider using distroless image in future for zero CVEs
+# Security: Minimal image - only openssl for health checks
+# No global npm packages - use local dependencies from builder stage
 RUN apk add --no-cache \
     openssl \
     && rm -rf /var/cache/apk/*
 
-# Health check using node built-in (no curl needed)
+# Health check using node built-in (no external dependencies needed)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD node -e "const http=require('http');http.get('http://localhost:3000/health',(r)=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"
 
@@ -64,29 +63,35 @@ ENV NPM_CONFIG_LOGLEVEL=warn
 COPY --from=builder --chown=appuser:appgroup /app/package.json /app/package-lock.json* ./
 
 # Install ONLY production dependencies (omit devDependencies)
-# Note: We intentionally use npm here even though it has CVEs in its bundled deps,
-# because we remove npm after installation - it's only used at build time
+# Note: We keep npm for migrations
 RUN npm ci --omit=dev --ignore-scripts --legacy-peer-deps && \
-    echo "=== Production dependencies installed ===" && \
-    # Remove npm CLI and its bundled dependencies to eliminate base image CVE exposure
-    # npm is not needed at runtime - we only use 'node' to run the application
-    rm -rf /usr/local/lib/node_modules/npm && \
-    echo "=== npm CLI removed ==="
+    echo "=== Production dependencies installed ==="
 
-# Copy Prisma schema + generated client from builder
+# Copy Prisma schema from builder
 COPY --from=builder --chown=appuser:appgroup /app/prisma ./prisma
 COPY --from=builder --chown=appuser:appgroup /app/node_modules/.prisma ./node_modules/.prisma
 COPY --from=builder --chown=appuser:appgroup /app/node_modules/@prisma ./node_modules/@prisma
+COPY --from=builder --chown=appuser:appgroup /app/node_modules/prisma ./node_modules/prisma
+COPY --from=builder --chown=appuser:appgroup /app/node_modules/.bin ./node_modules/.bin
+
+# Generate Prisma client for this platform (Alpine/musl)
+# This must run in production stage to get correct platform binaries
+RUN npx prisma generate && \
+    echo "=== Prisma client generated ==="
 
 # Copy built application
 COPY --from=builder --chown=appuser:appgroup /app/dist ./dist
 
-# Copy tsconfig.json - needed by ts-node for migrations
-COPY --from=builder --chown=appuser:appgroup /app/tsconfig.json ./tsconfig.json
+# Copy ts-node and typescript from builder for seeding
+COPY --from=builder --chown=appuser:appgroup /app/node_modules/ts-node ./node_modules/ts-node
+COPY --from=builder --chown=appuser:appgroup /app/node_modules/ts-node/dist ./node_modules/ts-node/dist
+COPY --from=builder --chown=appuser:appgroup /app/node_modules/.bin/ts-node ./node_modules/.bin/ts-node
+COPY --from=builder --chown=appuser:appgroup /app/node_modules/typescript ./node_modules/typescript
+COPY --from=builder --chown=appuser:appgroup /app/node_modules/.bin/tsc ./node_modules/.bin/tsc
+COPY --from=builder --chown=appuser:appgroup /app/node_modules/tsconfig-paths ./node_modules/tsconfig-paths
 
-# Install Prisma CLI for migrations (needed at runtime for seeding)
-COPY --from=builder --chown=appuser:appgroup /app/node_modules/.bin ./node_modules/.bin
-COPY --from=builder --chown=appuser:appgroup /app/node_modules/prisma ./node_modules/prisma
+# Copy tsconfig for seed
+COPY --from=builder --chown=appuser:appgroup /app/tsconfig.json ./tsconfig.json
 
 # Copy startup script
 COPY docker-entrypoint.sh /app/docker-entrypoint.sh

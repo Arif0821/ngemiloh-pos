@@ -37,15 +37,14 @@
 				return;
 			}
 
-			// Langsung berhasil (mode tanpa OTP - fallback)
+			// Defense-in-depth: Backend sudah menolak non-superadmin di auth.service.ts
+			// Check ini sebagai validasi tambahan di frontend
 			if (data.data?.role !== 'superadmin') {
 				throw new Error('Akses ditolak: Hanya Superadmin yang diizinkan');
 			}
 
-			// Store CSRF token (access token is httpOnly cookie set by backend)
-			if (data.csrfToken) {
-				localStorage.setItem('csrf_token', data.csrfToken);
-			}
+			// SECURITY FIX F-01: CSRF token is now set as httpOnly cookie by backend
+			// No need to store in localStorage anymore
 			// Store user data in localStorage for layout guards
 			localStorage.setItem('user', JSON.stringify(data.data));
 

@@ -1,6 +1,7 @@
 <script lang="ts">
 	import '../app.css';
 	import Toast from '$lib/components/Toast.svelte';
+	import ErrorBoundary from '$lib/components/ErrorBoundary.svelte';
 	let { children } = $props();
 </script>
 
@@ -18,5 +19,7 @@
 	<!-- CSP is configured server-side in backend/main.ts and Caddy proxy -->
 </svelte:head>
 
-{@render children()}
+<ErrorBoundary>
+	{@render children()}
+</ErrorBoundary>
 <Toast />

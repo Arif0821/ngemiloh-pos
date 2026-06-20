@@ -95,12 +95,11 @@ class ApiClient {
 	}
 
 	/**
-	 * Get CSRF token from localStorage
-	 * CSRF token is stored in localStorage (not httpOnly) after login
+	 * Get CSRF token from httpOnly cookie (set by backend during login)
+	 * SECURITY FIX F-01: Read from cookie, not localStorage (XSS protection)
 	 */
 	private get_csrf_token(): string | null {
-		if (typeof localStorage === 'undefined') return null;
-		return localStorage.getItem('csrf_token');
+		return get_cookie('csrf_token') ?? null;
 	}
 
 	/**

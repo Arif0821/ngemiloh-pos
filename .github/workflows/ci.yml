@@ -292,19 +292,23 @@ jobs:
           format: sarif
           output: trivy-results.sarif
           severity: HIGH,CRITICAL
-          exit-code: '0'
+          exit-code: '1'  # FAIL on HIGH/CRITICAL vulnerabilities (except ignored ones)
           ignore-unfixed: true
           trivyignores: |
             .trivyignore
 
-      - name: Check for unignored vulnerabilities
+      - name: Check Trivy scan results
+        if: always()
         run: |
+          echo "=== Trivy Security Scan Results ==="
           if [ -f trivy-results.sarif ]; then
-            # Count HIGH/CRITICAL vulnerabilities that are NOT in .trivyignore
-            # If count > 0, fail with clear message
-            echo "Checking for unignored HIGH/CRITICAL vulnerabilities..."
-            # Trivy akan exit dengan code sesuai jumlah vulnerability yang TIDAK diabaikan
-            # Jika semua sudah diabaikan, trivy akan exit 0
+            count=$(cat trivy-results.sarif | jq -r '.runs[0].results | length // 0')
+            echo "HIGH/CRITICAL vulnerabilities found (not in .trivyignore): $count"
+            if [ "$count" -gt 0 ]; then
+              echo "See Security tab for details or check trivy-results.sarif artifact"
+            fi
+          else
+            echo "No unignored vulnerabilities detected"
           fi
 
       - name: Upload Trivy results to GitHub Security

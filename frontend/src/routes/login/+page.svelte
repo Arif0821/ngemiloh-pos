@@ -54,21 +54,15 @@
 			const data = await res.json();
 
 			if (data.success || data.accessToken || data.data) {
-				// Login berhasil - cek apakah perlu ganti PIN (AUTH-13)
+				// SECURITY FIX F-01: CSRF token is now set as httpOnly cookie by backend
+				// No need to store in localStorage anymore
 				const user_data = data.data || data;
+
 				if (user_data.must_change_pin) {
-					// Simpan CSRF token untuk change-pin page
-					if (data.csrfToken) {
-						localStorage.setItem('csrf_token', data.csrfToken);
-					}
 					// Simpan user ke localStorage untuk change-pin page
 					localStorage.setItem('pending_pin_change', JSON.stringify(user_data));
 					goto('/change-pin');
 				} else {
-					// Simpan CSRF token (access token is httpOnly cookie set by backend)
-					if (data.csrfToken) {
-						localStorage.setItem('csrf_token', data.csrfToken);
-					}
 					// Simpan user info ke localStorage (untuk role guard di layout)
 					localStorage.setItem('user', JSON.stringify(user_data));
 					goto('/pos');

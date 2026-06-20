@@ -2,6 +2,7 @@
 	import { api } from '$lib/services/api.client';
 	import { toast } from '$lib/stores/toast.store.svelte';
 	import { onMount } from 'svelte';
+	import { format_rp } from '$lib/utils/format';
 	import type { OrderResponse } from '$lib/domain/models/types';
 
 	let orders = $state<OrderResponse[]>([]);
@@ -100,14 +101,6 @@
 		} catch (e) {
 			toast.error('Gagal menandai transaksi. Cek koneksi Anda.');
 		}
-	}
-
-	function format_rp(amount: number) {
-		return new Intl.NumberFormat('id-ID', {
-			style: 'currency',
-			currency: 'IDR',
-			minimumFractionDigits: 0
-		}).format(amount);
 	}
 </script>
 

@@ -1,17 +1,6 @@
 import { db, type LocalProduct, type ModifierOption } from '$lib/db';
-import type { Discount, OrderResponse } from '../domain/models/types';
+import type { CartItem, Discount, OrderResponse } from '../domain/models/types';
 import { DEFAULT_OPENING_BALANCE, QRIS_COUNTDOWN_SECONDS, format_rp } from '../utils/format';
-
-// ============================================
-// CART ITEM TYPE
-// Using snake_case naming
-// ============================================
-
-export type CartItem = LocalProduct & {
-	quantity: number;
-	cart_item_id: string;
-	selected_modifiers: ModifierOption[];
-};
 
 // ============================================
 // POS STORE - Main Application State

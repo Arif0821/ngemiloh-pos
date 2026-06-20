@@ -8,6 +8,16 @@ export const FLAG_REFRESH_INTERVAL_MS = 60000; // 1 minute
 export const DEFAULT_OPENING_BALANCE = 500000; // Rp 500,000
 export const MIN_QRIS_PAYMENT = 1000; // Rp 1,000
 
+// FIX F-05: Business constants moved from hardcoded values
+export const DAILY_REVENUE_TARGET = 5000000; // Rp 5.000.000 daily target
+export const KPI_REFRESH_INTERVAL_MS = 60000; // Refresh KPI every 1 minute
+
+// FIX F-09: Magic numbers extracted to constants
+export const QRIS_POLLING_INTERVAL_MS = 5000; // Poll Midtrans every 5 seconds
+export const HEALTH_CHECK_INTERVAL_MS = 30000; // Health check every 30 seconds
+export const API_REQUEST_TIMEOUT_MS = 30000; // API request timeout 30 seconds
+export const CASH_PRESET_AMOUNTS = [10000, 20000, 50000, 100000] as const;
+
 /**
  * Format number to Indonesian Rupiah (snake_case function name)
  */

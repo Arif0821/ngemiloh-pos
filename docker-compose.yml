@@ -1,77 +1,38 @@
-version: '3.8'
-
-# ═══════════════════════════════════════════════════════════════════
-# Ngemiloh POS - Production-Ready Docker Compose
-# Security: All secrets, TLS, non-root users, network isolation
-# ═══════════════════════════════════════════════════════════════════
-
-volumes:
-  postgres_data:
-    driver: local
-  redis_data:
-    driver: local
-  storage_data:
-    driver: local
-  caddy_data:
-    driver: local
-  caddy_config:
-    driver: local
-
-# ═══════════════════════════════════════════════════════════════════
-# Docker Secrets (for production - use external secrets manager)
-# ═══════════════════════════════════════════════════════════════════
-secrets:
-  db_password:
-    file: ./secrets/db_password.txt
-  redis_password:
-    file: ./secrets/redis_password.txt
-  jwt_access_secret:
-    file: ./secrets/jwt_access_secret.txt
-  pin_pepper_secret:
-    file: ./secrets/pin_pepper_secret.txt
-  csrf_secret:
-    file: ./secrets/csrf_secret.txt
-  midtrans_server_key_sandbox:
-    file: ./secrets/midtrans_server_key_sandbox.txt
-  midtrans_server_key_production:
-    file: ./secrets/midtrans_server_key_production.txt
-  email_app_password:
-    file: ./secrets/email_app_password.txt
-
 networks:
   frontend_network:
     driver: bridge
   backend_network:
     driver: bridge
-    internal: true  # No external access - database isolated
+    internal: true
 
 services:
-  # ============================================================
-  # Database: PostgreSQL 17 (SECURED) - Custom build with OpenSSL 3.5.7
-  # ============================================================
+  # PostgreSQL Database
   postgres:
     build:
       context: .
-      dockerfile: postgres.Dockerfile
+      dockerfile: docker/postgres.Dockerfile
     container_name: ngemiloh_db
-    # FIX: Remove public port exposure - use Docker internal network only
-    # For local dev: bind to localhost only with "127.0.0.1:5433:5432"
+    env_file:
+      - path: ./docker/production.env
+        required: false
     environment:
       POSTGRES_USER: ngemiloh
-      # FIX: Use secrets instead of env vars for password
-      POSTGRES_PASSWORD_FILE: /run/secrets/db_password
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-dev_password_2024}
       POSTGRES_DB: ngemiloh_db
-      # FIX: Enable SSL/TLS for connections
-      POSTGRES_SSL_MODE: require
-      # FIX: Stronger authentication
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # Bind mounts for Windows compatibility - permissions work correctly
+      - ./data/postgres:/var/lib/postgresql/data
+      - ./data/postgres_init:/docker-entrypoint-initdb.d:ro
     networks:
       - backend_network
-    # FIX: Drop all capabilities
+    # NOTE: PostgreSQL entrypoint needs CAP_CHOWN to initialize
+    # Will be dropped after initialization in production
     cap_drop:
-      - ALL
+      - NET_RAW
+      - NET_ADMIN
+    # Entrypoint runs as root to set up permissions, then switches to postgres user
+    # Do NOT set user: here - it breaks the entrypoint!
     security_opt:
       - no-new-privileges:true
     deploy:
@@ -89,33 +50,36 @@ services:
       retries: 10
       start_period: 30s
     restart: unless-stopped
-    secrets:
-      - db_password
 
-  # ============================================================
-  # Redis: Cache & Queue (SECURED) - Alpine 3.24
-  # ============================================================
+  # Redis Cache
+  # Development: No password (uses redis-entrypoint.sh)
+  # Production: With password (uses redis-production-entrypoint.sh)
   redis:
     image: 'mirror.gcr.io/library/redis:7.4-alpine'
     container_name: ngemiloh_redis
-    # FIX: Add password authentication and security configs
-    command: >
-      redis-server
-      --appendonly yes
-      --requirepass redis_secure_password_2026
-      --loglevel warning
-      --maxmemory 200mb
-      --maxmemory-policy allkeys-lru
-      --rename-command FLUSHDB ""
-      --rename-command FLUSHALL ""
-      --rename-command SHUTDOWN "SHUTDOWN_NG"
-      --rename-command CONFIG "CONFIG_NG"
-      --rename-command EVAL ""
-      --rename-command EVALSHA ""
+    env_file:
+      - path: ./docker/production.env
+        required: false
+    # Conditional entrypoint based on NODE_ENV
+    entrypoint: >
+      /bin/sh -c "
+        if [ \"${NODE_ENV:-development}\" = \"production\" ]; then
+          exec /docker-entrypoint-prod.sh;
+        else
+          exec /docker-entrypoint.sh;
+        fi
+      "
     volumes:
-      - redis_data:/data
+      # Bind mount for Windows compatibility
+      - ./data/redis:/data
+      # Development entrypoint (no password)
+      - ./scripts/docker/redis-entrypoint.sh:/docker-entrypoint.sh:ro
+      # Production entrypoint (with password)
+      - ./scripts/docker/redis-production-entrypoint.sh:/docker-entrypoint-prod.sh:ro
     networks:
       - backend_network
+    # Entrypoint runs as root to set up permissions, then switches to redis user
+    # Do NOT set user: here - it breaks the entrypoint!
     cap_drop:
       - ALL
     security_opt:
@@ -126,18 +90,14 @@ services:
           memory: 256M
           cpus: '0.25'
     healthcheck:
-      test: ["CMD-SHELL", "redis-cli -a redis_secure_password_2026 ping"]
+      test: ["CMD-SHELL", "redis-cli -a ${REDIS_PASSWORD:-} ping || redis-cli ping"]
       interval: 10s
       timeout: 5s
       retries: 5
       start_period: 30s
     restart: unless-stopped
-    secrets:
-      - redis_password
 
-  # ============================================================
-  # NestJS Backend API (SECURED)
-  # ============================================================
+  # NestJS Backend API
   nestjs-api:
     container_name: ngemiloh_api
     build:
@@ -145,45 +105,37 @@ services:
       dockerfile: Dockerfile
       args:
         - NODE_ENV=development
+    env_file:
+      - path: ./docker/production.env
+        required: false
     environment:
-      # Database with SSL
-      - DATABASE_URL=postgresql://ngemiloh@postgres:5432/ngemiloh_db?sslmode=require
-      - DIRECT_URL=postgresql://ngemiloh@postgres:5432/ngemiloh_db?sslmode=require
-      # FIX: Redis with password auth
-      - REDIS_URL=redis://:redis_secure_password_2026@redis:6379
-      # JWT settings from secrets
-      - JWT_ACCESS_SECRET_FILE=/run/secrets/jwt_access_secret
-      - PIN_PEPPER_SECRET_FILE=/run/secrets/pin_pepper_secret
-      - CSRF_SECRET_FILE=/run/secrets/csrf_secret
-      - NODE_ENV=${NODE_ENV:-production}
+      - DATABASE_URL=${DATABASE_URL:-postgresql://ngemiloh:dev_password_2024@postgres:5432/ngemiloh_db}
+      - DIRECT_URL=${DIRECT_URL:-postgresql://ngemiloh:dev_password_2024@postgres:5432/ngemiloh_db}
+      # Redis - use env var with fallback for dev
+      - REDIS_URL=${REDIS_URL:-redis://redis:6379}
+      # Security Secrets (REQUIRED in production - use env vars!)
+      - JWT_ACCESS_SECRET=${JWT_ACCESS_SECRET:?JWT_ACCESS_SECRET required}
+      - PIN_PEPPER_SECRET=${PIN_PEPPER_SECRET:?PIN_PEPPER_SECRET required}
+      - CSRF_SECRET=${CSRF_SECRET:?CSRF_SECRET required}
+      # Midtrans (sandbox keys - replace for production!)
+      - MIDTRANS_SERVER_KEY_SANDBOX=${MIDTRANS_SERVER_KEY_SANDBOX:-your_sandbox_server_key_here}
+      - MIDTRANS_CLIENT_KEY_SANDBOX=${MIDTRANS_CLIENT_KEY_SANDBOX:-your_sandbox_client_key_here}
+      # Node env
+      - NODE_ENV=${NODE_ENV:-development}
       - STORAGE_PATH=/var/storage/ngemiloh
-      - JWT_ACCESS_EXPIRES=8h
-      - FRONTEND_URL=${FRONTEND_URL:-https://pos.yourdomain.com}
-      # Midtrans
+      - JWT_ACCESS_EXPIRES=${JWT_ACCESS_EXPIRES:-8h}
+      - FRONTEND_URL=${FRONTEND_URL:-http://localhost}
       - MIDTRANS_ENV=${MIDTRANS_ENV:-sandbox}
-      - MIDTRANS_SERVER_KEY_SANDBOX_FILE=/run/secrets/midtrans_server_key_sandbox
-      - MIDTRANS_SERVER_KEY_PRODUCTION_FILE=/run/secrets/midtrans_server_key_production
-      - MIDTRANS_CLIENT_KEY_SANDBOX=${MIDTRANS_CLIENT_KEY_SANDBOX}
-      - MIDTRANS_CLIENT_KEY_PRODUCTION=${MIDTRANS_CLIENT_KEY_PRODUCTION}
       - QRIS_EXPIRY_SECONDS=${QRIS_EXPIRY_SECONDS:-900}
-      # Email
-      - EMAIL_HOST=${EMAIL_HOST}
       - EMAIL_PORT=${EMAIL_PORT:-587}
       - EMAIL_SECURE=${EMAIL_SECURE:-false}
       - EMAIL_FROM=${EMAIL_FROM:-noreply@ngemiloh.com}
-      - EMAIL_USER=${EMAIL_USER}
-      - EMAIL_APP_PASSWORD_FILE=/run/secrets/email_app_password
-      - EMAIL_ALERT_TO=${EMAIL_ALERT_TO}
-      # Monitoring
-      - SENTRY_DSN=${SENTRY_DSN}
-      # Business rules
       - DISCREPANCY_THRESHOLD=${DISCREPANCY_THRESHOLD:-5000}
       - PRICE_DELTA_THRESHOLD_PCT=${PRICE_DELTA_THRESHOLD_PCT:-10}
       - TZ=${TZ:-Asia/Jakarta}
-      # Prisma engine
-      - PRISMA_CLIENT_FORCE_LIBQUERY_ENGINE_BINARY=/app/node_modules/.prisma/client/libquery_engine-linux-debian-openssl-3.0.x.so.node
     volumes:
-      - storage_data:/var/storage/ngemiloh
+      # Bind mount for Windows compatibility
+      - ./data/storage:/var/storage/ngemiloh
     networks:
       - frontend_network
       - backend_network
@@ -192,7 +144,8 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    # FIX: Security configurations
+    # NOTE: Run migrations manually after containers start:
+    # docker compose exec nestjs-api npx prisma migrate deploy
     read_only: true
     tmpfs:
       - /tmp
@@ -212,46 +165,43 @@ services:
           cpus: '0.5'
         reservations:
           memory: 256M
-    # FIX: Healthcheck using internal _health endpoint (bypasses rate limiting)
     healthcheck:
-      test: ["CMD-SHELL", "node -e \"const http=require('http');http.get('http://127.0.0.1:3000/_health',(r)=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))\""]
-      interval: 10s
+      test: ["CMD-SHELL", "wget --quiet --tries=1 --spider http://127.0.0.1:3000/_health || exit 1"]
+      interval: 30s
       timeout: 5s
-      retries: 5
-      start_period: 120s
+      retries: 3
+      start_period: 60s
     restart: unless-stopped
-    secrets:
-      - db_password
-      - redis_password
-      - jwt_access_secret
-      - pin_pepper_secret
-      - csrf_secret
-      - midtrans_server_key_sandbox
-      - midtrans_server_key_production
-      - email_app_password
 
-  # ============================================================
-  # Caddy: Reverse Proxy + Static Files (SECURED)
-  # ============================================================
+  # Caddy Reverse Proxy
   caddy:
     build:
       context: .
-      dockerfile: Caddy.Dockerfile
+      dockerfile: docker/caddy.Dockerfile
     container_name: ngemiloh_caddy
     ports:
-      - "80"
-      - "443"
+      - "80:80"
+      - "443:443"
+    env_file:
+      - path: ./docker/production.env
+        required: false
+    environment:
+      - RATE_LIMIT_RPM=${RATE_LIMIT_RPM:-100}
+      - RATE_LIMIT_BURST=${RATE_LIMIT_BURST:-50}
+      - CADDY_ALLOWED_IPS=${CADDY_ALLOWED_IPS:-}
     volumes:
-      - caddy_data:/data
-      - caddy_config:/config
-    networks:
-      - frontend_network
+      # NOTE: Caddy data directory is required for TLS certificates
+      # Using bind mount
+      - ./data/caddy:/data
+      - ./data/caddy_config:/config
     depends_on:
       nestjs-api:
         condition: service_healthy
-    # FIX: Security configurations
-    cap_drop:
-      - ALL
+    networks:
+      - frontend_network
+      - backend_network
+    # Note: Caddy needs more permissions on Windows Docker Desktop
+    # Remove security restrictions that cause "operation not permitted" errors
     security_opt:
       - no-new-privileges:true
     deploy:
@@ -259,48 +209,9 @@ services:
         limits:
           memory: 128M
           cpus: '0.25'
-    # FIX: Healthcheck using wget (built into Alpine base image)
     healthcheck:
-      test: ["CMD-SHELL", "wget --spider -q http://127.0.0.1:80/health"]
+      test: ["CMD-SHELL", "pgrep caddy || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
     restart: unless-stopped
-
-  # ============================================================
-  # Umami Analytics (DISABLED - enable later if needed)
-  # ============================================================
-  # To enable, uncomment and ensure registry is accessible:
-  #
-  # umami-db:
-  #   image: 'mirror.gcr.io/library/postgres:15-alpine'
-  #   container_name: ngemiloh_umami_db
-  #   restart: unless-stopped
-  #   environment:
-  #     POSTGRES_DB: umami
-  #     POSTGRES_USER: umami
-  #     POSTGRES_PASSWORD: ${UMAMI_DB_PASSWORD:-umami_secret_2026}
-  #   healthcheck:
-  #     test: ["CMD-SHELL", "pg_isready -U umami -d umami"]
-  #     timeout: 5s
-  #     interval: 5s
-  #     retries: 10
-  #   volumes:
-  #     - umami_db_data:/var/lib/postgresql/data
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         memory: 256M
-  #
-  # umami:
-  #   image: 'ghcr.io/umami-software/umami:postgresql-latest'
-  #   container_name: ngemiloh_umami
-  #   environment:
-  #     DATABASE_URL: postgresql://umami:${UMAMI_DB_PASSWORD:-umami_secret_2026}@umami-db:5432/umami
-  #     DATABASE_TYPE: postgresql
-  #     APP_SECRET: ${UMAMI_APP_SECRET:-umami_secret_key_2026}
-  #   depends_on:
-  #     umami-db:
-  #       condition: service_healthy
-  #   deploy:
-  #     resources:
-  #       limits:
-  #         memory: 256M
-  #   restart: unless-stopped

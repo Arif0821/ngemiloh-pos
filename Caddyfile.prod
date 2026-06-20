@@ -1,0 +1,122 @@
+# ── Ngemiloh POS - Caddyfile Production ─────────────────────────
+# HTTPS with rate limiting and security headers
+# Use this Caddyfile for production deployment
+#
+# How to use:
+# 1. Copy this file to Caddyfile.prod
+# 2. Update DOMAIN and other variables as needed
+# 3. In docker-compose.yml, mount: ./Caddyfile.prod:/etc/caddy/Caddyfile:ro
+
+{
+	# Security settings
+	admin off
+	persist_config off
+	# auto_https on # Enable automatic HTTPS (default)
+
+	# Logging for production
+	log {
+		level INFO
+		output file /var/log/caddy/access.log {
+			roll_size 10mb
+			roll_keep 5
+			roll_keep_for 7d
+		}
+	}
+}
+
+# ── Dynamic config via environment variables ──────────────────
+# Set these in docker-compose.yml or production.env
+# CADDY_DOMAIN - your domain (e.g., pos.ngemiloh.com)
+# RATE_LIMIT_RPM - requests per minute per IP (default: 100)
+# RATE_LIMIT_BURST - burst capacity (default: 50)
+
+:443 {
+	# ── Security Headers ────────────────────────────────────────
+	header {
+		# Clickjacking protection
+		X-Frame-Options "SAMEORIGIN"
+		# Prevent MIME sniffing
+		X-Content-Type-Options "nosniff"
+		# XSS protection (legacy browsers)
+		X-XSS-Protection "1; mode=block"
+		# Referrer policy
+		Referrer-Policy "strict-origin-when-cross-origin"
+		# Content Security Policy
+		# Allow self, inline scripts for Svelte, and Midtrans for payments
+		Content-Security-Policy "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; connect-src 'self' https://api.midtrans.com https://app.sandbox.midtrans.com; font-src 'self' data:;"
+		# Permissions policy
+		Permissions-Policy "accelerometer=(), camera=(), geolocation=(), gyroscope=(), magnetometer=(), microphone=(), payment=()"
+		# HSTS (enable after confirming HTTPS works)
+		Strict-Transport-Security "max-age=31536000; includeSubDomains"
+		# Remove sensitive headers
+		-Server
+		-X-Powered-By
+	}
+
+	# ── Rate Limiting ──────────────────────────────────────────
+	# Limit API requests to prevent abuse
+	@rate-limited {
+		path /api/*
+		not remote_ip {env.CADDY_ALLOWED_IPS}
+	}
+
+	handle @rate-limited {
+		rate_limit {
+			zone {
+				key remote_ip
+				rate {env.RATE_LIMIT_RPM:-100}r/m
+				burst {env.RATE_LIMIT_BURST:-50}
+				zone_size 1mb
+			}
+		}
+	}
+
+	# ── Internal Health Checks ──────────────────────────────────
+	# These endpoints bypass rate limiting for monitoring
+	@internal {
+		path /health /_health /api/v1/store-info
+	}
+
+	handle @internal {
+		reverse_proxy ngemiloh_api:3000
+	}
+
+	# ── API Routes ─────────────────────────────────────────────
+	handle /api/* {
+		reverse_proxy ngemiloh_api:3000
+	}
+
+	# ── Storage (file uploads) ───────────────────────────────
+	handle /storage/* {
+		reverse_proxy ngemiloh_api:3000
+	}
+
+	# ── Webhooks (Midtrans) ──────────────────────────────────
+	# No rate limiting for webhooks - need to accept Midtrans callbacks
+	handle /webhooks/* {
+		reverse_proxy ngemiloh_api:3000
+	}
+
+	# ── Static Files (Frontend SPA) ────────────────────────
+	handle {
+		root * /srv
+		try_files {path} /index.html
+		file_server
+	}
+
+	# ── Error Pages ────────────────────────────────────────
+	handle_errors {
+		rewrite * /{err.status_code}.html
+		file_server {
+			root /etc/caddy/error_pages
+		}
+	}
+}
+
+# ── ACME Challenge for Let's Encrypt ──────────────────────────
+# Uncomment if using Let's Encrypt (remove global admin off above)
+# localhost {
+# 	respond /.well-known/acme-challenge/* {
+# 		header Content-Type text/plain
+# 	}
+# }

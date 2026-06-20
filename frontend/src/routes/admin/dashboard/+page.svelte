@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { api } from '$lib/services/api.client';
-	import { format_rp } from '$lib/utils/format';
-	import { onMount } from 'svelte';
+	import { format_rp, DAILY_REVENUE_TARGET, KPI_REFRESH_INTERVAL_MS } from '$lib/utils/format';
+	import { onMount, onDestroy } from 'svelte';
 	import Chart from 'chart.js/auto';
 	import type { Chart as ChartType } from 'chart.js';
 
@@ -120,7 +120,7 @@
 		fetch_chart_data();
 		refresh_timer = setInterval(() => {
 			fetch_kpi();
-		}, 60000);
+		}, KPI_REFRESH_INTERVAL_MS);
 
 		// Payment distribution chart (initialized with zeros, updated by fetch_kpi)
 		payment_chart = new Chart(document.getElementById('paymentCanvas') as HTMLCanvasElement, {
@@ -176,7 +176,9 @@
 
 			<div class="mt-4">
 				<div class="mb-1 flex justify-between text-xs">
-					<span class="text-surface-500 font-bold">Progress Target ({format_rp(5000000)})</span>
+					<span class="text-surface-500 font-bold"
+						>Progress Target ({format_rp(DAILY_REVENUE_TARGET)})</span
+					>
 					<span class="text-brand-600 font-bold">{kpi.target_progress}%</span>
 				</div>
 				<div class="bg-surface-200 h-2 w-full rounded-full">

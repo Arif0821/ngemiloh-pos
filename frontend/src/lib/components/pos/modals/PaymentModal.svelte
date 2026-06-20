@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { pos_store } from '$lib/stores/pos.store.svelte';
 	import { pos_service } from '$lib/services/pos.service';
+	import { CASH_PRESET_AMOUNTS } from '$lib/utils/format';
 
 	// Focus trap action for modals
 	function focus_trap(node: HTMLElement) {
@@ -211,7 +212,7 @@
 								class="bg-surface-100 dark:bg-surface-700 text-surface-700 hover:bg-surface-200 col-span-3 rounded-xl py-3 font-bold transition-colors"
 								onclick={() => (pos_store.cash_amount = pos_store.cart_total)}>Uang Pas</button
 							>
-							{#each [10000, 20000, 50000, 100000] as preset}
+							{#each CASH_PRESET_AMOUNTS as preset}
 								<button
 									class="bg-surface-50 border-surface-200 text-surface-600 hover:border-brand-500 hover:text-brand-600 rounded-xl border py-2.5 text-sm font-medium transition-colors"
 									onclick={() => (pos_store.cash_amount = preset)}

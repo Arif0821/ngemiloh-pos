@@ -64,8 +64,8 @@ if [ ! -f "/app/dist/main.js" ]; then
     exit 1
 fi
 
-# Run database migrations
-if [ "${NODE_ENV}" = "production" ]; then
+# Run database migrations (always, including development)
+if [ "${SKIP_MIGRATIONS:-false}" != "true" ]; then
     echo "[INFO] Running database migrations..."
     npx prisma migrate deploy
     echo "[INFO] Migrations complete"

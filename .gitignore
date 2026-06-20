@@ -47,6 +47,9 @@ PRD_Ngemiloh_POS_v3.0.docx
 PRD_Ngemiloh_POS_v3.0_FINAL.md
 
 secrets/
+
+# ── Docker Data Volumes (local development) ──────────
+data/
 ngemiloh-key.pem
 
 *.ppk

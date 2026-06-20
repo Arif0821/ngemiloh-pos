@@ -1,147 +1,62 @@
 # ── Ngemiloh POS - Caddyfile ────────────────────────────────────
-# Production-ready with automatic HTTPS via Let's Encrypt
+# Development Mode: HTTP Only (No HTTPS redirect for localhost)
+# For production, use HTTPS configuration
 
 {
 	# Security settings
 	admin off
 	persist_config off
-	auto_https off # We handle HTTPS explicitly
+	auto_https off # Disable automatic HTTPS redirect
 }
 
-# HTTP endpoint (redirects to HTTPS)
+# HTTP endpoint only - Development
 :80 {
-	@http {
-		not header Connection *Upgrade*
+	# ── Internal Health Checks ────────────────────────────────
+	@internal {
+		path /health /_health /api/v1/store-info
 	}
 
-	# Redirect HTTP to HTTPS
-	handle @http {
-		redir https://{host}{uri} 301
+	handle @internal {
+		reverse_proxy ngemiloh_api:3000
 	}
 
-	# Allow ACME challenges on HTTP
-	handle /.well-known/acme/challenge/* {
-		respond "OK"
-	}
-
-	# Health check (no redirect)
-	handle /health {
-		respond "OK" 200
-	}
-}
-
-# HTTPS endpoint
-:443 {
-	# ── Security Headers ────────────────────────────────────────
-	header {
-		# HSTS - enforce HTTPS for 1 year
-		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
-
-		# Prevent MIME type sniffing
-		X-Content-Type-Options "nosniff"
-
-		# Prevent clickjacking
-		X-Frame-Options "DENY"
-
-		# XSS protection (legacy but still helpful)
-		X-XSS-Protection "1; mode=block"
-
-		# Referrer policy
-		Referrer-Policy "strict-origin-when-cross-origin"
-
-		# Permissions policy
-		Permissions-Policy "camera=(), microphone=(), geolocation=()"
-
-		# Remove server identification
-		-Server
-		-X-Powered-By
-
-		# Security headers for API
-		-Authorization
-	}
-
-	# ── TLS Configuration ───────────────────────────────────────
-	tls {
-		protocols tls1.2 tls1.3
-		ciphers TLS_AES_128_GCM_SHA256 TLS_AES_256_GCM_SHA384 TLS_CHACHA20_POLY1305_SHA256
-	}
-
-	# ── Compression ─────────────────────────────────────────────
-	encode gzip zstd
-
-	# ── Cache Headers for Static Assets ─────────────────────────
-	@static {
-		file
-		*.css *.js *.ico *.png *.jpg *.jpeg *.gif *.svg *.woff *.woff2 *.ttf *.eot
-	}
-
-	header @static {
-		Cache-Control "public, max-age=31536000, immutable"
-	}
-
-	# ── Rate Limiting (applied at edge) ─────────────────────────
-	@auth_paths {
-		path /api/v1/auth/login*
-		path /api/v1/auth/admin/login*
-		path /api/v1/auth/kasir/login*
-	}
-
-	handle @auth_paths {
-		rate_limit {
-			zone static {
-				key {remote_ip}
-				rate 5/m
-				burst 3
-			}
-		}
-		reverse_proxy nestjs-api:3000
-	}
-
-	# ── API Routes ─────────────────────────────────────────────
+	# ── API Routes ───────────────────────────────────────────
 	handle /api/* {
-		reverse_proxy nestjs-api:3000
+		reverse_proxy ngemiloh_api:3000
 	}
 
-	# ── Storage (file uploads) ──────────────────────────────────
+	# ── Storage (file uploads) ──────────────────────────────
 	handle /storage/* {
-		reverse_proxy nestjs-api:3000
+		reverse_proxy ngemiloh_api:3000
 	}
 
-	# ── Webhooks ───────────────────────────────────────────────
-	# Note: Midtrans IPs are validated in NestJS controller
+	# ── Webhooks (Midtrans) ────────────────────────────────
 	handle /webhooks/* {
-		reverse_proxy nestjs-api:3000
+		reverse_proxy ngemiloh_api:3000
 	}
 
-	# ── Health Check ────────────────────────────────────────────
+	# ── Health Check Endpoint ────────────────────────────────
 	handle /health {
 		respond "OK" 200
 	}
 
-	# ── Internal Health Check (bypasses rate limiting) ──────────
+	# ── Internal Health Check (bypasses rate limiting) ──────
 	handle /_health {
-		reverse_proxy nestjs-api:3000
+		reverse_proxy ngemiloh_api:3000
 	}
 
-	# ── Static Files (Frontend SPA) ────────────────────────────
+	# ── Static Files (Frontend SPA) ────────────────────────
 	handle {
 		root * /srv
 		try_files {path} /index.html
 		file_server
 	}
-}
 
-# ── Error Pages ────────────────────────────────────────────────
-@errors {
-	error 400
-	error 404
-	error 500
-	error 503
-}
-
-handle @errors {
-	rewrite * /{err.status_code}.html
-	file_server {
-		root /etc/caddy/error_pages
+	# ── Error Pages ────────────────────────────────────────
+	handle_errors {
+		rewrite * /{err.status_code}.html
+		file_server {
+			root /etc/caddy/error_pages
+		}
 	}
 }

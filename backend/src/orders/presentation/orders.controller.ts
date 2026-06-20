@@ -15,6 +15,7 @@ import {
   ForbiddenException,
   Logger,
   ParseUUIDPipe,
+  BadRequestException,
 } from '@nestjs/common';
 import { OrdersService } from '../application/services/orders.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
@@ -165,7 +166,14 @@ export class OrdersController {
   @Post('admin/transactions/:id/void')
   @UseGuards(JwtAuthGuard)
   async voidTransaction(
-    @Param('id') id: string,
+    @Param(
+      'id',
+      new ParseUUIDPipe({
+        exceptionFactory: () =>
+          new BadRequestException('Invalid transaction ID format'),
+      }),
+    )
+    id: string,
     @Body('reason') reason: string,
     @Req() req: AuthenticatedRequest,
   ) {

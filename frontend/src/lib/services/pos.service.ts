@@ -3,6 +3,7 @@ import { pos_store } from '../stores/pos.store.svelte';
 import { api } from '$lib/services/api.client';
 import { toast } from '$lib/stores/toast.store.svelte';
 import { goto } from '$app/navigation';
+import { QRIS_POLLING_INTERVAL_MS } from '../utils/format';
 import type {
 	ApiResponse,
 	Discount,
@@ -277,7 +278,7 @@ export class PosService {
 			} catch (e) {
 				console.warn('Polling error', e);
 			}
-		}, 5000);
+		}, QRIS_POLLING_INTERVAL_MS);
 	}
 
 	cancel_qris_waiting() {

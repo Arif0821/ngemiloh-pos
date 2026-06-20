@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { api } from '$lib/services/api.client';
 	import { onMount, onDestroy } from 'svelte';
+	import { HEALTH_CHECK_INTERVAL_MS } from '$lib/utils/format';
 
 	interface HealthStatus {
 		status: 'ok' | 'degraded' | 'down';
@@ -44,8 +45,8 @@
 
 	onMount(() => {
 		fetch_health();
-		// Auto-refresh every 30 seconds
-		refresh_interval = setInterval(fetch_health, 30000);
+		// Auto-refresh using constant
+		refresh_interval = setInterval(fetch_health, HEALTH_CHECK_INTERVAL_MS);
 	});
 
 	onDestroy(() => {
