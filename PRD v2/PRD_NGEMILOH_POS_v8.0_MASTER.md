@@ -11,7 +11,25 @@
 1. [Overview](#1-overview)
 2. [Business Context](#2-business-context)
 3. [Technical Stack](#3-technical-stack)
-4. [Phase 1: Critical Audit Fixes](#phase-1-critical-audit-fixes)
+4. [All Features - EXISTING & COMPLETED](#all-features--existing--completed)
+   - [4.1 Backend Modules Status](#41-backend-modules-status)
+   - [4.2 Frontend Pages Status](#42-frontend-pages-status)
+   - [4.3 Database Models Status](#43-database-models-status)
+   - [4.4 Auth Module - Complete Features](#44-auth-module---complete-features)
+   - [4.5 Orders Module - Complete Features](#45-orders-module---complete-features)
+   - [4.6 Products Module - Complete Features](#46-products-module---complete-features)
+   - [4.7 Finance Module - Complete Features](#47-finance-module---complete-features)
+   - [4.8 Inventory Module - Complete Features](#48-inventory-module---complete-features)
+   - [4.9 Discounts Module - Complete Features](#49-discounts-module---complete-features)
+   - [4.10 Payment Module - Complete Features](#410-payment-module---complete-features)
+   - [4.11 Receipts Module - Complete Features](#411-receipts-module---complete-features)
+   - [4.12 Audit Module - Complete Features](#412-audit-module---complete-features)
+   - [4.13 Email Module - Complete Features](#413-email-module---complete-features)
+   - [4.14 Users Module - Complete Features](#414-users-module---complete-features)
+   - [4.15 Flags Module - Complete Features](#415-flags-module---complete-features)
+   - [4.16 Frontend - POS Complete Features](#416-frontend---pos-complete-features)
+   - [4.17 Frontend - Admin Complete Features](#417-frontend---admin-complete-features)
+5. [Phase 1: Critical Audit Fixes](#phase-1-critical-audit-fixes)
    - [KRITIS-01: CI/CD Path Fix](#kritIS-01-cicd-path-fix)
    - [KRITIS-02: VITE_API_URL Environment](#kritIS-02-vite_api_url-environment)
    - [KRITIS-03: Auto-Close Shift Time Boundary](#kritIS-03-auto-close-shift-time-boundary)
@@ -139,6 +157,1164 @@ PRD ini merupakan acuan utama untuk menyelesaikan pengembangan sistem POS Ngemil
 | Container | Docker + Docker Compose |
 | Reverse Proxy | Caddy 2 |
 | CI/CD | GitHub Actions |
+
+---
+
+# All Features - EXISTING & COMPLETED
+
+## 4.1 Backend Modules Status
+
+| Module | Location | Completion | Notes |
+|--------|----------|------------|-------|
+| **auth** | `backend/src/auth/` | ~90% | Login, JWT, OTP, PIN |
+| **orders** | `backend/src/orders/` | ~80% | CRUD, sync, payment |
+| **products** | `backend/src/products/` | ~75% | CRUD, modifiers |
+| **finance** | `backend/src/finance/` | ~70% | Shifts, profit share |
+| **inventory** | `backend/src/inventory/` | ~75% | Stock, BOM |
+| **discounts** | `backend/src/discounts/` | ~65% | Scheduled discounts |
+| **payment** | `backend/src/payment/` | ~60% | Midtrans, QRIS |
+| **receipts** | `backend/src/receipts/` | ~80% | Receipt generation |
+| **audit** | `backend/src/audit/` | ~70% | Logging |
+| **email** | `backend/src/email/` | ~60% | Alerts, OTP |
+| **users** | `backend/src/users/` | ~60% | CRUD |
+| **flags** | `backend/src/flags/` | ~70% | Feature flags |
+| **jobs** | `backend/src/jobs/` | ~40% | BullMQ |
+| **members** | - | **MISSING** | **0% - Phase 3** |
+| **common** | `backend/src/common/` | ✅ | Utilities, filters |
+| **dto** | `backend/src/dto/` | ✅ | Validation |
+| **types** | `backend/src/types/` | ✅ | Type definitions |
+| **test** | `backend/src/test/` | ✅ | Test utilities |
+| **prisma** | `backend/src/prisma/` | ✅ | Database service |
+
+---
+
+## 4.2 Frontend Pages Status
+
+### Login & Authentication (4/4 Complete)
+| Route | Feature | Status |
+|-------|---------|--------|
+| `/login` | Kasir login (username + PIN) | ✅ Complete |
+| `/login-admin` | Admin login (email + password) | ✅ Complete |
+| `/login-admin/verify-otp` | OTP verification for admin | ✅ Complete |
+| `/change-pin` | Change PIN for kasir | ✅ Complete |
+
+### POS (Point of Sale) (3/3 Complete)
+| Route | Feature | Status |
+|-------|---------|--------|
+| `/pos` | Main POS with product list, cart, payment processing, QRIS, offline mode | ✅ Complete |
+| `/pos/print` | Receipt printing functionality | ✅ Complete |
+| `/shift` | Cashier daily shift summary | ✅ Complete |
+
+### Admin Dashboard & Management (20/20 Complete)
+| Route | Feature | Status |
+|-------|---------|--------|
+| `/admin/dashboard` | KPI cards, revenue trend chart, top products, payment distribution | ✅ Complete |
+| `/admin/transactions` | Transaction history with filters, void, detail modal, flagging | ✅ Complete |
+| `/admin/products` | Product CRUD + modifier groups (toppings/sauces) | ✅ Complete |
+| `/admin/categories` | Category management with sort order | ✅ Complete |
+| `/admin/inventory` | Raw materials with stock opname functionality | ✅ Complete |
+| `/admin/discounts` | Discount/promo management (percentage & fixed) | ✅ Complete |
+| `/admin/shifts` | Shift history with discrepancy tracking | ✅ Complete |
+| `/admin/cashiers` | Cashier CRUD, PIN reset, status toggle | ✅ Complete |
+| `/admin/analytics` | Revenue trends, peak hours, payment distribution charts | ✅ Complete |
+| `/admin/reports` | CSV export for transactions | ✅ Complete |
+| `/admin/cash` | Cash register report with export | ✅ Complete |
+| `/admin/opex` | Operational expenses input & history | ✅ Complete |
+| `/admin/assets` | Asset management with depreciation calculation | ✅ Complete |
+| `/admin/profit-share` | Net profit calculation with 60/40 split | ✅ Complete |
+| `/admin/settings` | Store profile (name, halal cert, address, receipt footer) | ✅ Complete |
+| `/admin/settings/flags` | Feature flags toggle | ✅ Complete |
+| `/admin/system-health` | PostgreSQL, Redis, Midtrans status monitoring | ✅ Complete |
+| `/admin/audit-logs` | Immutable audit log viewer with filters | ✅ Complete |
+| `/admin/system-logs` | System logs viewer | ✅ Complete |
+| `/admin/system-logs` | System logs viewer | ✅ Complete |
+
+### Missing Pages (Phase 3)
+| Route | Feature | Status |
+|-------|---------|--------|
+| `/register` | Member registration page | ❌ MISSING |
+| `/admin/members` | Member management | ❌ MISSING |
+| `/admin/bom` | BOM Recipes management | ❌ MISSING |
+
+### Frontend Completion: 27/30 pages (~90%)
+
+---
+
+## 4.3 Database Models Status
+
+### Existing Models (24 Total)
+| Model | Fields | Relationships |
+|-------|--------|---------------|
+| **User** | id, name, username, email, pin_hash, password_hash, role, is_active, cashier_letter | Products, Orders, CashRegister, AuditLog |
+| **Category** | id, name, sort_order, is_active | Products |
+| **Product** | id, name, category_id, base_price, image_url, is_active, is_out_of_stock, sort_order | Category, Modifiers, BOM, OrderItems |
+| **ProductModifierGroup** | id, product_id, name, is_required, max_selections, sort_order | Product, ModifierOptions |
+| **ProductModifierOption** | id, group_id, name, additional_price, sort_order | Group, BOM, OrderItemModifiers |
+| **Discount** | id, name, type, value, scope, target_id, valid_from, valid_until, applicable_days, is_active | User, OrderItems |
+| **Order** | id, cashier_id, client_uuid, total_amount, discount_total, cogs_total, payment_method, cash_amount, qris_amount, payment_gateway, payment_status, status, voided_by, void_reason, customer_name, order_number | User (cashier), User (voider), OrderItems, OrderRefund, StockMovement |
+| **OrderItem** | id, order_id, product_id, product_name_snapshot, base_price, discount_amount, discounted_base, modifier_total, final_price, quantity, subtotal | Order, Product, Discount, OrderItemModifiers |
+| **OrderItemModifier** | id, order_item_id, option_id, group_name_snapshot, option_name_snapshot, additional_price_at_time | OrderItem, ModifierOption |
+| **OrderRefund** | id, order_id, amount, refund_method, refunded_by, refunded_at, notes | Order, User |
+| **CashRegister** | id, cashier_id, shift_date, shift_start, shift_end, opening_balance, closing_balance, system_cash_total, discrepancy, status, notes, shift_number, carry_over_from_shift_id | User, self-reference |
+| **OperationalExpense** | id, category, description, amount, expense_date | User |
+| **Asset** | id, name, purchase_price, useful_life_months, monthly_depreciation, purchase_date, is_active | - |
+| **ProfitShareLog** | id, period_month, total_revenue, total_hpp, total_opex, total_depreciation, net_profit, owner_share, cashier_share, cashier_paid_amount, is_paid | User, ProfitShareDetail |
+| **ProfitShareDetail** | id, profit_share_log_id, cashier_id, cashier_name, total_sales, total_orders, shift_count, share_amount, is_paid | ProfitShareLog, User |
+| **FeatureFlag** | id, name, is_enabled, description, updated_by | User |
+| **Setting** | id, key, value, updated_by | User |
+| **AuditLog** | id (BigInt), actor_id, action, entity_type, entity_id, old_value, new_value, ip_address | User |
+| **Customer** | id, phone, name, loyalty_points, registered_via, created_at | - |
+| **RawMaterial** | id, name, purchase_unit, purchase_qty, usage_unit, conversion_factor, current_stock, min_stock, cost_per_unit, supplier | PriceHistory, BOM, StockMovement |
+| **RawMaterialPriceHistory** | id, raw_material_id, cost_per_unit, valid_from | RawMaterial, User |
+| **BomRecipe** | id, product_id, modifier_option_id, raw_material_id, quantity_per_serving | Product, ModifierOption, RawMaterial |
+| **StockMovement** | id, raw_material_id, type, quantity, reference_order_id, notes, created_by | RawMaterial, User, Order |
+| **IpLockout** | id, ip_address, failed_count, locked_until | - |
+| **SystemLog** | id (BigInt), level, source, message, metadata | - |
+
+### Missing Models (Phase 3)
+| Model | Purpose | Priority |
+|-------|---------|----------|
+| **LoyaltyTier** | Tier levels for loyalty program | HIGH |
+| **MemberTransaction** | Point earning/redeeming history | HIGH |
+| **Outlet** | Multi-outlet support | MEDIUM |
+| **UserOutlet** | Kasir-outlet assignment | MEDIUM |
+
+---
+
+## 4.4 Auth Module - Complete Features
+
+### 4.4.1 Kasir Login (PIN)
+```
+Endpoint: POST /api/v1/auth/kasir/login
+Flow:
+1. Kasir input username + PIN
+2. Backend hash PIN dengan pepper (bcrypt 12 rounds)
+3. Verifikasi dengan database
+4. Generate JWT token (12 jam expiry)
+5. Set httpOnly cookie access_token
+6. Return user info
+```
+
+**Security Features:**
+- ✅ PIN hashing dengan bcrypt 12 rounds + pepper
+- ✅ Rate limiting (20 req/min per IP)
+- ✅ IP lockout setelah 5 failed attempts
+- ✅ JWT token (12h expiry)
+- ✅ CSRF protection
+
+### 4.4.2 Admin Login (Email + Password)
+```
+Endpoint: POST /api/v1/auth/admin/login
+Flow:
+1. Admin input email + password
+2. Backend verifikasi dengan bcrypt
+3. Generate JWT token (12 jam expiry)
+4. Send OTP email untuk 2FA
+5. Set httpOnly cookie access_token
+```
+
+### 4.4.3 OTP Verification
+```
+Endpoint: POST /api/v1/auth/verify-otp
+Flow:
+1. Admin input 6-digit OTP
+2. Backend verifikasi OTP dari Redis
+3. Jika valid → aktifkan session
+4. OTP expire setelah 5 menit
+5. Max 3 failed attempts → lockout
+```
+
+### 4.4.4 PIN Management
+```
+Endpoint: POST /api/v1/auth/change-pin
+- Kasir bisa ganti PIN sendiri
+- Wajib verifikasi PIN lama terlebih dahulu
+- PIN baru harus 6 digit
+```
+
+### 4.4.5 Get Current User
+```
+Endpoint: GET /api/v1/auth/me
+- Return user info dari JWT token
+- Digunakan untuk verifikasi session
+```
+
+---
+
+## 4.5 Orders Module - Complete Features
+
+### 4.5.1 Create Order
+```
+Endpoint: POST /api/v1/orders
+Flow:
+1. Kasir submit cart items + payment method
+2. Validasi stok (jika INVENTORY_CHECK flag enabled)
+3. Generate order number dengan advisory lock
+4. Simpan order dengan status "pending"
+5. Proses payment (cash/QRIS/split)
+6. Update status → "completed"
+7. Kurangi stok jika success
+8. Generate receipt
+```
+
+**Order Number Format:**
+```
+Format: TRX-YYYYMMDD-{letter}-{sequence}
+Example: TRX-20260620-C-001
+- YYMMDD = tanggal
+- letter = cashier letter (A, B, C...)
+- sequence = 001, 002, ...
+```
+
+### 4.5.2 Order Payment Methods
+```
+1. CASH
+   - Kasir terima uangcash
+   - Hitung kembalian
+   - Simpan cash_amount
+
+2. QRIS (Midtrans)
+   - Generate QR code
+   - Wait for payment notification
+   - Timeout: 10 menit (configurable)
+
+3. SPLIT
+   - Cash + QRIS kombinasi
+   - Wajib ada cash_amount > 0
+   - Generate 2 payment records
+```
+
+### 4.5.3 Offline Sync
+```
+Endpoint: POST /api/v1/orders/sync-batch
+Flow:
+1. POS offline → simpan order ke Dexie (IndexedDB)
+2. Setiap order punya client_uuid (UUID v4)
+3. Saat online → sync-batch kirim semua order
+4. Server proses per order
+5. Return success/failed per order
+```
+
+**Idempotency:**
+- Server check client_uuid sebelum insert
+- Jika sudah ada → skip (prevents duplicate)
+
+### 4.5.4 Order Status
+```
+Status Flow:
+pending → completed
+pending → failed → pending (retry)
+completed → voided
+```
+
+### 4.5.5 Void Order
+```
+Endpoint: POST /api/v1/admin/transactions/:id/void
+Requirements:
+- Wajib isi reason
+- Void setelah > 3x dalam 10 menit → trigger fraud alert
+- Void refund stock ke warehouse
+- Void записывается в audit log
+```
+
+### 4.5.6 Order History
+```
+Endpoint: GET /api/v1/orders
+Query Parameters:
+- ?cashier_id=xxx (filter by kasir)
+- ?date_from=xxx (filter by date)
+- ?date_to=xxx
+- ?status=completed
+- ?page=1
+- ?limit=20
+```
+
+### 4.5.7 Shift Summary
+```
+Endpoint: GET /api/v1/orders/shift
+- Return semua order dalam shift aktif
+- Total revenue, count, payment distribution
+```
+
+### 4.5.8 SSE Order Status
+```
+Endpoint: GET /api/v1/orders/:id/sse
+Use Case:
+- Real-time update saat QRIS payment status berubah
+- Browser listen ke SSE stream
+- Server push update saat payment success/failed
+```
+
+### 4.5.9 Fraud Detection
+```
+Trigger: 3x void dalam 10 menit
+Action:
+1. Log warning ke SystemLog
+2. Send email alert ke owner
+3. Flag kasir di dashboard
+```
+
+---
+
+## 4.6 Products Module - Complete Features
+
+### 4.6.1 Product CRUD
+```
+GET /api/v1/products
+- List semua produk aktif
+- Include category, modifiers
+- Filter by category_id
+
+POST /api/v1/admin/products
+- Create produk baru
+- Upload image (resize to 800px, WebP)
+- Set base_price, category
+
+PATCH /api/v1/admin/products/:id
+- Update produk
+- Replace image
+- Log perubahan harga
+
+DELETE /api/v1/admin/products/:id
+- Soft delete jika punya order history
+- Hard delete jika belum ada order
+```
+
+### 4.6.2 Categories
+```
+GET /api/v1/categories
+- List semua category
+- Sort by sort_order
+
+POST /api/v1/admin/categories
+- Create category baru
+
+PATCH /api/v1/admin/categories/:id
+- Update category
+
+DELETE /api/v1/admin/categories/:id
+- Soft delete
+```
+
+### 4.6.3 Product Modifiers (Toppings/Sauces)
+```
+Modifier Group:
+- Nama: "Tingkat Pedas", "Saus Extra"
+- is_required: true/false
+- max_selections: 1, 2, 3...
+
+Modifier Option:
+- Nama: "Level 1", "Level 2"
+- additional_price: 0, 1000, 2000...
+
+Endpoint: /api/v1/admin/products/:id/modifiers
+- Attach modifier group ke produk
+- Set sort order
+```
+
+### 4.6.4 Product Image
+```
+Upload Flow:
+1. Kasir upload image
+2. Backend resize to 800px width
+3. Convert to WebP, quality 80
+4. Save to storage
+5. Return URL
+```
+
+---
+
+## 4.7 Finance Module - Complete Features
+
+### 4.7.1 Cash Register (Shift)
+```
+Open Shift:
+Endpoint: POST /api/v1/pos/shift/start
+- Input opening_balance
+- Generate shift number (per kasir per hari)
+- Set status = "open"
+- Carry-over dari shift sebelumnya
+
+Close Shift:
+Endpoint: POST /api/v1/admin/finance/cash/close
+- Input closing_balance (blind closing)
+- Hitung discrepancy
+- Set status = "closed"
+
+Auto-Close (Cron):
+- Cron setiap 15 menit
+- Close shift idle > 4 jam + grace period 30 menit
+```
+
+### 4.7.2 Discrepancy Handling
+```
+Threshold: Rp 10.000
+If |discrepancy| > threshold:
+- Log warning
+- Send email alert ke owner
+- Kasir wajib report explanation
+```
+
+### 4.7.3 Dashboard KPI
+```
+Endpoint: GET /api/v1/admin/finance/kpi
+Return:
+{
+  revenue,           // Total penjualan
+  gross_revenue,     // Revenue - tax
+  total_tax,         // PPN 11%
+  cogs,              // HPP
+  net_profit,        // gross_revenue - cogs - opex
+  order_count,
+  average_order,
+  payment_distribution: { cash: 45, qris: 30, split: 25 }
+}
+```
+
+### 4.7.4 Analytics
+```
+Endpoint: GET /api/v1/admin/finance/analytics
+Charts:
+- Revenue trend (daily/weekly/monthly)
+- Top products
+- Payment distribution
+- Peak hours (heatmap)
+```
+
+### 4.7.5 Profit Sharing
+```
+Formula:
+Net Profit = Revenue - Tax - COGS - Opex - Depreciation
+Owner Share = Net Profit × 60%
+Kasir Pool = Net Profit × 40%
+
+Per Kasir:
+Kasir Share = (Kasir Orders / Total Orders) × Kasir Pool
+
+Endpoint: GET /api/v1/admin/finance/profit-share
+- List semua period
+- Detail per kasir
+```
+
+### 4.7.6 Operational Expenses (Opex)
+```
+Endpoint: GET /api/v1/admin/finance/opex
+Categories:
+- Sewa Tempat
+- Listrik
+- Kemasan
+- Lainnya
+
+POST /api/v1/admin/finance/opex
+- Input expense baru
+- auto-tanggal hari ini
+```
+
+### 4.7.7 Assets
+```
+Endpoint: GET /api/v1/admin/finance/assets
+- List semua aset
+- Monthly depreciation calculation
+- Useful life tracking
+
+POST /api/v1/admin/finance/assets
+- Add aset baru
+- Set purchase_price, useful_life_months
+```
+
+---
+
+## 4.8 Inventory Module - Complete Features
+
+### 4.8.1 Raw Materials
+```
+Endpoint: GET /api/v1/admin/inventory
+Fields:
+- id, name
+- current_stock
+- min_stock (for alerts)
+- cost_per_unit
+- supplier
+- unit conversion
+
+POST /api/v1/admin/inventory/materials
+- Create bahan baku baru
+
+PATCH /api/v1/admin/inventory/materials/:id
+- Update stock, price
+- Log price history
+```
+
+### 4.8.2 Stock Movement (FEFO)
+```
+Types:
+- IN (pembelian)
+- OUT (pemakaian produksi)
+- ADJUSTMENT (opname)
+- WASTE (rusak/expired)
+- RETURN (retur)
+
+FEFO Logic:
+- Ambil dari batch dengan expiry paling dekat
+- Kurangi stock per batch
+- Track qty_remaining per batch
+```
+
+### 4.8.3 Stock Opname
+```
+Endpoint: POST /api/v1/admin/inventory/opname
+Flow:
+1. Hitung fisik barang
+2. Input ke sistem
+3. Sistem hitung selisih
+4. Create adjustment movement
+5. Update stock
+```
+
+### 4.8.4 Low Stock Alert
+```
+Endpoint: GET /api/v1/admin/inventory/low-stock
+Trigger: current_stock <= min_stock
+Return: List bahan baku yang perlu restock
+```
+
+### 4.8.5 BOM (Bill of Materials)
+```
+Endpoint: GET /api/v1/admin/inventory/bom/:productId
+Structure:
+- product_id
+- raw_material_id
+- quantity_per_serving
+
+Use Case:
+- Hitung HPP per produk
+- Kurangi stock saat order
+```
+
+### 4.8.6 Auto Stock Reduction
+```
+Trigger: Order completed
+Flow:
+1. Get order items
+2. Get BOM for each product
+3. Calculate required materials
+4. Deduct from stock (FEFO)
+5. Create StockMovement records
+```
+
+### 4.8.7 Stock Restoration (Void)
+```
+Trigger: Order voided
+Flow:
+1. Get original StockMovement for order
+2. Reverse each movement
+3. Restore stock to original levels
+```
+
+---
+
+## 4.9 Discounts Module - Complete Features
+
+### 4.9.1 Discount Types
+```
+1. PERCENTAGE
+   - Discount % dari base_price
+   - Example: 10% off
+
+2. FIXED_AMOUNT
+   - Discount amount tetap
+   - Example: Rp 5.000 off
+```
+
+### 4.9.2 Discount Scope
+```
+1. ALL_PRODUCTS
+   - Discount untuk semua produk
+
+2. CATEGORY
+   - Discount untuk category tertentu
+
+3. SPECIFIC_PRODUCT
+   - Discount untuk produk tertentu
+```
+
+### 4.9.3 Discount Scheduling
+```
+valid_from: DateTime
+valid_until: DateTime
+applicable_days: [0,1,2,3,4,5,6] // 0=Minggu
+
+Example:
+- Weekend Promo: valid Fri 18:00 - Sun 23:59
+- Happy Hour: Mon-Fri 14:00-16:00
+```
+
+### 4.9.4 Auto Expire (Cron)
+```
+Cron: Setiap 5 menit
+Check:
+1. Discount valid_until passed → is_active = false
+2. Discount valid_from reached → is_active = true
+3. Manual disabled → skip (don't auto-enable)
+```
+
+### 4.9.5 Discount Calculation
+```
+Priority:
+1. SPECIFIC_PRODUCT (highest)
+2. CATEGORY
+3. ALL_PRODUCTS (lowest)
+
+Rules:
+- Diskon hanya pada base_price, bukan modifier
+- Diskon tidak stack (highest wins)
+- Diskon dihitung per item
+```
+
+---
+
+## 4.10 Payment Module - Complete Features
+
+### 4.10.1 Midtrans Integration
+```
+Environment:
+- Sandbox: SB-Mid-server-xxx
+- Production: Mid-server-xxx
+
+Endpoints:
+POST /api/v1/payment/qris
+- Generate QRIS payment
+- Return QR code image URL
+
+POST /api/v1/payment/webhook
+- Midtrans callback
+- Update order status
+- Verify signature SHA512
+```
+
+### 4.10.2 Payment Status
+```
+Status Flow:
+pending → processing → settlement (success)
+pending → expire (timeout 10 min)
+pending → decline (failed)
+```
+
+### 4.10.3 Fake Gateway (Development)
+```
+Environment Variable: FAKE_MIDTRANS=true
+Flow:
+1. Generate fake QR URL
+2. Return immediately as "settlement"
+3. No actual Midtrans call
+```
+
+### 4.10.4 Split Payment
+```
+Structure:
+{
+  payment_method: "split",
+  cash_amount: 50000,      // Tunai
+  qris_amount: 35000,      // QRIS
+  total_amount: 85000       // Total
+}
+
+Rules:
+- cash_amount wajib > 0
+- Total must match sum
+```
+
+---
+
+## 4.11 Receipts Module - Complete Features
+
+### 4.11.1 Receipt Data
+```
+Endpoint: GET /api/v1/receipts/:orderId
+Return:
+{
+  order_number,
+  cashier_name,
+  items: [{ name, qty, price }],
+  subtotal,
+  discount,
+  total,
+  payment_method,
+  cash_received,
+  change,
+  timestamp
+}
+```
+
+### 4.11.2 Receipt Formats
+```
+1. Plain Text (58mm printer)
+   - Fixed width font
+   - Line characters: ─, │, ┌, ┐, └, ┘
+
+2. Plain Text (80mm printer)
+   - Wider format
+   - More detail
+
+3. HTML (browser print)
+   - Styled receipt
+   - Auto print dialog
+```
+
+### 4.11.3 Receipt Content
+```
+Header:
+- Company name
+- Address
+- Phone
+
+Body:
+- Date & Time
+- Order number
+- Cashier name
+- Items (name, qty, price, modifiers)
+- Subtotal
+- Discount (if any)
+- TOTAL (bold)
+
+Payment:
+- Method: CASH / QRIS / SPLIT
+- Tunai: Rp xxx
+- Kembalian: Rp xxx
+
+Footer:
+- "Terima Kasih"
+- QR link for member registration
+```
+
+### 4.11.4 Print
+```
+Endpoint: GET /api/v1/receipts/:orderId/print
+Flow:
+1. Return HTML receipt
+2. Browser auto open print dialog
+3. Select printer (Bluetooth/USB)
+```
+
+---
+
+## 4.12 Audit Module - Complete Features
+
+### 4.12.1 Audit Log
+```
+Captured Events:
+- LOGIN (kasir, admin)
+- LOGOUT
+- OTP_REQUEST
+- OTP_VERIFY
+- SHIFT_OPEN
+- SHIFT_CLOSE
+- SHIFT_AUTO_CLOSE
+- ORDER_CREATE
+- ORDER_VOID
+- ORDER_FLAG
+- PROFIT_SHARE_PAYMENT
+- PRICE_CHANGE
+- INVENTORY_ADJUST
+```
+
+### 4.12.2 Audit Data
+```
+{
+  id,
+  actor_id,        // User who performed
+  action,          // Action type
+  entity_type,     // Order, Product, etc.
+  entity_id,       // ID of affected entity
+  old_value,       // Before (JSON)
+  new_value,       // After (JSON)
+  ip_address,
+  timestamp
+}
+```
+
+### 4.12.3 Query Audit
+```
+Endpoint: GET /api/v1/admin/audit-logs
+Filters:
+- ?actor_id=xxx
+- ?action=ORDER_VOID
+- ?entity_type=Order
+- ?date_from=xxx
+- ?date_to=xxx
+```
+
+### 4.12.4 Immutability
+```
+- No UPDATE or DELETE on audit_log table
+- Trigger prevents mutations
+- Only INSERT allowed
+```
+
+---
+
+## 4.13 Email Module - Complete Features
+
+### 4.13.1 Email Types
+```
+1. OTP Email
+   - 6-digit code
+   - Expire 5 minutes
+   - HTML template
+
+2. Fraud Alert
+   - Triggered by void pattern
+   - Contains kasir info, order details
+
+3. Discrepancy Alert
+   - Shift closing with large discrepancy
+   - Threshold: Rp 10.000
+
+4. Loss Alert
+   - Monthly when profit is negative
+   - Summary of expenses
+
+5. Shift Reminder
+   - Sent to owner when shift not closed
+```
+
+### 4.13.2 Email Queue (BullMQ)
+```
+Flow:
+1. Email request → Add to queue
+2. Worker process queue
+3. Send via SMTP (Resend/SendGrid)
+4. Retry on failure (max 3)
+```
+
+### 4.13.3 Configuration
+```
+Environment Variables:
+- SMTP_HOST
+- SMTP_PORT
+- SMTP_USER
+- SMTP_PASS
+- EMAIL_FROM
+```
+
+---
+
+## 4.14 Users Module - Complete Features
+
+### 4.14.1 User Types
+```
+1. SUPERADMIN (Owner)
+   - Full access
+   - Email login + OTP
+
+2. CASHIER
+   - POS only
+   - PIN login
+   - Assigned to outlet(s)
+```
+
+### 4.14.2 User Management
+```
+GET /api/v1/admin/users
+- List all users
+- Filter by role
+
+POST /api/v1/admin/users
+- Create user (cashier only by admin)
+
+PATCH /api/v1/admin/users/:id
+- Update name, role
+- Toggle is_active
+
+POST /api/v1/admin/users/:id/reset-pin
+- Reset PIN to default
+- Send new PIN via email
+```
+
+### 4.14.3 Cashier Letter
+```
+Format: A, B, C, D...
+Used in:
+- Order number: TRX-20260620-A-001
+- Receipt header
+```
+
+---
+
+## 4.15 Flags Module - Complete Features
+
+### 4.15.1 Feature Flags
+```
+Purpose:
+- Toggle features without deploy
+- A/B testing
+- Gradual rollout
+
+Default Flags:
+- QRIS_PAYMENT (enable/disable QRIS)
+- SPLIT_PAYMENT (enable/disable split)
+- DISCOUNT_SYSTEM
+- MODIFIER_SYSTEM
+- INVENTORY_CHECK (validate stock)
+- PRINT_RECEIPT
+- EMAIL_RECEIPT
+- PROFIT_SHARE
+```
+
+### 4.15.2 Flag Usage
+```
+Backend:
+const flags = await flagsService.getFlags();
+if (flags.QRIS_PAYMENT) { ... }
+
+Frontend:
+const res = await api.get('/flags');
+if (res.data.QRIS_PAYMENT) { showQRIS(); }
+```
+
+---
+
+## 4.16 Frontend - POS Complete Features
+
+### 4.16.1 POS Layout
+```
+┌─────────────────────────────────────────────────┐
+│ Header: Store Name │ Cashier │ Time │ Logout     │
+├───────────────────┼─────────────────────────────┤
+│                   │                             │
+│   Product Grid    │      Cart Sidebar          │
+│                   │                             │
+│   [Category]      │   - Item 1     Rp 15.000  │
+│   ┌───┐┌───┐┌───┐│   - Item 2     Rp 10.000  │
+│   │   ││   ││   ││   - Modifier   Rp  2.000  │
+│   └───┘└───┘└───┘│                            │
+│   ┌───┐┌───┐┌───┐│   ─────────────────────  │
+│   │   ││   ││   ││   Subtotal     Rp 27.000  │
+│   └───┘└───┘└───┘│   Diskon        Rp  0     │
+│                   │   TOTAL         Rp 27.000  │
+│                   │                            │
+│                   │   [  BAYAR LUNAS  ]       │
+├───────────────────┴─────────────────────────────┤
+│ Status Bar: Connection │ Sync Status │ Version │
+└─────────────────────────────────────────────┘
+```
+
+### 4.16.2 Cart Operations
+```
+Add Item:
+- Tap product → Add to cart
+- If has modifiers → Show modifier modal
+
+Update Quantity:
+- Tap cart item → +/- buttons
+- Swipe to delete
+
+Modifier Selection:
+- Required modifiers must be selected
+- Show additional price
+- Max selections enforced
+```
+
+### 4.16.3 Payment Flow
+```
+1. Tap "BAYAR LUNAS"
+2. Select payment method:
+   - CASH → Input amount → Show change
+   - QRIS → Generate QR → Wait for payment
+   - SPLIT → CASH + QRIS combination
+3. On success → Print receipt
+4. Clear cart
+```
+
+### 4.16.4 Offline Mode
+```
+Indicator:
+- Online: Green dot
+- Offline: Red dot + "OFFLINE MODE"
+
+When Offline:
+- All operations work (cash only)
+- Orders saved to Dexie
+- QRIS disabled (require online)
+
+Sync on Reconnect:
+- Auto-trigger sync
+- Show progress
+- Toast on complete
+```
+
+### 4.16.5 Print Receipt
+```
+Trigger: After payment success
+Flow:
+1. Generate receipt HTML
+2. Open print dialog
+3. User selects printer
+4. Print
+
+Printer Options:
+- Bluetooth (PUTIAN802)
+- USB
+- Browser Print (fallback)
+```
+
+---
+
+## 4.17 Frontend - Admin Complete Features
+
+### 4.17.1 Dashboard
+```
+KPI Cards:
+┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────┐
+│ Revenue  │ │ Orders   │ │ Avg Order│ │ Profit   │
+│ Rp 2.5jt│ │    125   │ │ Rp 20rb  │ │ Rp 800rb │
+└──────────┘ └──────────┘ └──────────┘ └──────────┘
+
+Charts:
+- Revenue Trend (7 days)
+- Top Products (bar chart)
+- Payment Distribution (pie chart)
+```
+
+### 4.17.2 Transactions Page
+```
+Table Columns:
+- Order #, Date, Cashier, Items, Total, Payment, Status
+
+Actions:
+- View Detail (modal)
+- Void (with reason)
+- Flag (mark suspicious)
+
+Filters:
+- Date range
+- Cashier
+- Payment method
+- Status
+```
+
+### 4.17.3 Products Page
+```
+Table with:
+- Image, Name, Category, Price, Stock, Status
+
+Actions:
+- Add Product
+- Edit Product
+- Manage Modifiers
+- Toggle Active
+
+Product Form:
+- Name (required)
+- Category (select)
+- Base Price (number)
+- Image (upload)
+- Modifiers (multi-select)
+```
+
+### 4.17.4 Inventory Page
+```
+Tabs:
+1. Stock - List bahan baku
+2. Opname - Physical count
+
+Stock Tab:
+- Name, Current, Min, Cost, Supplier
+- Color coded: Normal (green), Low (yellow), Critical (red)
+
+Opname Tab:
+- Select material
+- Input physical count
+- Calculate variance
+- Submit adjustment
+```
+
+### 4.17.5 Cashiers Page
+```
+Table:
+- Letter, Name, Username, Status, Created
+
+Actions:
+- Add Cashier
+- Edit Cashier
+- Reset PIN
+- Toggle Active
+
+Cashier Form:
+- Name (required)
+- Username (unique)
+- Initial PIN (auto or manual)
+```
+
+### 4.17.6 Shifts Page
+```
+Table:
+- Cashier, Date, Open, Close, Opening, Closing, Discrepancy
+
+Status Badges:
+- Open (blue)
+- Closed (green)
+- Auto-Closed (orange)
+
+Detail Modal:
+- List all orders in shift
+- Payment summary
+- Discrepancy explanation
+```
+
+### 4.17.7 Reports Page
+```
+Export Options:
+- Transaction CSV
+- Cash Report CSV
+- Profit Share CSV
+
+Filters:
+- Date range (max 30 days)
+- Cashier (optional)
+```
+
+### 4.17.8 Profit Share Page
+```
+Current Period Summary:
+┌─────────────────────────────────────────────┐
+│ Total Revenue     : Rp 15.000.000          │
+│ Total HPP         : Rp  6.000.000          │
+│ Total Opex        : Rp  2.000.000          │
+│ ──────────────────────────────────────      │
+│ Net Profit        : Rp  7.000.000          │
+│ Owner (60%)       : Rp  4.200.000          │
+│ Kasir Pool (40%)  : Rp  2.800.000          │
+└─────────────────────────────────────────────┘
+
+Per Cashier Breakdown:
+- Name, Orders, Revenue, Share Amount, Paid?
+```
+
+### 4.17.9 System Health Page
+```
+Status Indicators:
+┌─────────────────────────────────────────────┐
+│ PostgreSQL    ● Connected  (15ms)           │
+│ Redis        ● Connected  (2ms)            │
+│ Midtrans     ● OK         (sandbox)        │
+│ SMTP         ● OK                          │
+└─────────────────────────────────────────────┘
+```
+
+---
+
+## Complete Features Summary
+
+| Category | Total | Completed | Missing |
+|----------|-------|-----------|---------|
+| Backend Modules | 17 | 16 | 1 (members) |
+| Frontend Pages | 30 | 27 | 3 |
+| Database Models | 28 | 24 | 4 |
+| API Endpoints | 100+ | 90+ | ~10 |
+| Features | 200+ | 180+ | ~20 |
+
+**Overall Completion: ~90%**
 
 ---
 
