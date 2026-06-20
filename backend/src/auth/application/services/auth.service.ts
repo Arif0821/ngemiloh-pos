@@ -67,21 +67,13 @@ export class AuthService {
     );
   }
 
-  validatePasswordRequirements(password: string): void {
-    const minLength = 16;
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSymbol = /[!@#$%^&*()_+\-={}:;"'<>,.?\\|/-]/.test(password);
-
-    if (password.length < minLength) {
-      throw new BadRequestException('Password must be at least 16 characters');
-    }
-    if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSymbol) {
-      throw new BadRequestException(
-        'Password must contain uppercase, lowercase, number, and symbol',
-      );
-    }
+  private getPasswordStrengthError(password: string): string | null {
+    if (password.length < 16) return 'Password must be at least 16 characters';
+    if (!/[A-Z]/.test(password)) return 'Password must contain at least one uppercase letter';
+    if (!/[a-z]/.test(password)) return 'Password must contain at least one lowercase letter';
+    if (!/[0-9]/.test(password)) return 'Password must contain at least one number';
+    if (!/[!@#$%^&*]/.test(password)) return 'Password must contain at least one special character (!@#$%^&*)';
+    return null;
   }
 
   async login(
@@ -126,24 +118,11 @@ export class AuthService {
       if (!user.password_hash)
         throw new UnauthorizedException('Invalid credentials');
 
-      if (pinOrPassword.length < 16) {
+      const strengthError = this.getPasswordStrengthError(pinOrPassword);
+      if (strengthError) {
         await this.authRepository.incrementUserFailedLogin(user.id);
         await this.authRepository.incrementIpLockout(ipAddress);
-        throw new UnauthorizedException(
-          'Password must be at least 16 characters',
-        );
-      }
-
-      const hasUpperCase = /[A-Z]/.test(pinOrPassword);
-      const hasLowerCase = /[a-z]/.test(pinOrPassword);
-      const hasNumber = /[0-9]/.test(pinOrPassword);
-      const hasSymbol = /[!@#$%^&*()_+\-={}:;"'<>,.?\\|/-]/.test(pinOrPassword);
-      if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSymbol) {
-        await this.authRepository.incrementUserFailedLogin(user.id);
-        await this.authRepository.incrementIpLockout(ipAddress);
-        throw new UnauthorizedException(
-          'Password must contain uppercase, lowercase, number, and symbol',
-        );
+        throw new UnauthorizedException(strengthError);
       }
 
       isValid = await bcrypt.compare(pinOrPassword, user.password_hash);
@@ -260,23 +239,11 @@ export class AuthService {
       );
     }
 
-    if (password.length < 16) {
+    const strengthError = this.getPasswordStrengthError(password);
+    if (strengthError) {
       await this.authRepository.incrementUserFailedLogin(user.id);
       await this.authRepository.incrementIpLockout(ipAddress);
-      throw new UnauthorizedException(
-        'Password must be at least 16 characters',
-      );
-    }
-    const hasUpperCase = /[A-Z]/.test(password);
-    const hasLowerCase = /[a-z]/.test(password);
-    const hasNumber = /[0-9]/.test(password);
-    const hasSymbol = /[!@#$%^&*()_+\-={}:;"'<>,.?\\|/-]/.test(password);
-    if (!hasUpperCase || !hasLowerCase || !hasNumber || !hasSymbol) {
-      await this.authRepository.incrementUserFailedLogin(user.id);
-      await this.authRepository.incrementIpLockout(ipAddress);
-      throw new UnauthorizedException(
-        'Password must contain uppercase, lowercase, number, and symbol',
-      );
+      throw new UnauthorizedException(strengthError);
     }
 
     const isValid = await bcrypt.compare(password, user.password_hash || '');
