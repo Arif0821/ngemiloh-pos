@@ -75,7 +75,7 @@ describe('UsersService', () => {
     const getCreateCashierDto = () => ({
       name: 'John Doe',
       username: 'johndoe',
-      pin: '123456',
+      pin: '12345678',
       cashier_letter: 'A' as const,
     });
 
@@ -170,7 +170,7 @@ describe('UsersService', () => {
     });
 
     it('should hash PIN with pepper before storing', async () => {
-      const plainPin = '123456';
+      const plainPin = '12345678';
       const createCashierDto = getCreateCashierDto();
       const dto = { ...createCashierDto, pin: plainPin };
 
@@ -211,7 +211,7 @@ describe('UsersService', () => {
 
   describe('resetCashierPin', () => {
     const cashierId = 'cashier-uuid-123';
-    const newPin = '654321';
+    const newPin = '87654321';
 
     const mockCashierUser: User = {
       id: cashierId,

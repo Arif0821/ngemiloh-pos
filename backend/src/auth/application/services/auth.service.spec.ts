@@ -109,7 +109,7 @@ describe('AuthService', () => {
       );
 
       // Act: Perform login
-      const result = await service.login('testuser', '123456', mockIpAddress);
+      const result = await service.login('testuser', '12345678', mockIpAddress);
 
       // Assert: Verify successful login response
       expect(result).toHaveProperty('csrfToken');
@@ -233,7 +233,7 @@ describe('AuthService', () => {
 
       // Act& Assert: Should throw UnauthorizedException
       await expect(
-        service.login('nonexistent', '123456', mockIpAddress),
+        service.login('nonexistent', '12345678', mockIpAddress),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -248,7 +248,7 @@ describe('AuthService', () => {
 
       // Act & Assert: Should throw UnauthorizedException with account inactive message
       await expect(
-        service.login('testuser', '123456', mockIpAddress),
+        service.login('testuser', '12345678', mockIpAddress),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -264,7 +264,7 @@ describe('AuthService', () => {
 
       // Act & Assert: Should throw HttpException with TOO_MANY_REQUESTS
       await expect(
-        service.login('testuser', '123456', mockIpAddress),
+        service.login('testuser', '12345678', mockIpAddress),
       ).rejects.toMatchObject({
         status: HttpStatus.TOO_MANY_REQUESTS,
       });
@@ -356,7 +356,7 @@ describe('AuthService', () => {
 
       // Act & Assert: Should throw HttpException immediately without checking user
       await expect(
-        service.login('testuser', '123456', mockIpAddress),
+        service.login('testuser', '12345678', mockIpAddress),
       ).rejects.toMatchObject({
         status: HttpStatus.TOO_MANY_REQUESTS,
       });
