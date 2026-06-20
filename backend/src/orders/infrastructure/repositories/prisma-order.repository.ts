@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { RedisService } from '../../../common/redis/redis.service';
 import {
   OrderRepositoryInterface,
   type ProductWithModifiers,
@@ -16,7 +17,13 @@ import {
 
 @Injectable()
 export class PrismaOrderRepository implements OrderRepositoryInterface {
-  constructor(private readonly prisma: PrismaService) {}
+  private readonly ACTIVE_DISCOUNTS_CACHE_KEY = 'active_discounts';
+  private readonly ACTIVE_DISCOUNTS_CACHE_TTL = 60; // seconds
+
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly redisService: RedisService,
+  ) {}
 
   async findOrderByClientUuid(clientUuid: string): Promise<Order | null> {
     return this.prisma.order.findUnique({
@@ -25,13 +32,36 @@ export class PrismaOrderRepository implements OrderRepositoryInterface {
   }
 
   async findActiveDiscounts(): Promise<Discount[]> {
-    return this.prisma.discount.findMany({
+    // PERFORMANCE: Cache active discounts with 60s TTL
+    try {
+      const cached = await this.redisService.get(this.ACTIVE_DISCOUNTS_CACHE_KEY);
+      if (cached) {
+        return JSON.parse(cached);
+      }
+    } catch {
+      // Redis unavailable, fall through to DB
+    }
+
+    const discounts = await this.prisma.discount.findMany({
       where: {
         is_active: true,
         valid_from: { lte: new Date() },
         OR: [{ valid_until: null }, { valid_until: { gte: new Date() } }],
       },
     });
+
+    // Cache result asynchronously (don't block on Redis)
+    this.redisService
+      .set(
+        this.ACTIVE_DISCOUNTS_CACHE_KEY,
+        JSON.stringify(discounts),
+        this.ACTIVE_DISCOUNTS_CACHE_TTL,
+      )
+      .catch(() => {
+        // Ignore cache set errors
+      });
+
+    return discounts;
   }
 
   async findProductWithModifiers(
