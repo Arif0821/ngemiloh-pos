@@ -24,6 +24,7 @@ import { AuditInterceptor } from './audit/presentation/audit.interceptor';
 import { ReceiptsModule } from './receipts/receipts.module';
 import { JobsModule } from './jobs/jobs.module';
 import { PaymentModule } from './payment/payment.module';
+import { MembersModule } from './members/members.module';
 
 // Skip throttling for health check endpoints (used by Docker healthcheck)
 const skipThrottleForHealth = (context: {
@@ -106,6 +107,7 @@ const skipThrottleForHealth = (context: {
     ReceiptsModule,
     JobsModule,
     PaymentModule,
+    MembersModule,
   ],
   controllers: [AppController],
   providers: [

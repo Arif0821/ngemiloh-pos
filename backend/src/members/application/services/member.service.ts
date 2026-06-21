@@ -1,6 +1,6 @@
 import { Injectable, Inject, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { RedisService } from '../../common/redis/redis.service';
+import { RedisService } from '../../../common/redis/redis.service';
 import { LoyaltyService } from './loyalty.service';
 import { IMemberRepository } from '../../domain/interfaces/member.repository.interface';
 
