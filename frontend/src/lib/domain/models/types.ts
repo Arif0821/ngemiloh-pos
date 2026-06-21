@@ -214,6 +214,14 @@ export interface ProfitShareData {
 	cashier_share: number;
 }
 
+// BOM Coverage Stats
+export interface BomCoverageStats {
+	total_products: number;
+	products_with_bom: number;
+	products_missing_bom: number;
+	coverage_percentage: number;
+}
+
 // Feature Flag Types
 export interface FeatureFlag {
 	id: string;
@@ -284,3 +292,50 @@ export type CartItem = LocalProduct & {
 	cart_item_id: string;
 	selected_modifiers: ModifierOption[];
 };
+
+// ============================================
+// MEMBER & LOYALTY TYPES (FASE 3)
+// ============================================
+
+export interface MemberData {
+	id: string;
+	member_code: string;
+	name: string;
+	phone: string;
+	email?: string;
+	tier: string;
+	loyalty_points: number;
+	points_value?: number;
+	registered_at: string;
+	registered_via: string;
+	can_earn?: boolean;
+	cooldown_until?: string | null;
+}
+
+export interface MemberTransactionData {
+	id: string;
+	member_id: string;
+	type: 'earn' | 'redeem' | 'adjust' | 'void_revoke' | 'void_restore';
+	points: number;
+	balance_after: number;
+	description: string | null;
+	created_at: string;
+}
+
+export interface ProcessPointsResponse {
+	points_earned: number;
+	points_redeemed: number;
+	discount_amount: number;
+	final_payment?: number;
+	new_balance: number;
+	cooldown_until: string | null;
+	tier: string;
+	tier_changed: boolean;
+	tier_benefits: { free_item?: string } | null;
+}
+
+export interface MemberStats {
+	total_members: number;
+	new_this_month: number;
+	tier_distribution: Record<string, number>;
+}
