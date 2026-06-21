@@ -39,17 +39,8 @@
 		<!-- Header -->
 		<div class="flex items-center justify-between border-b border-slate-200 p-4">
 			<h2 class="text-lg font-bold text-slate-800">🔍 Cari Member</h2>
-			<button
-				onclick={handle_close}
-				class="rounded-lg p-2 hover:bg-slate-100"
-				aria-label="Close"
-			>
-				<svg
-					class="h-5 w-5 text-slate-500"
-					fill="none"
-					stroke="currentColor"
-					viewBox="0 0 24 24"
-				>
+			<button onclick={handle_close} class="rounded-lg p-2 hover:bg-slate-100" aria-label="Close">
+				<svg class="h-5 w-5 text-slate-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
 					<path
 						stroke-linecap="round"
 						stroke-linejoin="round"
@@ -61,7 +52,7 @@
 		</div>
 
 		<!-- Content -->
-		<div class="p-4 space-y-4">
+		<div class="space-y-4 p-4">
 			{#if !member_store.current_member}
 				<!-- Search Form -->
 				<div class="space-y-3">
@@ -98,7 +89,7 @@
 						type={search_mode === 'phone' ? 'tel' : 'text'}
 						bind:value={search_input}
 						placeholder={search_mode === 'phone' ? '081234567890' : 'MBR-A1B2C3'}
-						class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg font-medium focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+						class="w-full rounded-lg border border-slate-300 px-4 py-3 text-lg font-medium focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
 					/>
 
 					<!-- Error -->
@@ -122,11 +113,7 @@
 				<div class="space-y-4">
 					<div class="rounded-lg bg-emerald-50 p-4">
 						<div class="flex items-center gap-2 text-emerald-700">
-							<svg
-								class="h-5 w-5"
-								fill="currentColor"
-								viewBox="0 0 20 20"
-							>
+							<svg class="h-5 w-5" fill="currentColor" viewBox="0 0 20 20">
 								<path
 									fill-rule="evenodd"
 									d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
@@ -145,8 +132,7 @@
 						</div>
 						<div class="flex items-center justify-between">
 							<span class="text-slate-600">ID</span>
-							<span class="font-mono text-slate-800"
-								>{member_store.current_member.member_code}</span
+							<span class="font-mono text-slate-800">{member_store.current_member.member_code}</span
 							>
 						</div>
 						<div class="flex items-center justify-between">
@@ -159,7 +145,8 @@
 								<span class="text-xl font-black text-blue-600"
 									>{member_store.current_member.loyalty_points} pts</span
 								>
-								<span class="ml-2 text-sm text-slate-500">({member_store.format_points_value})</span>
+								<span class="ml-2 text-sm text-slate-500">({member_store.format_points_value})</span
+								>
 							</div>
 						</div>
 					</div>
@@ -177,8 +164,7 @@
 							<div class="flex-1">
 								<span class="font-bold text-blue-800">Pakai Poin?</span>
 								<p class="text-sm text-blue-600">
-									Tersedia {member_store.current_member.loyalty_points} poin
-									({member_store.format_points_value})
+									Tersedia {member_store.current_member.loyalty_points} poin ({member_store.format_points_value})
 								</p>
 							</div>
 						</label>

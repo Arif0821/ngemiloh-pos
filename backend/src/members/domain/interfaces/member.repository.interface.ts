@@ -34,6 +34,8 @@ export interface IMemberRepository {
     tier?: string;
     search?: string;
   }): Promise<{ data: MemberWithTier[]; total: number }>;
-  createTransaction(data: Prisma.MemberTransactionUncheckedCreateInput): Promise<void>;
+  createTransaction(
+    data: Prisma.MemberTransactionUncheckedCreateInput,
+  ): Promise<void>;
   getTransactionHistory(memberId: string, limit?: number): Promise<any[]>;
 }

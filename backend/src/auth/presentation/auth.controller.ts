@@ -11,7 +11,12 @@ import {
   Req,
   BadRequestException,
 } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { AuthService } from '../application/services/auth.service';
 import type { Response, Request } from 'express';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
@@ -40,8 +45,14 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @Throttle({ login: { limit: 5, ttl: 600000 } })
-  @ApiOperation({ summary: 'Login kasir dengan PIN', description: 'Autentikasi kasir dengan username dan PIN 6 digit' })
-  @ApiResponse({ status: 200, description: 'Login berhasil, JWT token di-set sebagai cookie' })
+  @ApiOperation({
+    summary: 'Login kasir dengan PIN',
+    description: 'Autentikasi kasir dengan username dan PIN 6 digit',
+  })
+  @ApiResponse({
+    status: 200,
+    description: 'Login berhasil, JWT token di-set sebagai cookie',
+  })
   @ApiResponse({ status: 401, description: 'PIN atau username salah' })
   @ApiResponse({ status: 429, description: 'Terlalu banyak percobaan login' })
   async login(

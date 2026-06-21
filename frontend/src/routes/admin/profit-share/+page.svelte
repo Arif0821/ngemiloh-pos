@@ -1,22 +1,30 @@
 <script lang="ts">
 	import { api } from '$lib/services/api.client';
 	import { format_rp } from '$lib/utils/format';
-	import type { ProfitShareData } from '$lib/domain/models/types';
+	import type { ProfitShareData, BomCoverageStats } from '$lib/domain/models/types';
 
 	let month = $state(new Date().getMonth() + 1);
 	let year = $state(new Date().getFullYear());
 	let profit_share_data: ProfitShareData | null = $state(null);
+	let bom_coverage: BomCoverageStats | null = $state(null);
 	let is_loading = $state(false);
 
 	async function fetch_profit_share() {
 		is_loading = true;
 		try {
-			const res = await api.request(`/admin/finance/profit-share?month=${month}&year=${year}`, {
-				credentials: 'include'
-			});
-			if (res.ok) {
-				const json = await res.json();
+			const [profitRes, bomRes] = await Promise.all([
+				api.request(`/admin/finance/profit-share?month=${month}&year=${year}`, {
+					credentials: 'include'
+				}),
+				api.request('/admin/inventory/bom-coverage', { credentials: 'include' })
+			]);
+			if (profitRes.ok) {
+				const json = await profitRes.json();
 				profit_share_data = json.data;
+			}
+			if (bomRes.ok) {
+				const json = await bomRes.json();
+				bom_coverage = json.data;
 			}
 		} catch (e) {
 			console.error(e);
@@ -91,24 +99,72 @@
 		</div>
 	</div>
 
-	<div class="rounded-r-lg border-l-4 border-amber-500 bg-amber-50 p-4">
-		<div class="flex items-start gap-3">
-			<svg class="h-5 w-5 shrink-0 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
-				<path
-					fill-rule="evenodd"
-					d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM10 9a1 1 0 100-2 1 1 0 000-2zm-1-5a1 1 0 11-2 0 1 1 0 012 0z"
-					clip-rule="evenodd"
-				/>
-			</svg>
-			<div>
-				<h3 class="text-sm font-bold text-amber-800">Disclaimer</h3>
-				<p class="mt-1 text-sm text-amber-700">
-					Nilai HPP (Bahan) mungkin masih Rp 0 atau belum akurat karena modul BOM (Bill of
-					Materials) dalam pengembangan.
-				</p>
+	{#if bom_coverage && bom_coverage.products_missing_bom > 0}
+		<div class="rounded-lg border-l-4 border-red-500 bg-red-50 p-4">
+			<div class="flex items-start gap-3">
+				<svg class="h-5 w-5 shrink-0 text-red-400" viewBox="0 0 20 20" fill="currentColor">
+					<path
+						fill-rule="evenodd"
+						d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM10 9a1 1 0 100-2 1 1 0 000 2zm-1-5a1 1 0 011-1h1a1 1 0 110 2H10a1 1 0 01-1-1z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+				<div class="flex-1">
+					<h3 class="text-sm font-bold text-red-800">HPP = Rp 0 - BOM Belum Disetting!</h3>
+					<p class="mt-1 text-sm text-red-700">
+						{bom_coverage.products_with_bom} dari {bom_coverage.total_products} produk ({bom_coverage.coverage_percentage}%)
+						sudah ada resep BOM.
+						<b>{bom_coverage.products_missing_bom} produk belum memiliki BOM.</b>
+					</p>
+					<a
+						href="/admin/inventory"
+						class="mt-2 inline-block rounded bg-red-600 px-3 py-1 text-xs font-bold text-white hover:bg-red-700"
+					>
+						Setup BOM Sekarang
+					</a>
+				</div>
 			</div>
 		</div>
-	</div>
+	{:else if profit_share_data && Number(profit_share_data.total_hpp) === 0}
+		<div class="rounded-lg border-l-4 border-amber-500 bg-amber-50 p-4">
+			<div class="flex items-start gap-3">
+				<svg class="h-5 w-5 shrink-0 text-amber-400" viewBox="0 0 20 20" fill="currentColor">
+					<path
+						fill-rule="evenodd"
+						d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zM10 9a1 1 0 100-2 1 1 0 000 2zm-1-5a1 1 0 011-1h1a1 1 0 110 2H10a1 1 0 01-1-1z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+				<div>
+					<h3 class="text-sm font-bold text-amber-800">HPP = Rp 0</h3>
+					<p class="mt-1 text-sm text-amber-700">
+						Nilai HPP (Bahan) mungkin belum akurat. Pastikan semua produk memiliki resep BOM.
+					</p>
+				</div>
+			</div>
+		</div>
+	{:else}
+		<div class="rounded-lg border-l-4 border-emerald-500 bg-emerald-50 p-4">
+			<div class="flex items-start gap-3">
+				<svg class="h-5 w-5 shrink-0 text-emerald-400" viewBox="0 0 20 20" fill="currentColor">
+					<path
+						fill-rule="evenodd"
+						d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+						clip-rule="evenodd"
+					/>
+				</svg>
+				<div>
+					<h3 class="text-sm font-bold text-emerald-800">
+						BOM Coverage: {bom_coverage?.coverage_percentage || 0}%
+					</h3>
+					<p class="mt-1 text-sm text-emerald-700">
+						{bom_coverage?.products_with_bom || 0} dari {bom_coverage?.total_products || 0} produk sudah
+						memiliki resep BOM.
+					</p>
+				</div>
+			</div>
+		</div>
+	{/if}
 
 	{#if is_loading && !profit_share_data}
 		<p class="animate-pulse py-10 text-center text-slate-500">Menghitung kalkulasi bagi hasil...</p>

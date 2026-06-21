@@ -251,4 +251,77 @@ export class InventoryService {
       }
     });
   }
+
+  async recordWaste(
+    rawMaterialId: string,
+    quantity: number,
+    reason: string,
+    notes: string,
+    userId: string,
+  ) {
+    const material =
+      await this.inventoryRepository.findRawMaterialById(rawMaterialId);
+    if (!material) throw new NotFoundException('Raw material not found');
+
+    if (Number(material.current_stock) < quantity) {
+      throw new BadRequestException('Insufficient stock for waste recording');
+    }
+
+    return this.inventoryRepository.executeInTransaction(async (repo) => {
+      // Decrease stock
+      await repo.updateRawMaterialStock(rawMaterialId, quantity, 'decrement');
+
+      // Record waste movement
+      const wasteMovement = await repo.createInventoryTransaction({
+        raw_material_id: rawMaterialId,
+        qty: quantity,
+        transaction_type: 'waste',
+        notes: `[${reason}] ${notes}`.trim(),
+        created_by: userId,
+      });
+
+      return wasteMovement;
+    });
+  }
+
+  async getWasteHistory(limit = 50) {
+    return this.inventoryRepository.findWasteMovements(limit);
+  }
+
+  async getBomRecipesByProduct(productId: string) {
+    return this.inventoryRepository.findBomRecipesByProduct(productId);
+  }
+
+  async updateBomRecipe(id: string, quantity: number) {
+    return this.inventoryRepository.updateBomRecipe(id, quantity);
+  }
+
+  async getBomCoverage() {
+    const prisma =
+      (this.inventoryRepository as any).prisma ||
+      (this.inventoryRepository as any).client;
+    if (!prisma) {
+      throw new Error('Cannot access Prisma client');
+    }
+
+    const [totalProducts, productsWithBom] = await Promise.all([
+      prisma.product.count({ where: { is_active: true } }),
+      prisma.product.count({
+        where: {
+          is_active: true,
+          bom_recipes: { some: {} },
+        },
+      }),
+    ]);
+
+    return {
+      total_products: totalProducts,
+      products_with_bom: productsWithBom,
+      products_missing_bom: totalProducts - productsWithBom,
+      coverage_percentage:
+        totalProducts > 0
+          ? Math.round((productsWithBom / totalProducts) * 100)
+          : 0,
+    };
+  }
 }

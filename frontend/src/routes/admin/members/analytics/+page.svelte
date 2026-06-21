@@ -94,7 +94,7 @@
 			<div class="space-y-3">
 				{#each Object.entries(stats.tier_distribution || {}) as [tier, count]}
 					{@const total = stats.total_members || 1}
-					{@const pct = Math.round((count / total) * 100)}
+					{@const pct = Math.round((Number(count) / total) * 100)}
 					<div>
 						<div class="mb-1 flex justify-between text-sm">
 							<span class="flex items-center gap-2 font-medium">

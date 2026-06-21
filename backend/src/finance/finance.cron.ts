@@ -67,7 +67,7 @@ export class FinanceCronService {
     for (const shift of shiftsNearClose) {
       const plannedClose = shift.planned_close_at;
       const minutesLeft = Math.round(
-        (plannedClose!.getTime() - now.getTime()) / 60000,
+        (plannedClose.getTime() - now.getTime()) / 60000,
       );
       this.logger.log(
         `Shift warning: ${shift.id} closes in ${minutesLeft} minutes`,
@@ -133,8 +133,8 @@ export class FinanceCronService {
           cashier_id: shift.cashier_id,
           status: 'completed',
           created_at: {
-            gte: shift.shift_start,    // mulai shift dibuka
-            lt: auto_close_time,        // sampai saat auto-close
+            gte: shift.shift_start, // mulai shift dibuka
+            lt: auto_close_time, // sampai saat auto-close
           },
         },
       });

@@ -10,9 +10,9 @@ export class LoyaltyService {
   }
 
   // Constants
-  readonly POINTS_EARN_RATE = 5;      // 5 points per Rp 1,000
-  readonly POINTS_EARN_PER = 1000;     // per Rp 1,000
-  readonly POINTS_REDEEM_RATE = 5;     // 5 points = Rp 1,000
+  readonly POINTS_EARN_RATE = 5; // 5 points per Rp 1,000
+  readonly POINTS_EARN_PER = 1000; // per Rp 1,000
+  readonly POINTS_REDEEM_RATE = 5; // 5 points = Rp 1,000
   readonly POINTS_REDEEM_PER = 1000;
   readonly COOLDOWN_MINUTES = 2;
   readonly GRACE_DAYS = 30;
@@ -22,7 +22,9 @@ export class LoyaltyService {
   }
 
   calculate_redeem_value(points: number): number {
-    return Math.floor(points / this.POINTS_REDEEM_RATE) * this.POINTS_REDEEM_PER;
+    return (
+      Math.floor(points / this.POINTS_REDEEM_RATE) * this.POINTS_REDEEM_PER
+    );
   }
 
   generate_member_code(): string {
@@ -34,7 +36,10 @@ export class LoyaltyService {
     return `MBR-${code}`;
   }
 
-  async evaluate_tier(memberId: string, currentPoints: number): Promise<{
+  async evaluate_tier(
+    memberId: string,
+    currentPoints: number,
+  ): Promise<{
     tier_id: string;
     tier_name: string;
     changed: boolean;
@@ -47,7 +52,7 @@ export class LoyaltyService {
     });
 
     // Find appropriate tier
-    let newTier = tiers.find(t => currentPoints >= t.min_points);
+    let newTier = tiers.find((t) => currentPoints >= t.min_points);
     if (!newTier) {
       newTier = tiers[tiers.length - 1]; // Lowest tier
     }
@@ -70,7 +75,9 @@ export class LoyaltyService {
     };
   }
 
-  async get_tier_benefits(tierId: string): Promise<{ free_item?: string } | null> {
+  async get_tier_benefits(
+    tierId: string,
+  ): Promise<{ free_item?: string } | null> {
     if (!tierId) return null;
 
     const tier = await this.prisma.loyaltyTier.findUnique({

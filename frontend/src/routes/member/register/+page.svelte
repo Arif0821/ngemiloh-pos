@@ -32,7 +32,7 @@
 				name: name.trim(),
 				phone: phone.trim(),
 				email: email.trim() || undefined,
-				ref_code: ref_code || undefined,
+				ref_code: ref_code || undefined
 			});
 
 			if (result.success) {
@@ -55,9 +55,21 @@
 			<!-- Success Card -->
 			<div class="rounded-2xl bg-white p-8 shadow-xl">
 				<div class="mb-6 text-center">
-					<div class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100">
-						<svg class="h-8 w-8 text-emerald-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-							<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+					<div
+						class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-emerald-100"
+					>
+						<svg
+							class="h-8 w-8 text-emerald-600"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M5 13l4 4L19 7"
+							/>
 						</svg>
 					</div>
 					<h1 class="text-2xl font-black text-slate-800">Pendaftaran Berhasil!</h1>
@@ -65,7 +77,9 @@
 				</div>
 
 				<!-- Member Card -->
-				<div class="rounded-xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 to-orange-50 p-6">
+				<div
+					class="rounded-xl border-2 border-amber-400 bg-gradient-to-br from-amber-50 to-orange-50 p-6"
+				>
 					<div class="mb-4 text-center">
 						<div class="mb-2 text-3xl">🏪 NGEMILOH</div>
 						<div class="text-sm font-bold text-amber-700">MEMBERSHIP CARD</div>
@@ -78,7 +92,8 @@
 						</div>
 						<div class="flex justify-between">
 							<span class="text-slate-600">Member ID</span>
-							<span class="font-mono font-bold text-slate-800">{registered_member.member_code}</span>
+							<span class="font-mono font-bold text-slate-800">{registered_member.member_code}</span
+							>
 						</div>
 						<div class="flex justify-between">
 							<span class="text-slate-600">Tier</span>
@@ -111,7 +126,13 @@
 					<p class="mt-2 text-slate-500">Daftar gratis dan dapatkan poin dari setiap pembelian!</p>
 				</div>
 
-				<form onsubmit={(e) => { e.preventDefault(); handle_submit(); }} class="space-y-4">
+				<form
+					onsubmit={(e) => {
+						e.preventDefault();
+						handle_submit();
+					}}
+					class="space-y-4"
+				>
 					<div>
 						<label for="name" class="mb-1 block text-sm font-medium text-slate-700">
 							Nama Lengkap <span class="text-red-500">*</span>
@@ -121,7 +142,7 @@
 							type="text"
 							bind:value={name}
 							placeholder="Masukkan nama lengkap"
-							class="w-full rounded-lg border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+							class="w-full rounded-lg border border-slate-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
 							required
 						/>
 					</div>
@@ -135,7 +156,7 @@
 							type="tel"
 							bind:value={phone}
 							placeholder="08xxxxxxxxxx"
-							class="w-full rounded-lg border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+							class="w-full rounded-lg border border-slate-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
 							required
 						/>
 					</div>
@@ -149,7 +170,7 @@
 							type="email"
 							bind:value={email}
 							placeholder="email@contoh.com"
-							class="w-full rounded-lg border border-slate-300 px-4 py-3 focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20"
+							class="w-full rounded-lg border border-slate-300 px-4 py-3 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 focus:outline-none"
 						/>
 					</div>
 

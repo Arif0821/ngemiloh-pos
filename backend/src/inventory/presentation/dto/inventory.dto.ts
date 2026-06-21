@@ -161,3 +161,21 @@ export class CreateBomRecipeDto {
   @Min(0.0001)
   quantity_per_serving: number;
 }
+
+export class RecordWasteDto {
+  @IsUUID()
+  raw_material_id: string;
+
+  @IsNumber()
+  @Min(0.0001)
+  quantity: number;
+
+  @IsString()
+  @MaxLength(50)
+  reason: string;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  notes?: string;
+}

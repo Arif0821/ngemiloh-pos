@@ -1,4 +1,10 @@
-import { Injectable, Inject, ConflictException, NotFoundException, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  Inject,
+  ConflictException,
+  NotFoundException,
+  BadRequestException,
+} from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
 import { RedisService } from '../../../common/redis/redis.service';
 import { LoyaltyService } from './loyalty.service';
@@ -17,11 +23,18 @@ export class MemberService {
     this.prisma = new PrismaClient();
   }
 
-  async register(data: { name: string; phone: string; email?: string; ref_code?: string }) {
+  async register(data: {
+    name: string;
+    phone: string;
+    email?: string;
+    ref_code?: string;
+  }) {
     // Check phone uniqueness
     const existing = await this.memberRepository.findByPhone(data.phone);
     if (existing) {
-      throw new ConflictException('No. HP sudah terdaftar. Silakan gunakan no. HP lain.');
+      throw new ConflictException(
+        'No. HP sudah terdaftar. Silakan gunakan no. HP lain.',
+      );
     }
 
     // Generate member code
@@ -29,13 +42,16 @@ export class MemberService {
     let attempts = 0;
     do {
       memberCode = this.loyaltyService.generate_member_code();
-      const existingCode = await this.memberRepository.findByMemberCode(memberCode);
+      const existingCode =
+        await this.memberRepository.findByMemberCode(memberCode);
       if (!existingCode) break;
       attempts++;
     } while (attempts < 10);
 
     if (attempts >= 10) {
-      throw new BadRequestException('Gagal membuat kode member. Silakan coba lagi.');
+      throw new BadRequestException(
+        'Gagal membuat kode member. Silakan coba lagi.',
+      );
     }
 
     // Get Bronze tier (default)
@@ -87,7 +103,9 @@ export class MemberService {
       name: member.name,
       tier: member.tier?.name || 'Bronze',
       loyalty_points: member.loyalty_points,
-      points_value: this.loyaltyService.calculate_redeem_value(member.loyalty_points),
+      points_value: this.loyaltyService.calculate_redeem_value(
+        member.loyalty_points,
+      ),
       can_earn: !cooldownUntil,
       cooldown_until: cooldownUntil,
     };
@@ -121,7 +139,8 @@ export class MemberService {
     // Handle redemption (if requested)
     if (data.redeem_requested && member.loyalty_points > 0) {
       pointsRedeemed = member.loyalty_points;
-      discountAmount = this.loyaltyService.calculate_redeem_value(pointsRedeemed);
+      discountAmount =
+        this.loyaltyService.calculate_redeem_value(pointsRedeemed);
 
       // Create redeem transaction
       await this.memberRepository.createTransaction({
@@ -141,10 +160,13 @@ export class MemberService {
 
     // Handle earning (after payment success, not during cooldown)
     if (canEarn) {
-      pointsEarned = this.loyaltyService.calculate_points_earned(data.transaction_subtotal);
+      pointsEarned = this.loyaltyService.calculate_points_earned(
+        data.transaction_subtotal,
+      );
 
       if (pointsEarned > 0) {
-        const newBalance = member.loyalty_points - pointsRedeemed + pointsEarned;
+        const newBalance =
+          member.loyalty_points - pointsRedeemed + pointsEarned;
 
         await this.memberRepository.createTransaction({
           member_id: data.member_id,
@@ -157,23 +179,33 @@ export class MemberService {
         });
 
         // Set cooldown
-        const cooldownUntilDate = new Date(Date.now() + this.loyaltyService.COOLDOWN_MINUTES * 60 * 1000);
+        const cooldownUntilDate = new Date(
+          Date.now() + this.loyaltyService.COOLDOWN_MINUTES * 60 * 1000,
+        );
         await this.set_cooldown(data.member_id, cooldownUntilDate);
 
         // Update balance
         await this.memberRepository.updatePoints(data.member_id, newBalance);
 
         // Evaluate tier
-        const tierResult = await this.loyaltyService.evaluate_tier(data.member_id, newBalance);
+        const tierResult = await this.loyaltyService.evaluate_tier(
+          data.member_id,
+          newBalance,
+        );
         if (tierResult.changed) {
-          await this.memberRepository.updateTier(data.member_id, tierResult.tier_id);
+          await this.memberRepository.updateTier(
+            data.member_id,
+            tierResult.tier_id,
+          );
         }
       }
     }
 
     // Get updated member
     const updatedMember = await this.memberRepository.findById(data.member_id);
-    const tierBenefits = await this.loyaltyService.get_tier_benefits(updatedMember?.current_tier_id || '');
+    const tierBenefits = await this.loyaltyService.get_tier_benefits(
+      updatedMember?.current_tier_id || '',
+    );
 
     return {
       points_earned: pointsEarned,
@@ -181,7 +213,11 @@ export class MemberService {
       discount_amount: discountAmount,
       final_payment: finalPayment,
       new_balance: updatedMember?.loyalty_points || 0,
-      cooldown_until: canEarn ? new Date(Date.now() + this.loyaltyService.COOLDOWN_MINUTES * 60 * 1000) : cooldownUntil,
+      cooldown_until: canEarn
+        ? new Date(
+            Date.now() + this.loyaltyService.COOLDOWN_MINUTES * 60 * 1000,
+          )
+        : cooldownUntil,
       tier: updatedMember?.tier?.name || 'Bronze',
       tier_changed: false,
       tier_benefits: tierBenefits,
@@ -221,12 +257,23 @@ export class MemberService {
     }
 
     // Recalculate balance
-    const allTxs = await this.memberRepository.getTransactionHistory(memberId, 1000);
+    const allTxs = await this.memberRepository.getTransactionHistory(
+      memberId,
+      1000,
+    );
     const currentBalance = allTxs.reduce((sum, tx) => sum + tx.points, 0);
-    await this.memberRepository.updatePoints(memberId, Math.max(0, currentBalance));
+    await this.memberRepository.updatePoints(
+      memberId,
+      Math.max(0, currentBalance),
+    );
   }
 
-  async get_all_members(options?: { page?: number; limit?: number; tier?: string; search?: string }) {
+  async get_all_members(options?: {
+    page?: number;
+    limit?: number;
+    tier?: string;
+    search?: string;
+  }) {
     return this.memberRepository.findAll(options);
   }
 
@@ -237,22 +284,22 @@ export class MemberService {
     }
 
     const transactions = await this.memberRepository.getTransactionHistory(id);
-    const tierBenefits = await this.loyaltyService.get_tier_benefits(member.current_tier_id || '');
+    const tierBenefits = await this.loyaltyService.get_tier_benefits(
+      member.current_tier_id || '',
+    );
 
     return {
       ...member,
-      points_value: this.loyaltyService.calculate_redeem_value(member.loyalty_points),
+      points_value: this.loyaltyService.calculate_redeem_value(
+        member.loyalty_points,
+      ),
       tier_benefits: tierBenefits,
       transactions,
     };
   }
 
   async get_stats() {
-    const [
-      totalMembers,
-      newThisMonth,
-      tierDistribution,
-    ] = await Promise.all([
+    const [totalMembers, newThisMonth, tierDistribution] = await Promise.all([
       this.prisma.member.count({ where: { is_active: true } }),
       this.prisma.member.count({
         where: {
@@ -271,7 +318,7 @@ export class MemberService {
 
     // Get tier names
     const tiers = await this.prisma.loyaltyTier.findMany();
-    const tierMap = new Map(tiers.map(t => [t.id, t.name]));
+    const tierMap = new Map(tiers.map((t) => [t.id, t.name]));
 
     const distribution: Record<string, number> = {};
     for (const td of tierDistribution) {
@@ -310,7 +357,10 @@ export class MemberService {
 
   private async set_cooldown(memberId: string, until: Date): Promise<void> {
     const key = `member:cooldown:${memberId}`;
-    const ttlSeconds = Math.max(0, Math.floor((until.getTime() - Date.now()) / 1000));
+    const ttlSeconds = Math.max(
+      0,
+      Math.floor((until.getTime() - Date.now()) / 1000),
+    );
     if (ttlSeconds > 0) {
       await this.redisService.set(key, until.toISOString(), ttlSeconds);
     }

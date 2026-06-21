@@ -88,7 +88,7 @@
 					← Kembali ke Daftar
 				</a>
 				<h1 class="text-2xl font-black text-slate-800">{member.name}</h1>
-				<p class="text-slate-500 font-mono">{member.member_code}</p>
+				<p class="font-mono text-slate-500">{member.member_code}</p>
 			</div>
 			<span class="rounded-full px-4 py-2 text-lg font-bold {get_tier_color(member.tier?.name)}">
 				{member.tier?.name || 'Bronze'}
@@ -100,7 +100,9 @@
 			<div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
 				<div class="text-sm text-slate-500">Poin</div>
 				<div class="text-3xl font-black text-blue-600">{member.loyalty_points} pts</div>
-				<div class="text-sm text-slate-500">= Rp {(Math.floor(member.loyalty_points / 5) * 1000).toLocaleString()}</div>
+				<div class="text-sm text-slate-500">
+					= Rp {(Math.floor(member.loyalty_points / 5) * 1000).toLocaleString()}
+				</div>
 			</div>
 			<div class="rounded-xl border border-slate-200 bg-white p-6 shadow-sm">
 				<div class="text-sm text-slate-500">HP</div>
@@ -118,7 +120,9 @@
 						day: 'numeric'
 					})}
 				</div>
-				<div class="text-sm text-slate-500 capitalize">{member.registered_via?.replace('_', ' ')}</div>
+				<div class="text-sm text-slate-500 capitalize">
+					{member.registered_via?.replace('_', ' ')}
+				</div>
 			</div>
 		</div>
 
@@ -128,7 +132,7 @@
 				<h3 class="font-bold text-slate-800">Riwayat Poin</h3>
 			</div>
 			<div class="divide-y divide-slate-200">
-				{#each (member.transactions || []) as tx}
+				{#each member.transactions || [] as tx}
 					<div class="flex items-center justify-between p-4">
 						<div>
 							<span class="font-medium {get_tx_color(tx.type)}">
@@ -151,10 +155,7 @@
 	{:else}
 		<div class="rounded-xl border border-slate-200 bg-white p-8 text-center">
 			<p class="text-slate-500">Member tidak ditemukan</p>
-			<a
-				href="/admin/members"
-				class="mt-4 inline-block text-blue-600 hover:underline"
-			>
+			<a href="/admin/members" class="mt-4 inline-block text-blue-600 hover:underline">
 				← Kembali ke Daftar
 			</a>
 		</div>

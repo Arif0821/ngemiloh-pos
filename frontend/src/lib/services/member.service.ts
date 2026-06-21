@@ -1,5 +1,10 @@
 import { api } from './api.client';
-import type { ApiResponse, MemberData, ProcessPointsResponse, MemberStats } from '../domain/models/types';
+import type {
+	ApiResponse,
+	MemberData,
+	ProcessPointsResponse,
+	MemberStats
+} from '../domain/models/types';
 
 export class MemberService {
 	async register(data: { name: string; phone: string; email?: string; ref_code?: string }) {

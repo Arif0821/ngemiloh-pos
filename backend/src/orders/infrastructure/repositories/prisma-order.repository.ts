@@ -66,10 +66,12 @@ export class PrismaOrderRepository implements OrderRepositoryInterface {
     return discounts;
   }
 
-  async aggregateOrders(
-    where: Prisma.OrderWhereInput,
-  ): Promise<{
-    _sum: { cash_amount: number | null; qris_amount: number | null; total_amount: number | null };
+  async aggregateOrders(where: Prisma.OrderWhereInput): Promise<{
+    _sum: {
+      cash_amount: number | null;
+      qris_amount: number | null;
+      total_amount: number | null;
+    };
     _count: number;
   }> {
     const result = await this.prisma.order.aggregate({
@@ -83,9 +85,15 @@ export class PrismaOrderRepository implements OrderRepositoryInterface {
     });
     return {
       _sum: {
-        cash_amount: result._sum.cash_amount ? Number(result._sum.cash_amount) : null,
-        qris_amount: result._sum.qris_amount ? Number(result._sum.qris_amount) : null,
-        total_amount: result._sum.total_amount ? Number(result._sum.total_amount) : null,
+        cash_amount: result._sum.cash_amount
+          ? Number(result._sum.cash_amount)
+          : null,
+        qris_amount: result._sum.qris_amount
+          ? Number(result._sum.qris_amount)
+          : null,
+        total_amount: result._sum.total_amount
+          ? Number(result._sum.total_amount)
+          : null,
       },
       _count: result._count,
     };

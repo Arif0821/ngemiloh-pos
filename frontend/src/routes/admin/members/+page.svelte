@@ -97,7 +97,11 @@
 						<td class="px-4 py-3 font-mono text-slate-600">{member.member_code}</td>
 						<td class="px-4 py-3 text-slate-600">{member.phone}</td>
 						<td class="px-4 py-3">
-							<span class="rounded-full px-2 py-0.5 text-xs font-bold {get_tier_color(member.tier?.name)}">
+							<span
+								class="rounded-full px-2 py-0.5 text-xs font-bold {get_tier_color(
+									member.tier?.name
+								)}"
+							>
 								{member.tier?.name || 'Bronze'}
 							</span>
 						</td>

@@ -1,5 +1,12 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsString, IsNotEmpty, IsNumber, IsBoolean, IsOptional, Min } from 'class-validator';
+import {
+  IsString,
+  IsNotEmpty,
+  IsNumber,
+  IsBoolean,
+  IsOptional,
+  Min,
+} from 'class-validator';
 
 export class ProcessMemberPointsDto {
   @ApiProperty()
@@ -37,7 +44,10 @@ export class ProcessMemberPointsResponseDto {
   @ApiProperty({ example: 0, description: 'Discount amount in Rupiah' })
   discount_amount: number;
 
-  @ApiPropertyOptional({ example: 61000, description: 'Final payment after redeem' })
+  @ApiPropertyOptional({
+    example: 61000,
+    description: 'Final payment after redeem',
+  })
   final_payment?: number;
 
   @ApiProperty({ example: 1425 })

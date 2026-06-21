@@ -64,4 +64,19 @@ export interface IInventoryRepository {
     orderId: string,
     rawMaterialId: string,
   ): Promise<StockMovement | null>;
+
+  /**
+   * Find waste movements for waste tracking history
+   */
+  findWasteMovements(limit?: number): Promise<unknown>;
+
+  /**
+   * Find BOM recipes for a specific product
+   */
+  findBomRecipesByProduct(productId: string): Promise<unknown>;
+
+  /**
+   * Update BOM recipe quantity
+   */
+  updateBomRecipe(id: string, quantity: number): Promise<unknown>;
 }

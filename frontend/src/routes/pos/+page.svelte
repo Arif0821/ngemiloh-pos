@@ -158,7 +158,8 @@
 					>
 					<span class="hidden sm:inline">Riwayat</span>
 				</button>
-				<button onclick={handle_logout}
+				<button
+					onclick={handle_logout}
 					class="flex items-center gap-2 rounded-full border border-red-100 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 shadow-sm transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/20 dark:hover:bg-red-900/40"
 					title="Keluar"
 				>

@@ -40,7 +40,12 @@ export class FinanceService {
       where: {
         shift_start: { gte: query_date, lte: query_date_end },
       },
-      select: { id: true, shift_start: true, actual_close_at: true },
+      select: {
+        id: true,
+        cashier_id: true,
+        shift_start: true,
+        actual_close_at: true,
+      },
     });
 
     if (shifts.length === 0) {
@@ -56,13 +61,20 @@ export class FinanceService {
       };
     }
 
-    const shift_ids = shifts.map((s) => s.id);
+    // Build OR conditions for each shift's time range
+    const shiftConditions = shifts.map((shift) => ({
+      cashier_id: shift.cashier_id,
+      created_at: {
+        gte: shift.shift_start,
+        lt: shift.actual_close_at || new Date(),
+      },
+    }));
 
-    // Query order berdasarkan CASH_REGISTER_ID (shift-based) bukan created_at
+    // Query order berdasarkan cashier_id + created_at range (shift-based)
     const [aggregateResult, paymentCounts] = await Promise.all([
       this.prisma.order.aggregate({
         where: {
-          cash_register_id: { in: shift_ids },
+          OR: shiftConditions,
           status: { not: 'voided' },
         },
         _sum: { total_amount: true, cogs_total: true },
@@ -71,7 +83,13 @@ export class FinanceService {
       this.prisma.$queryRaw<{ payment_method: string; count: bigint }[]>`
         SELECT payment_method, COUNT(*)::bigint as count
         FROM orders
-        WHERE cash_register_id = ANY(${shift_ids}::text[])
+        WHERE (${Prisma.join(
+          shifts.map(
+            (s) =>
+              Prisma.sql`(cashier_id = ${s.cashier_id} AND created_at >= ${s.shift_start} AND created_at < ${s.actual_close_at || new Date()})`,
+          ),
+          ' OR ',
+        )})
           AND status != 'voided'
         GROUP BY payment_method
       `,
@@ -93,7 +111,9 @@ export class FinanceService {
     const payment_distribution = { cash: 0, qris: 0, split: 0 };
     for (const row of paymentCounts) {
       if (row.payment_method in payment_distribution) {
-        payment_distribution[row.payment_method as keyof typeof payment_distribution] = Number(row.count);
+        payment_distribution[
+          row.payment_method as keyof typeof payment_distribution
+        ] = Number(row.count);
       }
     }
 
@@ -107,7 +127,7 @@ export class FinanceService {
         ? Math.min(100, Math.round((revenue / dailyRevenueTarget) * 100))
         : 0;
 
-    const avg = transactions > 0 ? revenue / transactions : 0;
+    const avg = transactions > 0 ? revenue / Number(transactions) : 0;
 
     return {
       revenue,

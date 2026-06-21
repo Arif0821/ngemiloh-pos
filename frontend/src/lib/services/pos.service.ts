@@ -126,14 +126,34 @@ export class PosService {
 			const res = await api.get(`/admin/discounts`);
 			if (res.ok) {
 				const json: ApiResponse<Discount[]> = await res.json();
-				if (json.success) {
+				if (json.success && json.data) {
 					pos_store.active_discounts = json.data.filter((d) => d.is_active);
+
+					// Cache discounts for offline mode (2.3 Dexie Discount Cache)
+					await db.discounts.clear();
+					await db.discounts.bulkAdd(json.data);
 				}
 			} else {
 				console.warn('Failed to fetch discounts:', res.status);
+				// Fallback: load dari Dexie jika offline
+				await this.load_discounts_from_cache();
 			}
 		} catch (e) {
 			console.warn('Failed to fetch discounts (offline or network error)');
+			// Fallback: load dari Dexie jika offline
+			await this.load_discounts_from_cache();
+		}
+	}
+
+	private async load_discounts_from_cache() {
+		try {
+			const cached = await db.discounts.toArray();
+			if (cached.length > 0) {
+				pos_store.active_discounts = cached.filter((d) => d.is_active);
+				console.log('[POS] Loaded discounts from local cache:', cached.length);
+			}
+		} catch (e) {
+			console.warn('Failed to load discounts from cache:', e);
 		}
 	}
 

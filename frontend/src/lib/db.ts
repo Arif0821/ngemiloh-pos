@@ -13,7 +13,8 @@ import type {
 	LocalProduct,
 	LocalOrderItem,
 	LocalOrder,
-	LocalCartItem
+	LocalCartItem,
+	Discount
 } from '$lib/domain/models/types';
 
 // Dexie Database
@@ -21,13 +22,15 @@ export class PosDatabase extends Dexie {
 	products!: Table<LocalProduct, string>;
 	orders!: Table<LocalOrder, string>;
 	cart!: Table<LocalCartItem, string>;
+	discounts!: Table<Discount, string>;
 
 	constructor() {
 		super('NgemilohPOSDB');
-		this.version(3).stores({
+		this.version(4).stores({
 			products: 'id, category_id',
 			orders: 'client_uuid, sync_status, created_at',
-			cart: 'id'
+			cart: 'id',
+			discounts: 'id, is_active'
 		});
 	}
 }

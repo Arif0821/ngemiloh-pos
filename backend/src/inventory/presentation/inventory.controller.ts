@@ -21,6 +21,7 @@ import {
   CreateRawMaterialDto,
   UpdateRawMaterialDto,
   CreateBomRecipeDto,
+  RecordWasteDto,
 } from './dto/inventory.dto';
 import type { AuthenticatedRequest } from '../../types/express';
 
@@ -108,6 +109,62 @@ export class InventoryController {
   @Throttle({ default: { limit: 20, ttl: 60000 } })
   async deleteBomRecipe(@Param('id') id: string) {
     const data = await this.inventoryService.deleteBomRecipe(id);
+    return { status: 'success', data };
+  }
+
+  @Roles(Role.superadmin)
+  @Post('waste')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
+  async recordWaste(
+    @Body() body: RecordWasteDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const userId = req.user.id;
+    const data = await this.inventoryService.recordWaste(
+      body.raw_material_id,
+      body.quantity,
+      body.reason,
+      body.notes || '',
+      userId,
+    );
+    return { status: 'success', data };
+  }
+
+  @Roles(Role.superadmin)
+  @Get('waste')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  async getWasteHistory() {
+    const data = await this.inventoryService.getWasteHistory();
+    return { status: 'success', data };
+  }
+
+  @Roles(Role.superadmin)
+  @Get('bom/:productId')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  async getBomRecipes(@Param('productId') productId: string) {
+    const data = await this.inventoryService.getBomRecipesByProduct(productId);
+    return { status: 'success', data };
+  }
+
+  @Roles(Role.superadmin)
+  @Patch('bom/:id')
+  @Throttle({ default: { limit: 20, ttl: 60000 } })
+  async updateBomRecipe(
+    @Param('id') id: string,
+    @Body() body: { quantity_per_serving: number },
+  ) {
+    const data = await this.inventoryService.updateBomRecipe(
+      id,
+      body.quantity_per_serving,
+    );
+    return { status: 'success', data };
+  }
+
+  @Roles(Role.superadmin)
+  @Get('bom-coverage')
+  @Throttle({ default: { limit: 60, ttl: 60000 } })
+  async getBomCoverage() {
+    const data = await this.inventoryService.getBomCoverage();
     return { status: 'success', data };
   }
 }

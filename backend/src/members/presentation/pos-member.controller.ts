@@ -1,5 +1,18 @@
-import { Controller, Get, Post, Body, Query, UseGuards, Req } from '@nestjs/common';
-import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
+import {
+  Controller,
+  Get,
+  Post,
+  Body,
+  Query,
+  UseGuards,
+  Req,
+} from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+} from '@nestjs/swagger';
 import { MemberService } from '../application/services/member.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { LookupMemberQueryDto } from '../application/dto/lookup-member.dto';

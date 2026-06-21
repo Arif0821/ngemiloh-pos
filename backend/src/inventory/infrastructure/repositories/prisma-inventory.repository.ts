@@ -237,4 +237,41 @@ export class PrismaInventoryRepository implements IInventoryRepository {
       orderBy: { created_at: 'desc' },
     });
   }
+
+  async findWasteMovements(limit = 50) {
+    return this.client.stockMovement.findMany({
+      where: { type: 'waste' },
+      include: {
+        raw_material: {
+          select: { name: true, purchase_unit: true, usage_unit: true },
+        },
+        actor: { select: { name: true } },
+      },
+      orderBy: { created_at: 'desc' },
+      take: limit,
+    });
+  }
+
+  async findBomRecipesByProduct(productId: string) {
+    return this.client.bomRecipe.findMany({
+      where: { product_id: productId },
+      include: {
+        raw_material: {
+          select: {
+            id: true,
+            name: true,
+            cost_per_unit: true,
+            purchase_unit: true,
+          },
+        },
+      },
+    });
+  }
+
+  async updateBomRecipe(id: string, quantity: number) {
+    return this.client.bomRecipe.update({
+      where: { id },
+      data: { quantity_per_serving: quantity },
+    });
+  }
 }

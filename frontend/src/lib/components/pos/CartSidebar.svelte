@@ -210,8 +210,14 @@
 			<span class="text-surface-500 font-medium">Total Bayar</span>
 			<span class="text-brand-600 dark:text-brand-400 text-3xl font-black">
 				{#if member_use_points && member_store.current_member && member_store.current_member.points_value}
-					<span class="text-emerald-600">{pos_store.format_rp(Math.max(0, pos_store.cart_total - (member_store.current_member.points_value || 0)))}</span>
-					<span class="ml-2 text-base text-slate-400 line-through">{pos_store.format_rp(pos_store.cart_total)}</span>
+					<span class="text-emerald-600"
+						>{pos_store.format_rp(
+							Math.max(0, pos_store.cart_total - (member_store.current_member.points_value || 0))
+						)}</span
+					>
+					<span class="ml-2 text-base text-slate-400 line-through"
+						>{pos_store.format_rp(pos_store.cart_total)}</span
+					>
 				{:else}
 					{pos_store.format_rp(pos_store.cart_total)}
 				{/if}

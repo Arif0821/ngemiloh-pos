@@ -122,13 +122,15 @@ export class ReceiptsService {
         phone: this.PHONE,
         receipt_width: 58, // Default 58mm
       },
-      member_info: order.member ? {
-        name: order.member.name,
-        code: order.member.member_code,
-        tier: order.member.tier?.name || '',
-        points_earned: 0, // Will be calculated by caller if needed
-        total_points: 0,
-      } : undefined,
+      member_info: order.member
+        ? {
+            name: order.member.name,
+            code: order.member.member_code,
+            tier: order.member.tier?.name || '',
+            points_earned: 0, // Will be calculated by caller if needed
+            total_points: 0,
+          }
+        : undefined,
     };
   }
 
@@ -297,14 +299,32 @@ export class ReceiptsService {
     if (data.member_info) {
       lines.push(this.divider('-', charsPerLine));
       lines.push(this.centerText('👤 MEMBER', charsPerLine));
-      lines.push(this.formatKeyValue('Nama', data.member_info.name, charsPerLine));
-      lines.push(this.formatKeyValue('ID', data.member_info.code, charsPerLine));
-      lines.push(this.formatKeyValue('Tier', data.member_info.tier, charsPerLine));
+      lines.push(
+        this.formatKeyValue('Nama', data.member_info.name, charsPerLine),
+      );
+      lines.push(
+        this.formatKeyValue('ID', data.member_info.code, charsPerLine),
+      );
+      lines.push(
+        this.formatKeyValue('Tier', data.member_info.tier, charsPerLine),
+      );
       if (data.member_info.points_earned > 0) {
-        lines.push(this.formatKeyValue('Poin Didapat', `+${data.member_info.points_earned}`, charsPerLine));
+        lines.push(
+          this.formatKeyValue(
+            'Poin Didapat',
+            `+${data.member_info.points_earned}`,
+            charsPerLine,
+          ),
+        );
       }
       if (data.member_info.total_points > 0) {
-        lines.push(this.formatKeyValue('Total Poin', `${data.member_info.total_points}`, charsPerLine));
+        lines.push(
+          this.formatKeyValue(
+            'Total Poin',
+            `${data.member_info.total_points}`,
+            charsPerLine,
+          ),
+        );
       }
       lines.push('');
     }

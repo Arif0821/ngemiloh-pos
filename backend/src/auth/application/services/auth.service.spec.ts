@@ -487,9 +487,7 @@ describe('AuthService', () => {
           'alllowercase123456',
           mockIpAddress,
         ),
-      ).rejects.toThrow(
-        'Password must contain at least one uppercase letter',
-      );
+      ).rejects.toThrow('Password must contain at least one uppercase letter');
     });
 
     it('should fail validation with incorrect password and trigger lockout', async () => {
@@ -656,7 +654,8 @@ describe('AuthService', () => {
     const mockIpAddress = '192.168.1.100';
     const validOtp = '123456';
     // SHA256 hash of '123456' for mocking
-    const validOtpHash = '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92';
+    const validOtpHash =
+      '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92';
 
     beforeEach(() => {
       // Clear all call history

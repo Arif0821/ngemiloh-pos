@@ -30,7 +30,8 @@
 		}
 
 		// VERIFIKASI TOKEN KE BACKEND (TINGGI-01)
-		api.get('/auth/me')
+		api
+			.get('/auth/me')
 			.then((res) => {
 				if (!res.ok) {
 					localStorage.removeItem('user');

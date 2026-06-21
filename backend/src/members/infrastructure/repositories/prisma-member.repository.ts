@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
-import { IMemberRepository, MemberWithTier } from '../../domain/interfaces/member.repository.interface';
+import {
+  IMemberRepository,
+  MemberWithTier,
+} from '../../domain/interfaces/member.repository.interface';
 
 @Injectable()
 export class PrismaMemberRepository implements IMemberRepository {
@@ -14,28 +17,28 @@ export class PrismaMemberRepository implements IMemberRepository {
     return this.client.member.create({
       data,
       include: { tier: true },
-    }) as Promise<MemberWithTier>;
+    });
   }
 
   async findById(id: string): Promise<MemberWithTier | null> {
     return this.client.member.findUnique({
       where: { id },
       include: { tier: true },
-    }) as Promise<MemberWithTier | null>;
+    });
   }
 
   async findByPhone(phone: string): Promise<MemberWithTier | null> {
     return this.client.member.findUnique({
       where: { phone },
       include: { tier: true },
-    }) as Promise<MemberWithTier | null>;
+    });
   }
 
   async findByMemberCode(code: string): Promise<MemberWithTier | null> {
     return this.client.member.findUnique({
       where: { member_code: code },
       include: { tier: true },
-    }) as Promise<MemberWithTier | null>;
+    });
   }
 
   async updatePoints(id: string, newBalance: number): Promise<MemberWithTier> {
@@ -43,7 +46,7 @@ export class PrismaMemberRepository implements IMemberRepository {
       where: { id },
       data: { loyalty_points: newBalance },
       include: { tier: true },
-    }) as Promise<MemberWithTier>;
+    });
   }
 
   async updateTier(id: string, tierId: string): Promise<MemberWithTier> {
@@ -54,7 +57,7 @@ export class PrismaMemberRepository implements IMemberRepository {
         tier_downgrade_at: null,
       },
       include: { tier: true },
-    }) as Promise<MemberWithTier>;
+    });
   }
 
   async deactivate(id: string): Promise<void> {
@@ -94,7 +97,7 @@ export class PrismaMemberRepository implements IMemberRepository {
       this.client.member.count({ where }),
     ]);
 
-    return { data: data as MemberWithTier[], total };
+    return { data: data, total };
   }
 
   async createTransaction(data: any): Promise<void> {
