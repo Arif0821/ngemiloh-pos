@@ -1,8 +1,18 @@
 <script lang="ts">
 	import { pos_store } from '$lib/stores/pos.store.svelte';
+	import { member_store } from '$lib/stores/member.store.svelte';
+	import MemberLookupModal from './MemberLookupModal.svelte';
+
+	let show_member_modal = $state(false);
+	let member_use_points = $state(false);
 
 	function vibrate() {
 		if (navigator.vibrate) navigator.vibrate(50);
+	}
+
+	function handle_member_selected(use_points: boolean) {
+		member_use_points = use_points;
+		show_member_modal = false;
 	}
 </script>
 
@@ -143,11 +153,69 @@
 				<span>- {pos_store.format_rp(pos_store.discount_total)}</span>
 			</div>
 		{/if}
+
+		<!-- Member Section -->
+		{#if member_store.current_member}
+			<div class="mb-3 rounded-xl border border-blue-200 bg-blue-50 p-3">
+				<div class="flex items-center justify-between">
+					<div class="flex items-center gap-2">
+						<span class="text-lg">👤</span>
+						<div>
+							<span class="font-bold text-slate-800">{member_store.current_member.name}</span>
+							<span class="ml-2 text-xs text-slate-500"
+								>{member_store.current_member.member_code}</span
+							>
+						</div>
+					</div>
+					<div class="text-right">
+						<span class="font-bold text-blue-600"
+							>{member_store.current_member.loyalty_points} pts</span
+						>
+						{#if member_use_points && member_store.current_member.loyalty_points > 0}
+							<span
+								class="ml-2 rounded bg-emerald-100 px-2 py-0.5 text-xs font-medium text-emerald-700"
+							>
+								-{member_store.format_points_value}
+							</span>
+						{/if}
+					</div>
+				</div>
+				<button
+					onclick={() => member_store.clear()}
+					class="mt-2 w-full rounded-lg border border-slate-200 py-1 text-xs text-slate-500 transition-colors hover:bg-slate-100"
+				>
+					Hapus Member
+				</button>
+			</div>
+		{:else}
+			<button
+				onclick={() => {
+					show_member_modal = true;
+				}}
+				class="mb-3 flex w-full items-center justify-center gap-2 rounded-xl border-2 border-dashed border-slate-300 py-3 text-slate-500 transition-colors hover:border-slate-400 hover:text-slate-600"
+			>
+				<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+					><path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"
+					></path></svg
+				>
+				<span class="font-medium">Tambah Member</span>
+			</button>
+		{/if}
+
 		<div class="mb-4 flex items-center justify-between px-2">
 			<span class="text-surface-500 font-medium">Total Bayar</span>
-			<span class="text-brand-600 dark:text-brand-400 text-3xl font-black"
-				>{pos_store.format_rp(pos_store.cart_total)}</span
-			>
+			<span class="text-brand-600 dark:text-brand-400 text-3xl font-black">
+				{#if member_use_points && member_store.current_member && member_store.current_member.points_value}
+					<span class="text-emerald-600">{pos_store.format_rp(Math.max(0, pos_store.cart_total - (member_store.current_member.points_value || 0)))}</span>
+					<span class="ml-2 text-base text-slate-400 line-through">{pos_store.format_rp(pos_store.cart_total)}</span>
+				{:else}
+					{pos_store.format_rp(pos_store.cart_total)}
+				{/if}
+			</span>
 		</div>
 		<button
 			class="h-60 w-full rounded-2xl text-lg font-bold {pos_store.cart.length > 0
@@ -160,6 +228,15 @@
 		</button>
 	</div>
 </div>
+
+{#if show_member_modal}
+	<MemberLookupModal
+		on_close={() => {
+			show_member_modal = false;
+		}}
+		on_member_selected={handle_member_selected}
+	/>
+{/if}
 
 <style>
 	.pb-safe {
