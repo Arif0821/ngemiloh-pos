@@ -123,7 +123,7 @@ PRD ini merupakan acuan utama untuk menyelesaikan pengembangan sistem POS Ngemil
 
 | Role | Access | Auth Method |
 |------|--------|------------|
-| Owner/Superadmin | Full dashboard | Email + OTP |
+| Owner/Superadmin | Full dashboard | Email + OTP [JAWABAN: Tidak ada biaya tambahan. Resend free tier 3.000 email/bulan]
 | Kasir | POS only | PIN 6 digit |
 | Customer | Member registration | QR Code + HP |
 
@@ -223,10 +223,9 @@ PRD ini merupakan acuan utama untuk menyelesaikan pengembangan sistem POS Ngemil
 | `/admin/assets` | Asset management with depreciation calculation | ✅ Complete |
 | `/admin/profit-share` | Net profit calculation with 60/40 split | ✅ Complete |
 | `/admin/settings` | Store profile (name, halal cert, address, receipt footer) | ✅ Complete |
-| `/admin/settings/flags` | Feature flags toggle | ✅ Complete |
+| `/admin/settings/flags` | Feature flags toggle | ✅ Complete [JAWABAN: Tombol ON/OFF untuk toggle fitur tanpa deploy code]
 | `/admin/system-health` | PostgreSQL, Redis, Midtrans status monitoring | ✅ Complete |
 | `/admin/audit-logs` | Immutable audit log viewer with filters | ✅ Complete |
-| `/admin/system-logs` | System logs viewer | ✅ Complete |
 | `/admin/system-logs` | System logs viewer | ✅ Complete |
 
 ### Missing Pages (Phase 3)
@@ -298,7 +297,7 @@ Flow:
 **Security Features:**
 - ✅ PIN hashing dengan bcrypt 12 rounds + pepper
 - ✅ Rate limiting (20 req/min per IP)
-- ✅ IP lockout setelah 5 failed attempts
+- ✅ IP lockout setelah 5 failed attempts [JAWABAN: Admin bisa unlock IP lockout dari halaman Admin Settings]
 - ✅ JWT token (12h expiry)
 - ✅ CSRF protection
 
@@ -321,13 +320,13 @@ Flow:
 2. Backend verifikasi OTP dari Redis
 3. Jika valid → aktifkan session
 4. OTP expire setelah 5 menit
-5. Max 3 failed attempts → lockout
+5. Max 3 failed attempts → lockout [JAWABAN: Admin unlock dari halaman Admin Settings]
 ```
 
 ### 4.4.4 PIN Management
 ```
 Endpoint: POST /api/v1/auth/change-pin
-- Kasir bisa ganti PIN sendiri
+- Kasir TIDAK BISA ganti PIN sendiri [JAWABAN: Hanya admin yang bisa reset/ganti PIN kasir] 
 - Wajib verifikasi PIN lama terlebih dahulu
 - PIN baru harus 6 digit
 ```
@@ -366,7 +365,7 @@ Example: TRX-20260620-C-001
 - sequence = 001, 002, ...
 ```
 
-### 4.5.2 Order Payment Methods
+### 4.5.2 Order Payment Methods 
 ```
 1. CASH
    - Kasir terima uangcash
@@ -384,7 +383,7 @@ Example: TRX-20260620-C-001
    - Generate 2 payment records
 ```
 
-### 4.5.3 Offline Sync
+### 4.5.3 Offline Sync 
 ```
 Endpoint: POST /api/v1/orders/sync-batch
 Flow:
@@ -403,7 +402,7 @@ Flow:
 ```
 Status Flow:
 pending → completed
-pending → failed → pending (retry)
+pending → failed → pending (retry) 
 completed → voided
 ```
 
@@ -512,10 +511,10 @@ Endpoint: /api/v1/admin/products/:id/modifiers
 - Set sort order
 ```
 
-### 4.6.4 Product Image
+### 4.6.4 Product Image [JAWABAN: Benar, yang upload adalah ADMIN bukan kasir]
 ```
 Upload Flow:
-1. Kasir upload image
+1. Kasir upload image 
 2. Backend resize to 800px width
 3. Convert to WebP, quality 80
 4. Save to storage
@@ -572,6 +571,7 @@ Return:
 ```
 
 ### 4.7.4 Analytics
+
 ```
 Endpoint: GET /api/v1/admin/finance/analytics
 Charts:
@@ -987,7 +987,7 @@ Flow:
 4. Retry on failure (max 3)
 ```
 
-### 4.13.3 Configuration
+### 4.13.3 Configuration 
 ```
 Environment Variables:
 - SMTP_HOST
@@ -1043,7 +1043,7 @@ Used in:
 
 ## 4.15 Flags Module - Complete Features
 
-### 4.15.1 Feature Flags
+### 4.15.1 Feature Flags 
 ```
 Purpose:
 - Toggle features without deploy
