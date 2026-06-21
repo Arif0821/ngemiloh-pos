@@ -205,7 +205,7 @@ async function main() {
   // 7. Seed Feature Flags (8 Item)
   const featureFlags = [
     { name: 'ENABLE_SPLIT_PAYMENT', description: 'Fitur pembayaran pisah bill', is_enabled: true },
-    { name: 'ENABLE_LOYALTY_PROGRAM', description: 'Fitur poin pelanggan', is_enabled: false },
+    { name: 'ENABLE_LOYALTY_PROGRAM', description: 'Fitur poin pelanggan', is_enabled: true },
     { name: 'ENABLE_OFFLINE_MODE', description: 'Sinkronisasi offline kasir', is_enabled: true },
     { name: 'ENABLE_ADVANCED_ANALYTICS', description: 'Dashboard analitik kompleks', is_enabled: false },
     { name: 'ENABLE_PROMO_CODE', description: 'Penggunaan kode promo', is_enabled: true },
@@ -228,6 +228,30 @@ async function main() {
   }
 
   console.log('Seeded 26 Raw Materials, Ingredients, and 8 Feature Flags!');
+
+  // 8. Seed Loyalty Tiers (FASE 3: Member & Loyalty System)
+  const loyaltyTiers = [
+    { name: 'Bronze', min_points: 0, sort_order: 1, points_multiplier: 1.0, discount_rate: null },
+    { name: 'Silver', min_points: 500, sort_order: 2, points_multiplier: 1.0, discount_rate: 5 },
+    { name: 'Gold', min_points: 1500, sort_order: 3, points_multiplier: 1.0, discount_rate: 10 },
+    { name: 'Platinum', min_points: 5000, sort_order: 4, points_multiplier: 1.0, discount_rate: 15 },
+  ];
+
+  for (const tier of loyaltyTiers) {
+    await prisma.loyaltyTier.upsert({
+      where: { name: tier.name },
+      update: {},
+      create: {
+        name: tier.name,
+        min_points: tier.min_points,
+        sort_order: tier.sort_order,
+        points_multiplier: tier.points_multiplier,
+        discount_rate: tier.discount_rate,
+        is_active: true,
+      },
+    });
+  }
+  console.log('Seeded Loyalty Tiers: Bronze, Silver, Gold, Platinum');
 }
 
 main()

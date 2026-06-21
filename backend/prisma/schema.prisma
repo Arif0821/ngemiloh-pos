@@ -123,6 +123,7 @@ model Product {
   modifier_groups ProductModifierGroup[]
   order_items     OrderItem[]
   bom_recipes     BomRecipe[]
+  loyalty_tiers   LoyaltyTier[]          @relation("LoyaltyTierFreeItem")
 
   @@index([category_id, sort_order])
 }
@@ -206,13 +207,16 @@ model Order {
   customer_name       String?       @db.VarChar(50)
   cash_received       Decimal?      @db.Decimal(12, 0)
   cash_change         Decimal?      @db.Decimal(12, 0)
+  member_id           String?       @db.Uuid   // FASE 3: link to member
   created_at          DateTime      @default(now()) @db.Timestamptz
 
   cashier     User          @relation("CashierOrders", fields: [cashier_id], references: [id])
   voider      User?         @relation("VoidedOrders", fields: [voided_by], references: [id])
+  member      Member?       @relation(fields: [member_id], references: [id])
   items           OrderItem[]
   refunds         OrderRefund[]
   stock_movements StockMovement[]
+  member_transactions MemberTransaction[]
 
   // PERFORMANCE: Composite index for shift summary queries (cashier + status + date)
   @@index([cashier_id, status, created_at(sort: Desc)])
@@ -224,6 +228,8 @@ model Order {
   @@index([payment_status, status])
   // PERFORMANCE: Index for analytics date range queries
   @@index([created_at(sort: Desc), cashier_id])
+  // FASE 3: Index for member order lookups
+  @@index([member_id])
 }
 
 model OrderItem {
@@ -534,4 +540,73 @@ model SystemLog {
 
   @@index([level, created_at(sort: Desc)])
   @@index([source, created_at(sort: Desc)])
+}
+
+// --- FASE 3: MEMBER & LOYALTY SYSTEM ---
+
+model LoyaltyTier {
+  id                String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name              String    @unique @db.VarChar(20)
+  min_points        Int       @default(0)
+  points_multiplier Decimal   @default(1.0) @db.Decimal(3, 2)
+  discount_rate     Int?      @db.SmallInt
+  free_item_id      String?   @db.Uuid
+  is_active         Boolean   @default(true)
+  sort_order        Int       @default(0)
+  created_at        DateTime  @default(now()) @db.Timestamptz
+  updated_at        DateTime  @updatedAt
+
+  members    Member[]
+  free_item  Product? @relation("LoyaltyTierFreeItem", fields: [free_item_id], references: [id])
+
+  @@index([sort_order])
+  @@index([is_active])
+}
+
+model Member {
+  id                    String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  member_code           String    @unique @db.VarChar(20)
+  phone                String    @unique @db.VarChar(20)
+  name                 String    @db.VarChar(100)
+  email                String?   @db.VarChar(150)
+  loyalty_points       Int       @default(0)
+  current_tier_id      String?   @db.Uuid
+  registered_at        DateTime  @default(now())
+  registered_via       String    @default("qr_link")
+  registered_outlet_id String?   @db.VarChar(50)
+  last_transaction_at DateTime?
+  tier_downgrade_at    DateTime?
+  is_active            Boolean   @default(true)
+  created_at           DateTime  @default(now()) @db.Timestamptz
+  updated_at           DateTime  @updatedAt
+
+  tier         LoyaltyTier?         @relation(fields: [current_tier_id], references: [id])
+  transactions MemberTransaction[]
+  orders       Order[]
+
+  @@index([phone])
+  @@index([member_code])
+  @@index([loyalty_points(sort: Desc)])
+  @@index([is_active])
+}
+
+model MemberTransaction {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  member_id       String    @db.Uuid
+  order_id        String?   @db.Uuid
+  type            String    @db.VarChar(30)
+  points          Int
+  balance_after   Int
+  description     String?
+  cashier_id      String?   @db.Uuid
+  reference_order String?   @db.VarChar(30)
+  created_at      DateTime  @default(now())
+
+  member  Member  @relation(fields: [member_id], references: [id], onDelete: Cascade)
+  order   Order? @relation(fields: [order_id], references: [id])
+
+  @@index([member_id])
+  @@index([order_id])
+  @@index([type])
+  @@index([created_at(sort: Desc)])
 }
