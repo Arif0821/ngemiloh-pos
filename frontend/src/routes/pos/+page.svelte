@@ -2,12 +2,25 @@
 	import { onMount, onDestroy } from 'svelte';
 	import { pos_store } from '$lib/stores/pos.store.svelte';
 	import { pos_service } from '$lib/services/pos.service';
+	import { api } from '$lib/services/api.client';
 	import { db } from '$lib/db';
 	import { FLAG_REFRESH_INTERVAL_MS } from '$lib/utils/format';
 
 	import ProductList from '$lib/components/pos/ProductList.svelte';
 	import CartSidebar from '$lib/components/pos/CartSidebar.svelte';
 	import ModalManager from '$lib/components/pos/ModalManager.svelte';
+
+	// Logout handler (KRITIS-04)
+	async function handle_logout() {
+		try {
+			await api.post('/auth/logout', {});
+		} catch {
+			// Lanjutkan logout walau request gagal
+		} finally {
+			localStorage.removeItem('user');
+			window.location.href = '/login';
+		}
+	}
 
 	// Track interval references for cleanup
 	let flag_interval: ReturnType<typeof setInterval> | undefined;
@@ -145,8 +158,7 @@
 					>
 					<span class="hidden sm:inline">Riwayat</span>
 				</button>
-				<a
-					href="/login"
+				<button onclick={handle_logout}
 					class="flex items-center gap-2 rounded-full border border-red-100 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 shadow-sm transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/20 dark:hover:bg-red-900/40"
 					title="Keluar"
 				>
@@ -159,7 +171,7 @@
 						></path></svg
 					>
 					<span class="hidden sm:inline">Logout</span>
-				</a>
+				</button>
 			</div>
 		</div>
 

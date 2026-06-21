@@ -67,12 +67,47 @@ export class FinanceCronService {
     for (const shift of shiftsNearClose) {
       const plannedClose = shift.planned_close_at;
       const minutesLeft = Math.round(
-        (plannedClose.getTime() - now.getTime()) / 60000,
+        (plannedClose!.getTime() - now.getTime()) / 60000,
       );
       this.logger.log(
         `Shift warning: ${shift.id} closes in ${minutesLeft} minutes`,
       );
-      // Warning email could be sent here if needed
+
+      // Kirim email peringatan ke kasir (TINGGI-05)
+      if (shift.cashier.email) {
+        await this.emailService
+          .sendAlert(
+            `Peringatan: Shift Anda akan otomatis ditutup dalam ${minutesLeft} menit`,
+            `
+              <p>Halo <strong>${shift.cashier.name}</strong>,</p>
+              <p>Shift Anda akan <strong>otomatis ditutup</strong> dalam
+                 <strong>${minutesLeft} menit</strong>.</p>
+              <p>Mohon segera tutup shift secara manual melalui aplikasi POS
+                 dan hitung uang tunai Anda.</p>
+              <p>Jika Anda sudah tutup shift, abaikan pesan ini.</p>
+            `,
+          )
+          .catch((err) =>
+            this.logger.error(
+              `Gagal kirim warning email ke ${shift.cashier.email}: ${err.message}`,
+            ),
+          );
+      }
+
+      // CATAT KE DATABASE UNTUK DASHBOARD NOTIFIKASI
+      await this.prisma.systemLog.create({
+        data: {
+          level: 'warn',
+          source: 'finance.cron',
+          message: `Shift warning: ${shift.id} closes in ${minutesLeft} minutes`,
+          metadata: JSON.stringify({
+            shift_id: shift.id,
+            cashier_id: shift.cashier_id,
+            cashier_name: shift.cashier.name,
+            minutes_left: minutesLeft,
+          }),
+        },
+      });
     }
   }
 
@@ -88,12 +123,19 @@ export class FinanceCronService {
     );
 
     try {
+      // Waktu auto-close = sekarang (saat cron berjalan)
+      const auto_close_time = new Date();
+
       // Calculate cash totals for this shift using shift_start as anchor
+      // FIXED: Gunakan boundary shift_start to auto_close_time
       const orders = await this.prisma.order.findMany({
         where: {
           cashier_id: shift.cashier_id,
           status: 'completed',
-          created_at: { gte: shift.shift_start },
+          created_at: {
+            gte: shift.shift_start,    // mulai shift dibuka
+            lt: auto_close_time,        // sampai saat auto-close
+          },
         },
       });
 

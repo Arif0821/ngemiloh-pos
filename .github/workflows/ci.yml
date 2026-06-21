@@ -337,8 +337,10 @@ jobs:
         uses: docker/build-push-action@v5
         with:
           context: .
-          file: ./Caddy.Dockerfile
+          file: ./docker/caddy.Dockerfile
           push: true
           tags: ${{ secrets.DOCKER_USERNAME }}/ngemiloh-caddy:${{ github.sha }}
+          build-args: |
+            VITE_API_URL=${{ secrets.VITE_API_URL }}
           cache-from: type=gha
           cache-to: type=gha,mode=max

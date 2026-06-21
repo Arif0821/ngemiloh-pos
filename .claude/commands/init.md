@@ -35,10 +35,10 @@ Offline-first POS, QRIS payment (Midtrans), shift management, audit logging, mul
 1. **No Phase Development** - Complete all features at once
 2. **Always Use Skills** - `superpowers` + `agent-skills` combined
 3. **snake_case naming** for all code
-4. **Simple, readable code** - No unnecessary complexity
+4. **Simple Code** - Sederhana, readable, tanpa complexity & duplikasi tidak perlu, mudah debug & fix (tidak rumit)
 5. **Deep analysis** - Analyze thoroughly before implementing
 6. **Best practice solutions** - Options with pros/cons
-7. **Strict Verification (MANDATORY)** - Build + Test + Type Check for every code change
+7. **Strict Verification (MANDATORY)** - Setiap perubahan WAJIB disertai Build + Test + Type Check + Code Review
 
 ---
 
@@ -461,12 +461,18 @@ docker compose exec nestjs-api npx prisma migrate reset
 
 ## Verification (MANDATORY)
 
+### Alur Verifikasi Wajib
+```
+Write Code → Build → Test → Type Check → Code Review → Commit
+```
+
 ### Backend Verification Order
 ```bash
 cd backend
 npm run lint          # 1. ESLint check
 npm run build         # 2. TypeScript compile
 npm run test          # 3. Unit tests
+# 4. Code Review (manual atau via agent-review)
 ```
 
 ### Frontend Verification Order
@@ -476,21 +482,23 @@ npm run lint          # 1. ESLint + Prettier check
 npm run check         # 2. TypeScript + Svelte check
 npm run test          # 3. Unit tests
 npm run build         # 4. Production build
+# 5. Code Review (manual atau via agent-review)
 ```
 
-### Rules
-- **Evidence before assertions** - Show output proving success
-- **Test failures = incomplete** - Feature is NOT complete if tests fail
-- **Build failed = incomplete** - Don't proceed if build fails
-- **Lint warnings = fix** - Don't ignore lint warnings
+### Aturan Penting
+- **Evidence before assertions** - Tunjukkan output yang membuktikan success
+- **Test failures = incomplete** - Fitur TIDAK dianggap selesai jika tests gagal
+- **Build failed = incomplete** - Jangan lanjutkan jika build gagal
+- **Lint warnings = fix** - Jangan abaikan lint warnings
+- **Code Review WAJIB** - Review kode sebelum commit (manual atau via agent)
 
 ---
 
 ## Quick Start
 
-1. Read `CLAUDE.md` for full project documentation
-2. Invoke relevant skills at task start (superpowers + agent-skills)
-3. Use agent-skills for parallel work
-4. Deep analyze before implementing
-5. Strict verification before claiming completion
-6. Commit frequently with clear messages
+1. Baca `CLAUDE.md` untuk dokumentasi lengkap project
+2. Invoke skills yang relevan di awal tugas (superpowers + agent-skills)
+3. Gunakan agent-skills untuk parallel work
+4. Analisa mendalam sebelum implementasi
+5. Strict verification sebelum mengklaim selesai (Build → Test → Type Check → Code Review)
+6. Commit sering dengan pesan yang jelas

@@ -11,6 +11,7 @@ import {
   Req,
   BadRequestException,
 } from '@nestjs/common';
+import { ApiTags, ApiOperation, ApiResponse, ApiBearerAuth } from '@nestjs/swagger';
 import { AuthService } from '../application/services/auth.service';
 import type { Response, Request } from 'express';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
@@ -21,6 +22,8 @@ import { ResendOtpDto } from '../dto/resend-otp.dto';
 import { ChangePinDto } from '../dto/change-pin.dto';
 import type { AuthenticatedRequest } from '../../types/express';
 
+@ApiTags('Auth')
+@ApiBearerAuth()
 @Controller('api/v1/auth')
 export class AuthController {
   constructor(private readonly authService: AuthService) {}
@@ -37,6 +40,10 @@ export class AuthController {
   @Post('login')
   @HttpCode(HttpStatus.OK)
   @Throttle({ login: { limit: 5, ttl: 600000 } })
+  @ApiOperation({ summary: 'Login kasir dengan PIN', description: 'Autentikasi kasir dengan username dan PIN 6 digit' })
+  @ApiResponse({ status: 200, description: 'Login berhasil, JWT token di-set sebagai cookie' })
+  @ApiResponse({ status: 401, description: 'PIN atau username salah' })
+  @ApiResponse({ status: 429, description: 'Terlalu banyak percobaan login' })
   async login(
     @Req() req: Request,
     @Body() body: LoginDto,
@@ -157,5 +164,19 @@ export class AuthController {
     );
 
     return { success: true, data: result.user };
+  }
+
+  // POST /api/v1/auth/logout — Clear cookies (KRITIS-04)
+  @Post('logout')
+  @HttpCode(HttpStatus.OK)
+  async logout(@Res({ passthrough: true }) response: Response) {
+    response.clearCookie('access_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+    });
+    response.clearCookie('csrf_token', { path: '/' });
+    return { success: true, message: 'Logged out' };
   }
 }

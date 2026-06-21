@@ -29,39 +29,73 @@ export class FinanceService {
   ) {}
 
   async getDashboardKpi(date: string) {
-    const start = new Date(date);
-    start.setHours(0, 0, 0, 0);
-    const end = new Date(date);
-    end.setHours(23, 59, 59, 999);
+    // TINGGI-06: Filter by SHIFT RANGE, bukan created_at date
+    const query_date = new Date(date);
+    query_date.setHours(0, 0, 0, 0);
+    const query_date_end = new Date(date);
+    query_date_end.setHours(23, 59, 59, 999);
 
-    // PERFORMANCE: Use database aggregation instead of fetching all orders into memory
+    // Cari semua shift yang DIMULAI pada tanggal tersebut
+    const shifts = await this.prisma.cashRegister.findMany({
+      where: {
+        shift_start: { gte: query_date, lte: query_date_end },
+      },
+      select: { id: true, shift_start: true, actual_close_at: true },
+    });
+
+    if (shifts.length === 0) {
+      return {
+        revenue: 0,
+        gross_revenue: 0,
+        total_tax: 0,
+        cogs: 0,
+        net_profit: 0,
+        order_count: 0,
+        avg: 0,
+        payment_distribution: { cash: 0, qris: 0, split: 0 },
+      };
+    }
+
+    const shift_ids = shifts.map((s) => s.id);
+
+    // Query order berdasarkan CASH_REGISTER_ID (shift-based) bukan created_at
     const [aggregateResult, paymentCounts] = await Promise.all([
       this.prisma.order.aggregate({
         where: {
-          created_at: { gte: start, lte: end },
+          cash_register_id: { in: shift_ids },
           status: { not: 'voided' },
         },
-        _sum: {
-          total_amount: true,
-          cogs_total: true,
-        },
+        _sum: { total_amount: true, cogs_total: true },
         _count: true,
       }),
-      // Get payment method distribution using GROUP BY
       this.prisma.$queryRaw<{ payment_method: string; count: bigint }[]>`
         SELECT payment_method, COUNT(*)::bigint as count
         FROM orders
-        WHERE created_at >= ${start}
-          AND created_at <= ${end}
+        WHERE cash_register_id = ANY(${shift_ids}::text[])
           AND status != 'voided'
         GROUP BY payment_method
       `,
     ]);
 
-    const revenue = Number(aggregateResult._sum.total_amount) || 0;
-    const hpp = Number(aggregateResult._sum.cogs_total) || 0;
-    const laba = revenue - hpp;
+    const revenue = Number(aggregateResult._sum.total_amount || 0);
+    const cogs = Number(aggregateResult._sum.cogs_total || 0);
     const transactions = aggregateResult._count;
+
+    // PPN 11% dari revenue (Tax Inclusive → Ekstrak)
+    const tax_rate = 0.11;
+    const gross_revenue = revenue / (1 + tax_rate);
+    const total_tax = Math.round(revenue - gross_revenue);
+
+    // Net profit = Gross Revenue - Tax - COGS
+    const net_profit = Math.round(gross_revenue - cogs);
+
+    // Payment distribution
+    const payment_distribution = { cash: 0, qris: 0, split: 0 };
+    for (const row of paymentCounts) {
+      if (row.payment_method in payment_distribution) {
+        payment_distribution[row.payment_method as keyof typeof payment_distribution] = Number(row.count);
+      }
+    }
 
     // FIX: Use environment variable instead of hardcoded target
     const dailyRevenueTarget = Number(
@@ -75,28 +109,16 @@ export class FinanceService {
 
     const avg = transactions > 0 ? revenue / transactions : 0;
 
-    // Build payment distribution from raw query result
-    const paymentDistribution = {
-      cash: 0,
-      qris: 0,
-      split: 0,
-    };
-    for (const row of paymentCounts) {
-      if (row.payment_method in paymentDistribution) {
-        paymentDistribution[
-          row.payment_method as keyof typeof paymentDistribution
-        ] = Number(row.count);
-      }
-    }
-
     return {
       revenue,
-      hpp,
-      laba,
-      targetProgress,
-      transactions,
+      gross_revenue: Math.round(gross_revenue),
+      total_tax,
+      cogs,
+      net_profit,
+      order_count: transactions,
       avg,
-      paymentDistribution,
+      targetProgress,
+      payment_distribution,
     };
   }
 

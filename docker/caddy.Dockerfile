@@ -15,6 +15,10 @@ COPY frontend/package.json frontend/package-lock.json* ./
 RUN npm install --include=dev --retry 3 --fetch-retry-mintimeout 20000 --fetch-retry-maxtimeout 120000 || \
     npm install --include=dev --retry 3 --retry-delay 5
 
+# Accept VITE_API_URL from build argument
+ARG VITE_API_URL=http://localhost:3000
+ENV VITE_API_URL=$VITE_API_URL
+
 COPY frontend/ .
 RUN npm run build
 
