@@ -5,7 +5,7 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../prisma/prisma.service';
-import { Order, OrderItem, User, CashRegister } from '@prisma/client';
+import { Order, OrderItem, User, CashRegister, Member } from '@prisma/client';
 import { Role } from '@prisma/client';
 
 export interface ReceiptData {
@@ -17,6 +17,7 @@ export interface ReceiptData {
       }>;
     })[];
     cashier: Pick<User, 'name' | 'cashier_letter'>;
+    member?: Pick<Member, 'name' | 'member_code'> | null;
   };
   shift?: CashRegister;
   config: {
@@ -24,6 +25,13 @@ export interface ReceiptData {
     address?: string;
     phone?: string;
     receipt_width: 58 | 80; // mm
+  };
+  member_info?: {
+    name: string;
+    code: string;
+    tier: string;
+    points_earned: number;
+    total_points: number;
   };
 }
 
@@ -66,6 +74,17 @@ export class ReceiptsService {
             cashier_letter: true,
           },
         },
+        member: {
+          select: {
+            name: true,
+            member_code: true,
+            tier: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
       },
     });
 
@@ -103,6 +122,13 @@ export class ReceiptsService {
         phone: this.PHONE,
         receipt_width: 58, // Default 58mm
       },
+      member_info: order.member ? {
+        name: order.member.name,
+        code: order.member.member_code,
+        tier: order.member.tier?.name || '',
+        points_earned: 0, // Will be calculated by caller if needed
+        total_points: 0,
+      } : undefined,
     };
   }
 
@@ -266,6 +292,30 @@ export class ReceiptsService {
     lines.push(this.centerText('TERIMA KASIH', charsPerLine));
     lines.push(this.centerText('ATAS KUNJUNGAN ANDA', charsPerLine));
     lines.push('');
+
+    // Member info section
+    if (data.member_info) {
+      lines.push(this.divider('-', charsPerLine));
+      lines.push(this.centerText('👤 MEMBER', charsPerLine));
+      lines.push(this.formatKeyValue('Nama', data.member_info.name, charsPerLine));
+      lines.push(this.formatKeyValue('ID', data.member_info.code, charsPerLine));
+      lines.push(this.formatKeyValue('Tier', data.member_info.tier, charsPerLine));
+      if (data.member_info.points_earned > 0) {
+        lines.push(this.formatKeyValue('Poin Didapat', `+${data.member_info.points_earned}`, charsPerLine));
+      }
+      if (data.member_info.total_points > 0) {
+        lines.push(this.formatKeyValue('Total Poin', `${data.member_info.total_points}`, charsPerLine));
+      }
+      lines.push('');
+    }
+
+    // Registration CTA if no member
+    if (!data.member_info) {
+      lines.push(this.divider('-', charsPerLine));
+      lines.push(this.centerText('DAFTAR MEMBER, FREE!', charsPerLine));
+      lines.push(this.centerText('ngemiloh.com/member/register', charsPerLine));
+      lines.push('');
+    }
 
     return {
       lines,
