@@ -666,7 +666,9 @@ export class FinanceService {
       shift_date: today,
     });
     if (existing)
-      throw new BadRequestException('Kasir masih memiliki shift aktif di outlet ini.');
+      throw new BadRequestException(
+        'Kasir masih memiliki shift aktif di outlet ini.',
+      );
 
     // PERFORMANCE: Use count instead of findMany when only counting records
     const closedShiftCount = await this.financeRepository.countCashRegisters({

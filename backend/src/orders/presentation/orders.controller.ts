@@ -35,7 +35,11 @@ import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { filter, map, fromEvent, merge, interval, Observable } from 'rxjs';
 import type { Response } from 'express';
-import { CreateOrderDto, SyncBatchDto, StartShiftDto } from './dto/create-order.dto';
+import {
+  CreateOrderDto,
+  SyncBatchDto,
+  StartShiftDto,
+} from './dto/create-order.dto';
 import type { AuthenticatedRequest } from '../../types/express';
 
 // SSE event type used by the @Sse() decorator return type
@@ -236,8 +240,14 @@ export class OrdersController {
   @ApiOperation({ summary: 'Start a new shift at selected outlet' })
   @ApiResponse({ status: 201, description: 'Shift started' })
   @ApiResponse({ status: 401, description: 'Unauthorized' })
-  async startShift(@Body() body: StartShiftDto, @Req() req: AuthenticatedRequest) {
-    const shift = await this.ordersService.startShift(req.user.id, body.outlet_id);
+  async startShift(
+    @Body() body: StartShiftDto,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const shift = await this.ordersService.startShift(
+      req.user.id,
+      body.outlet_id,
+    );
     return { success: true, data: shift };
   }
 

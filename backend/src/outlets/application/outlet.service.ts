@@ -24,10 +24,7 @@ export class OutletService {
       include: {
         outlet: true,
       },
-      orderBy: [
-        { is_primary: 'desc' },
-        { assigned_at: 'asc' },
-      ],
+      orderBy: [{ is_primary: 'desc' }, { assigned_at: 'asc' }],
     });
 
     return user_outlets.map((uo) => ({
@@ -56,7 +53,10 @@ export class OutletService {
     return primary?.outlet.id || null;
   }
 
-  async validate_cashier_outlet(user_id: string, outlet_id: string): Promise<boolean> {
+  async validate_cashier_outlet(
+    user_id: string,
+    outlet_id: string,
+  ): Promise<boolean> {
     const assignment = await this.prisma.userOutlet.findUnique({
       where: {
         user_id_outlet_id: {
