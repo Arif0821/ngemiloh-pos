@@ -2,6 +2,7 @@ import { api } from './api.client';
 import type {
 	ApiResponse,
 	MemberData,
+	MemberTransactionData,
 	ProcessPointsResponse,
 	MemberStats
 } from '../domain/models/types';
@@ -68,7 +69,7 @@ export class MemberService {
 		const res = await api.get(`/admin/members/${id}`, {
 			credentials: 'include'
 		});
-		const json: ApiResponse<MemberData & { transactions: any[] }> = await res.json();
+		const json: ApiResponse<MemberData & { transactions: MemberTransactionData[] }> = await res.json();
 		return json;
 	}
 

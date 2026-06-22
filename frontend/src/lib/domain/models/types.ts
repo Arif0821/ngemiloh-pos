@@ -60,6 +60,13 @@ export interface OrderItem {
 	modifiers?: { option_id: string }[];
 }
 
+export interface SyncBatchResult {
+	client_uuid: string;
+	status: 'success' | 'failed';
+	order_id?: string;
+	error?: string;
+}
+
 export interface CreateOrderPayload {
 	client_uuid: string;
 	payment_method: 'cash' | 'qris' | 'split';

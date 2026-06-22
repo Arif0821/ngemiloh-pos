@@ -10,7 +10,10 @@ import type {
 	Discount,
 	OrderResponse,
 	CreateOrderPayload,
-	ShiftInfo
+	ShiftInfo,
+	FeatureFlag,
+	SyncBatchResult,
+	ModifierOption
 } from '../domain/models/types';
 
 // ============================================
@@ -23,8 +26,10 @@ export class PosService {
 		try {
 			const res = await api.get(`/flags`);
 			if (res.ok) {
-				const json: ApiResponse<any> = await res.json();
-				pos_store.feature_flags = json.data;
+				const json: ApiResponse<FeatureFlag[]> = await res.json();
+				pos_store.feature_flags = Object.fromEntries(
+					json.data.map((f) => [f.name, f.is_enabled])
+				);
 			} else {
 				console.warn('Failed to fetch feature flags:', res.status);
 			}
@@ -213,7 +218,7 @@ export class PosService {
 								await db.orders.update(result.client_uuid, { sync_status: 'synced' });
 							}
 						}
-						const synced_count = json.data.filter((r: any) => r.status === 'success').length;
+						const synced_count = json.data.filter((r: SyncBatchResult) => r.status === 'success').length;
 						if (synced_count > 0) {
 							toast.success(`${synced_count} pesanan berhasil di-sync`);
 						}
@@ -364,7 +369,7 @@ export class PosService {
 			items: pos_store.cart.map((c) => ({
 				product_id: c.id,
 				quantity: c.quantity,
-				modifiers: c.selected_modifiers.map((m: any) => ({ option_id: m.id }))
+				modifiers: c.selected_modifiers.map((m: ModifierOption) => ({ option_id: m.id }))
 			}))
 		} as CreateOrderPayload;
 
