@@ -22,11 +22,11 @@ Offline-first POS, QRIS payment (Midtrans), shift management, audit logging, mul
 │        │                                                          │
 │        │ Supplier Raw Materials                                    │
 │        ▼                                                          │
-│    ┌────┴────┐    ┌────┴────┐    ┌────┴────┐                     │
-│    │ Outlet A │    │ Outlet B │    │ Outlet C │                   │
-│    │ Kasir 1 │    │ Kasir 2 │    │ Kasir 3 │                    │
-│    │(Freelance)│   │(Freelance)│   │(Freelance)│                │
-│    └─────────┘    └─────────┘    └─────────┘                     │
+│    ┌────┴────┐    ┌────┴────┐    ┌────┴────┐                 │
+│    │ Outlet A │    │ Outlet B │    │ Outlet C │                 │
+│    │ Kasir 1  │    │ Kasir 2  │    │ Kasir 3  │               │
+│    │(Freelance)│   │(Freelance)│   │(Freelance)│             │
+│    └─────────┘    └─────────┘    └─────────┘                   │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -34,48 +34,103 @@ Offline-first POS, QRIS payment (Midtrans), shift management, audit logging, mul
 
 ## User Preferences (CRITICAL)
 
-1. **No Phase Development** - Complete all features at once
-2. **Always Use Skills** - `superpowers` + `agent-skills` combined
-3. **snake_case naming** for all code
-4. **Simple Code** - Sederhana, readable, tanpa complexity & duplikasi tidak perlu, mudah debug & fix (tidak rumit)
-5. **Deep analysis** - Analyze thoroughly before implementing
-6. **Best practice solutions** - Options with pros/cons
-7. **Strict Verification (MANDATORY)** - Setiap perubahan WAJIB disertai Build + Test + Type Check + Code Review
+1. **snake_case naming** - All code MUST use snake_case for variables, functions, methods, properties, and file names
+2. **Simple Code** - Sederhana, readable, tanpa complexity & duplikasi tidak perlu, mudah debug & fix
+3. **Deep analysis** - Analyze thoroughly before implementing
+4. **Best practice solutions** - Options with pros/cons
+5. **Strict Verification (MANDATORY)** - Setiap perubahan WAJIB disertai Build + Test + Type Check + Code Review
 
 ---
 
-## Workflow
+## Workflow (Agent-Skills)
 
 ```
-brainstorming → writing-plans → subagent-driven-development →
-finishing-a-development-branch
+SPEC-DRIVEN-DEVELOPMENT → PLANNING-AND-TASK-BREAKDOWN → INCREMENTAL-IMPLEMENTATION
+                                                                          ↓
+                                                              TEST-DRIVEN-DEVELOPMENT
+                                                                          ↓
+                                                              CODE-REVIEW-AND-QUALITY
+                                                                          ↓
+                                                              SHIP (git-workflow)
 ```
+
+### When to Use Skills
+
+| Task | Skill to Use |
+|------|-------------|
+| New feature/project | `spec-driven-development` → `planning-and-task-breakdown` |
+| Multi-file implementation | `incremental-implementation` |
+| UI work | `frontend-ui-engineering` |
+| API work | `api-and-interface-design` |
+| Unfamiliar code/high stakes | `doubt-driven-development` |
+| Writing tests / fixing bugs | `test-driven-development` |
+| Browser debugging | `browser-testing-with-devtools` |
+| Test failures / errors | `debugging-and-error-recovery` |
+| Before merge | `code-review-and-quality` |
+| Code too complex | `code-simplification` |
+| Security concerns | `security-and-hardening` |
+| Performance issues | `performance-optimization` |
+| Deploying | `shipping-and-launch` |
 
 ---
 
-## Available Skills
+## Available Skills (Agent-Skills)
 
-### Superpowers (via `Skill` tool)
-| Category | Skills |
-|----------|--------|
-| Testing | `test-driven-development` |
-| Debugging | `systematic-debugging`, `verification-before-completion` |
-| Collaboration | `brainstorming`, `writing-plans`, `executing-plans`, `subagent-driven-development`, `dispatching-parallel-agents`, `requesting-code-review`, `receiving-code-review`, `using-git-worktrees`, `finishing-a-development-branch` |
-| Meta | `using-superpowers`, `writing-skills` |
+Invoke via `Skill` tool. See `agent-skills/` folder for full documentation.
 
-### Agent-Skills (via `Agent` tool)
-| Phase | Skills |
-|-------|--------|
-| Define | `interview-me`, `idea-refine`, `spec-driven-development` |
-| Plan | `planning-and-task-breakdown`, `Plan` |
-| Build | `incremental-implementation`, `source-driven-development`, `frontend-ui-engineering`, `doubt-driven-development`, `context-engineering`, `api-and-interface-design` |
-| Verify | `test-driven-development`, `browser-testing-with-devtools`, `debugging-and-error-recovery` |
-| Review | `code-review-and-quality`, `code-simplification`, `security-and-hardening`, `performance-optimization` |
-| Ship | `git-workflow-and-versioning`, `ci-cd-and-automation`, `shipping-and-launch`, `deprecation-and-migration`, `documentation-and-adrs` |
-| Support | `observability-and-instrumentation`, `using-agent-skills` |
+### Define Phase
+| Skill | When to Use |
+|-------|-------------|
+| `spec-driven-development` | New project/feature with requirements |
+| `interview-me` | User request is underspecified |
+| `idea-refine` | Rough concept needing exploration |
 
-### Agent Types (subagent_type)
-`Explore`, `Plan`, `code-reviewer`, `security-auditor`, `test-engineer`, `web-performance-auditor`, `general-purpose`
+### Plan Phase
+| Skill | When to Use |
+|-------|-------------|
+| `planning-and-task-breakdown` | Spec ready, need implementable tasks |
+
+### Build Phase
+| Skill | When to Use |
+|-------|-------------|
+| `incremental-implementation` | Any multi-file change |
+| `test-driven-development` | Implementing logic, fixing bugs |
+| `frontend-ui-engineering` | Building UI components |
+| `api-and-interface-design` | Designing APIs |
+| `source-driven-development` | Need doc-verified implementation |
+| `doubt-driven-development` | High-stakes decisions |
+| `context-engineering` | Need better context loading |
+
+### Verify Phase
+| Skill | When to Use |
+|-------|-------------|
+| `browser-testing-with-devtools` | Browser-based debugging |
+| `debugging-and-error-recovery` | Tests fail, bugs, errors |
+
+### Review Phase
+| Skill | When to Use |
+|-------|-------------|
+| `code-review-and-quality` | Before merge |
+| `code-simplification` | Code works but too complex |
+| `security-and-hardening` | Input handling, auth, data |
+| `performance-optimization` | Performance requirements |
+
+### Ship Phase
+| Skill | When to Use |
+|-------|-------------|
+| `git-workflow-and-versioning` | Every commit |
+| `ci-cd-and-automation` | CI/CD setup |
+| `shipping-and-launch` | Production deployment |
+| `deprecation-and-migration` | Removing old features |
+| `documentation-and-adrs` | Architectural decisions |
+
+### Specialist Agents (via `Agent` tool)
+| Agent | When to Use |
+|-------|-------------|
+| `code-reviewer` | Thorough code review |
+| `security-auditor` | Security vulnerability scan |
+| `test-engineer` | Test strategy and coverage |
+| `web-performance-auditor` | Core Web Vitals audit |
 
 ---
 
@@ -111,8 +166,8 @@ Use `SELECT ... FOR UPDATE` pattern for idempotent state transitions (payment, v
 
 | Feature | Priority | Status |
 |---------|----------|--------|
-| Member Registration | HIGH | ❌ Not Built |
-| Loyalty Tier System | HIGH | ❌ Not Built |
+| Member Registration | HIGH | ✅ Built |
+| Loyalty Tier System | HIGH | ✅ Built |
 | Waste Tracking | MEDIUM | ❌ Not Built |
 | BOM Recipes | MEDIUM | ⚠️ Partial (1 product seeded) |
 | Outlet Management | HIGH | ⚠️ Partial |
@@ -151,8 +206,9 @@ backend/
 │   ├── inventory/      # Stock management, BOM recipes
 │   ├── finance/        # Cash register, shift, profit share
 │   ├── discounts/      # Scheduled discount campaigns
-│   ├── payment/       # Midtrans QRIS + Fake gateway
-│   ├── receipts/      # Receipt generation
+│   ├── members/        # Member & loyalty system
+│   ├── payment/        # Midtrans QRIS + Fake gateway
+│   ├── receipts/       # Receipt generation
 │   ├── email/          # OTP and alert notifications
 │   ├── audit/          # Audit logging interceptor
 │   ├── jobs/           # BullMQ background jobs
@@ -201,6 +257,7 @@ frontend/
 │   │   │   ├── discounts/
 │   │   │   ├── profit-share/
 │   │   │   ├── opex/
+│   │   │   ├── members/
 │   │   │   ├── settings/
 │   │   │   ├── system-health/
 │   │   │   ├── system-logs/
@@ -208,6 +265,8 @@ frontend/
 │   │   │   └── assets/
 │   │   ├── pos/            # POS interface
 │   │   │   └── print/      # Receipt printing
+│   │   ├── member/         # Public member registration
+│   │   │   └── register/
 │   │   ├── login/          # Kasir PIN login
 │   │   ├── login-admin/    # Admin email+OTP login
 │   │   │   └── verify-otp/
@@ -221,9 +280,12 @@ frontend/
 │   │   │   ├── CartSidebar.svelte
 │   │   │   ├── ProductList.svelte
 │   │   │   ├── ModalManager.svelte
+│   │   │   ├── MemberLookupModal.svelte
 │   │   │   └── modals/      # PaymentModal, QrisWaitModal, etc.
-│   │   ├── services/         # api.client.ts, pos.service.ts, printer.service.ts
+│   │   ├── services/         # api.client.ts, pos.service.ts, printer.service.ts, member.service.ts
 │   │   ├── stores/           # Svelte 5 Runes ($state, $derived, $effect)
+│   │   │   ├── member.store.svelte.ts
+│   │   │   └── ...
 │   │   ├── db.ts            # Dexie (IndexedDB for offline)
 │   │   ├── domain/          # Domain types and logic
 │   │   └── utils/           # Utility functions
@@ -296,18 +358,8 @@ docs/
 ├── audits/
 │   ├── audit-findings-2026-06-18.md
 │   └── audit-report-2026-06-18.md
-└── superpowers/
-    ├── plans/
-    │   ├── 2026-06-18-comprehensive-audit-plan.md
-    │   ├── 2026-06-18-hybrid-token-migration.md
-    │   ├── 2026-06-18-naming-convention.md
-    │   ├── 2026-06-18-test-coverage.md
-    │   ├── 2026-06-19-docker-cve-audit-fix.md
-    │   ├── 2026-06-19-docker-cves-and-prisma-fix.md
-    │   ├── 2026-06-19-audit-fixes.md
-    │   └── 2026-06-19-action-plan-implementation.md
-    └── specs/
-        └── 2026-06-18-comprehensive-audit-design.md
+└── specs/                    # Design specs (from spec-driven-development)
+    └── 2026-06-18-comprehensive-audit-design.md
 ```
 
 ### PRD Documentation (`PRD v2/`)
@@ -375,16 +427,14 @@ tests/
 
 ### Agent-Skills Plugin
 ```
-agent-skills/
-├── skills/               # 23 skill workflows
+agent-skills/              # Production-grade engineering skills
+├── skills/                # 24 skill workflows (source of truth)
 ├── agents/               # Specialist agent personas
 ├── docs/                 # Setup guides
-├── references/           # Checklists
-├── hooks/                # Claude hooks
-├── scripts/              # Validation scripts
+├── references/           # Supplementary checklists
+├── hooks/                # Session lifecycle hooks
 ├── README.md
 ├── AGENTS.md
-├── CLAUDE.md
 └── plugin.json
 ```
 
@@ -448,59 +498,106 @@ docker compose exec nestjs-api npx prisma migrate reset
 
 | File | Description |
 |------|-------------|
-| `CLAUDE.md` | Full project documentation |
-| `SKILLS_SUMMARY.md` | 23 skill workflows summary |
-| `superpowers-guide.md` | Superpowers guide |
+| `CLAUDE.md` | This file - project documentation |
+| `agent-skills/README.md` | Full skill catalog |
+| `agent-skills/skills/*/SKILL.md` | Individual skill documentation |
+| `SKILLS_SUMMARY.md` | Quick skill reference |
 | `POST_FIX_COMPREHENSIVE_AUDIT_REPORT.md` | Post-fix audit results |
 | `COMPREHENSIVE_FINAL_AUDIT_REPORT.md` | Comprehensive audit |
 | `FINAL_AUDIT_REPORT.md` | Final audit report |
 | `ANALYSIS_REPORT.md` | Analysis report |
 | `DEPLOYMENT_COOLIFY.md` | Coolify deployment guide |
-| `.trivyignore` | Trivy security scanner ignore rules |
-| `NGEMILOH_POS_BRAINSTORMING_ANALYSIS.md` | Brainstorming + gaps + risks |
 
 ---
 
 ## Verification (MANDATORY)
 
-### Alur Verifikasi Wajib
+### Evidence Before Assertions
+**"Seems right" is NEVER sufficient** - Always show evidence:
+- Test output proving tests pass
+- Build output proving compilation succeeds
+- Type check output proving no errors
+
+### Verification Order
+
 ```
-Write Code → Build → Test → Type Check → Code Review → Commit
+Backend:
+1. npm run lint    → ESLint check
+2. npm run build   → TypeScript compile
+3. npm run test    → Unit tests
+4. [Review]       → Code review
+
+Frontend:
+1. npm run lint    → ESLint + Prettier
+2. npm run check   → TypeScript + Svelte check
+3. npm run test    → Unit tests
+4. npm run build   → Production build
+5. [Review]       → Code review
 ```
 
-### Backend Verification Order
-```bash
-cd backend
-npm run lint          # 1. ESLint check
-npm run build         # 2. TypeScript compile
-npm run test          # 3. Unit tests
-# 4. Code Review (manual atau via agent-review)
-```
-
-### Frontend Verification Order
-```bash
-cd frontend
-npm run lint          # 1. ESLint + Prettier check
-npm run check         # 2. TypeScript + Svelte check
-npm run test          # 3. Unit tests
-npm run build         # 4. Production build
-# 5. Code Review (manual atau via agent-review)
-```
-
-### Aturan Penting
-- **Evidence before assertions** - Tunjukkan output yang membuktikan success
+### Critical Rules
 - **Test failures = incomplete** - Fitur TIDAK dianggap selesai jika tests gagal
 - **Build failed = incomplete** - Jangan lanjutkan jika build gagal
 - **Lint warnings = fix** - Jangan abaikan lint warnings
-- **Code Review WAJIB** - Review kode sebelum commit (manual atau via agent)
+- **Commit without verification = violate rules** - Verification WAJIB sebelum commit
 
 ---
 
 ## Quick Start
 
-1. Baca `CLAUDE.md` untuk dokumentasi lengkap project
-2. Invoke skills yang relevan di awal tugas (superpowers + agent-skills)
-3. Gunakan agent-skills untuk parallel work
-4. Analisa mendalam sebelum implementasi
-5. Strict verification sebelum mengklaim selesai (Build → Test → Type Check → Code Review)
-6. Commit sering dengan pesan yang jelas
+1. Baca `CLAUDE.md` dan `agent-skills/` untuk konteks project
+2. **ANALYZE FIRST** - Deep analysis sebelum menulis code
+3. **INVOKE SKILLS** - Gunakan `Skill` tool untuk skills yang relevan
+4. **IMPLEMENT** - Build piece by piece dengan verification
+5. **VERIFY EVERY STEP** - Build → Test → Type Check sebelum next task
+6. **REVIEW BEFORE COMMIT** - Gunakan `code-review-and-quality`
+7. **COMMIT WITH EVIDENCE** - Sertakan verification output
+
+---
+
+## Skill Discovery
+
+```
+Task arrives
+    │
+    ├── Don't know what you want? ──────→ interview-me
+    ├── Rough concept? ───────────────────→ idea-refine
+    ├── New feature? ──────────────────────→ spec-driven-development
+    ├── Have spec, need tasks? ───────────→ planning-and-task-breakdown
+    ├── Implementing code? ────────────────→ incremental-implementation
+    │   ├── UI work? ────────────────────→ frontend-ui-engineering
+    │   ├── API work? ───────────────────→ api-and-interface-design
+    │   ├── High stakes? ────────────────→ doubt-driven-development
+    │   └── Tests / bugs? ───────────────→ test-driven-development
+    ├── Something broke? ─────────────────→ debugging-and-error-recovery
+    ├── Browser issues? ──────────────────→ browser-testing-with-devtools
+    ├── Before merge? ────────────────────→ code-review-and-quality
+    ├── Code too complex? ────────────────→ code-simplification
+    ├── Security concerns? ───────────────→ security-and-hardening
+    ├── Performance issues? ───────────────→ performance-optimization
+    └── Deploying? ──────────────────────→ shipping-and-launch
+```
+
+---
+
+## Core Operating Behaviors (from Agent-Skills)
+
+These behaviors apply at all times:
+
+### 1. Surface Assumptions
+Before implementing anything non-trivial, explicitly state assumptions and ask for correction.
+
+### 2. Manage Confusion Actively
+When encountering inconsistencies: **STOP** → Name the confusion → Present tradeoff → Wait for resolution.
+
+### 3. Push Back When Warranted
+You are not a yes-machine. Point out problems directly with concrete downsides.
+
+### 4. Enforce Simplicity
+Before finishing: Can this be done in fewer lines? Are abstractions earning their complexity?
+
+### 5. Scope Discipline
+Touch only what you're asked to touch. Do NOT refactor adjacent systems as a side effect.
+
+### 6. Verify, Don't Assume
+Every task requires verification evidence. "Seems right" is never sufficient.
