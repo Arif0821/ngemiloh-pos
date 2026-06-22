@@ -5,13 +5,13 @@ import {
   Logger,
 } from '@nestjs/common';
 import { PrismaClient } from '@prisma/client';
+import { SLOW_QUERY_THRESHOLD_MS } from '../common/utils/constants';
 
 @Injectable()
 export class PrismaService
   extends PrismaClient
   implements OnModuleInit, OnModuleDestroy
 {
-  private static readonly SLOW_QUERY_THRESHOLD_MS = 1000;
   private readonly logger = new Logger('PrismaQuery');
 
   constructor() {
@@ -47,7 +47,7 @@ export class PrismaService
       this.$on(
         'query' as never,
         (e: { duration: number; query: string; params: string }) => {
-          if (e.duration > PrismaService.SLOW_QUERY_THRESHOLD_MS) {
+          if (e.duration > SLOW_QUERY_THRESHOLD_MS) {
             this.logger.warn(`[SLOW QUERY] ${e.duration}ms - ${e.query}`);
           }
         },

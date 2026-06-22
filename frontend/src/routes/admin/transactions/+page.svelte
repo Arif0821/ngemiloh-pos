@@ -34,7 +34,11 @@
 			const res = await api.request(url, { credentials: 'include' });
 			if (res.ok) {
 				const data = await res.json();
-				if (Array.isArray(data.data)) {
+				if (data.data.orders) {
+					orders = data.data.orders;
+					total_items = data.data.total || 0;
+				} else if (Array.isArray(data.data)) {
+					// Backward compatibility: data.data is array
 					orders = data.data;
 					total_items = data.total || data.data.length;
 				} else {

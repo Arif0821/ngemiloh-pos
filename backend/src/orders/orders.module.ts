@@ -4,9 +4,10 @@ import { OrdersController } from './presentation/orders.controller';
 import { InventoryModule } from '../inventory/inventory.module';
 import { ORDER_REPOSITORY } from './domain/interfaces/order.repository.interface';
 import { PrismaOrderRepository } from './infrastructure/repositories/prisma-order.repository';
+import { MembersModule } from '../members/members.module';
 
 @Module({
-  imports: [InventoryModule],
+  imports: [InventoryModule, MembersModule],
   providers: [
     {
       provide: ORDER_REPOSITORY,

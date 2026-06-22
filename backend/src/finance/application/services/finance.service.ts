@@ -16,6 +16,7 @@ import {
   CreateAssetDto,
   UpdateAssetDto,
 } from '../../presentation/dto/finance.dto';
+import { TAX_RATE } from '../../../common/utils/constants';
 
 @Injectable()
 export class FinanceService {
@@ -100,8 +101,7 @@ export class FinanceService {
     const transactions = aggregateResult._count;
 
     // PPN 11% dari revenue (Tax Inclusive → Ekstrak)
-    const tax_rate = 0.11;
-    const gross_revenue = revenue / (1 + tax_rate);
+    const gross_revenue = revenue / (1 + TAX_RATE);
     const total_tax = Math.round(revenue - gross_revenue);
 
     // Net profit = Gross Revenue - Tax - COGS
@@ -635,19 +635,43 @@ export class FinanceService {
   async openShift(
     cashierId: string,
     opening_balance: number,
+    outlet_id: string,
     planned_close_at?: string,
     carry_over_from_shift_id?: string,
   ) {
+    // FASE 4: Multi-Outlet - validate cashier is assigned to this outlet
+    const assignment = await this.prisma.userOutlet.findUnique({
+      where: {
+        user_id_outlet_id: {
+          user_id: cashierId,
+          outlet_id: outlet_id,
+        },
+      },
+      include: {
+        outlet: true,
+      },
+    });
+
+    if (!assignment || !assignment.outlet.is_active) {
+      throw new BadRequestException('Kasir tidak ditugaskan di outlet ini');
+    }
+
+    // Check if there's already an open shift for this cashier at this outlet today
+    const today = new Date();
+    today.setHours(0, 0, 0, 0); // Start of day
     const existing = await this.financeRepository.findFirstCashRegister({
       cashier_id: cashierId,
+      outlet_id: outlet_id,
       status: 'open',
+      shift_date: today,
     });
     if (existing)
-      throw new BadRequestException('Kasir masih memiliki shift aktif.');
+      throw new BadRequestException('Kasir masih memiliki shift aktif di outlet ini.');
 
     // PERFORMANCE: Use count instead of findMany when only counting records
     const closedShiftCount = await this.financeRepository.countCashRegisters({
       cashier_id: cashierId,
+      outlet_id: outlet_id,
       status: 'closed',
     });
     const shift_number = closedShiftCount + 1;
@@ -667,6 +691,7 @@ export class FinanceService {
 
     return this.financeRepository.createCashRegister({
       cashier_id: cashierId,
+      outlet_id: outlet_id,
       shift_date: new Date(),
       opening_balance: opening_balance,
       shift_number: shift_number,

@@ -145,13 +145,17 @@ export class PrismaOrderRepository implements OrderRepositoryInterface {
     take?: number,
     skip?: number,
   ) {
-    return this.prisma.order.findMany({
-      where,
-      orderBy,
-      include,
-      take,
-      skip,
-    });
+    const [orders, total] = await Promise.all([
+      this.prisma.order.findMany({
+        where,
+        orderBy,
+        include,
+        take,
+        skip,
+      }),
+      this.prisma.order.count({ where }),
+    ]);
+    return { orders, total };
   }
 
   async createAuditLog(

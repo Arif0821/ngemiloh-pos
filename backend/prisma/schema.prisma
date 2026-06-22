@@ -90,6 +90,7 @@ model User {
   cashier_letter     String?   @unique @db.Char(1)
 
   profit_share_details ProfitShareDetail[]
+  user_outlets         UserOutlet[]
 
   @@index([role])
 }
@@ -183,6 +184,7 @@ model Discount {
 model Order {
   id                   String        @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   cashier_id           String        @db.Uuid
+  outlet_id            String        @db.Uuid
   client_uuid          String        @unique @db.Uuid
   total_amount         Decimal       @db.Decimal(12, 2)
   discount_total       Decimal       @default(0) @db.Decimal(12, 2)
@@ -213,6 +215,7 @@ model Order {
   cashier     User          @relation("CashierOrders", fields: [cashier_id], references: [id])
   voider      User?         @relation("VoidedOrders", fields: [voided_by], references: [id])
   member      Member?       @relation(fields: [member_id], references: [id])
+  outlet      Outlet        @relation(fields: [outlet_id], references: [id])
   items           OrderItem[]
   refunds         OrderRefund[]
   stock_movements StockMovement[]
@@ -230,6 +233,8 @@ model Order {
   @@index([created_at(sort: Desc), cashier_id])
   // FASE 3: Index for member order lookups
   @@index([member_id])
+  // FASE 4: Index for outlet-based order queries
+  @@index([outlet_id, created_at(sort: Desc)])
 }
 
 model OrderItem {
@@ -290,6 +295,7 @@ model OrderRefund {
 model CashRegister {
   id                String         @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
   cashier_id        String         @db.Uuid
+  outlet_id         String         @db.Uuid
   shift_date        DateTime       @db.Date
   shift_start       DateTime       @default(now()) @db.Timestamptz
   shift_end         DateTime?      @db.Timestamptz
@@ -306,6 +312,7 @@ model CashRegister {
   actual_close_at   DateTime?      @db.Timestamptz  // renamed from shift_end for clarity
 
   cashier          User           @relation(fields: [cashier_id], references: [id])
+  outlet           Outlet         @relation(fields: [outlet_id], references: [id])
   carry_over_from CashRegister?  @relation("ShiftCarryOver", fields: [carry_over_from_shift_id], references: [id])
   carry_over_to   CashRegister[] @relation("ShiftCarryOver")
 
@@ -315,6 +322,8 @@ model CashRegister {
   @@index([cashier_id, status])
   // PERFORMANCE: Index for daily cash reconciliation
   @@index([cashier_id, shift_date, status])
+  // PERFORMANCE: Index for outlet-based shift queries
+  @@index([outlet_id, shift_date])
   // SEDANG-06: Partial unique index enforced via migration (one open shift per cashier)
 }
 
@@ -431,6 +440,38 @@ model AuditLog {
   @@index([actor_id, action, created_at(sort: Desc)])
   // PERFORMANCE: Index for entity-specific audit queries
   @@index([entity_type, entity_id])
+}
+
+// --- FASE 4: MULTI-OUTLET ---
+
+model Outlet {
+  id         String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  name       String   @db.VarChar(100)
+  address    String?  @db.Text
+  phone      String?  @db.VarChar(20)
+  is_active  Boolean  @default(true)
+  created_at DateTime @default(now()) @db.Timestamptz
+  updated_at DateTime @updatedAt @db.Timestamptz
+
+  users         UserOutlet[]
+  cashRegisters CashRegister[]
+  orders        Order[]
+
+  @@map("outlets")
+}
+
+model UserOutlet {
+  id          String   @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  user_id     String   @db.Uuid
+  outlet_id   String   @db.Uuid
+  assigned_at DateTime @default(now()) @db.Timestamptz
+  is_primary  Boolean  @default(false)
+
+  user   User   @relation(fields: [user_id], references: [id])
+  outlet Outlet @relation(fields: [outlet_id], references: [id])
+
+  @@unique([user_id, outlet_id])
+  @@map("user_outlets")
 }
 
 // --- FASE 2: LOYALITAS & BAHAN BAKU ---

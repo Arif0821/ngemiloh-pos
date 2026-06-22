@@ -12,6 +12,15 @@ import {
   UseInterceptors,
   UploadedFile,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+  ApiConsumes,
+  ApiParam,
+} from '@nestjs/swagger';
 import { ProductsService } from '../application/services/products.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
@@ -33,12 +42,29 @@ import {
   UpdateModifierOptionDto,
 } from './dto/products.dto';
 
+@ApiTags('Products')
 @Controller('api/v1')
 export class ProductsController {
   constructor(private readonly productsService: ProductsService) {}
 
   @Get('products')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all products' })
+  @ApiQuery({
+    name: 'category_id',
+    required: false,
+    type: String,
+    description: 'Filter by category UUID',
+  })
+  @ApiQuery({
+    name: 'include_modifiers',
+    required: false,
+    type: String,
+    description: 'Include modifier groups (true/false)',
+  })
+  @ApiResponse({ status: 200, description: 'Products retrieved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getProducts(
     @Query('category_id') categoryId?: string,
     @Query('include_modifiers') includeModifiers?: string,
@@ -52,6 +78,10 @@ export class ProductsController {
 
   @Get('categories')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all categories' })
+  @ApiResponse({ status: 200, description: 'Categories retrieved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getCategories() {
     const categories = await this.productsService.getCategories();
     return { success: true, data: categories };
@@ -99,6 +129,12 @@ export class ProductsController {
   @Post('admin/products')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Create new product' })
+  @ApiResponse({ status: 201, description: 'Product created' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - superadmin only' })
   @UseInterceptors(
     FileInterceptor('image', {
       limits: {
@@ -123,6 +159,14 @@ export class ProductsController {
   @Patch('admin/products/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
+  @ApiBearerAuth()
+  @ApiConsumes('multipart/form-data')
+  @ApiOperation({ summary: 'Update product' })
+  @ApiParam({ name: 'id', description: 'Product UUID' })
+  @ApiResponse({ status: 200, description: 'Product updated' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - superadmin only' })
+  @ApiResponse({ status: 404, description: 'Product not found' })
   @UseInterceptors(
     FileInterceptor('image', {
       limits: {
@@ -150,6 +194,13 @@ export class ProductsController {
   @Delete('admin/products/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Delete product' })
+  @ApiParam({ name: 'id', description: 'Product UUID' })
+  @ApiResponse({ status: 200, description: 'Product deleted' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - superadmin only' })
+  @ApiResponse({ status: 404, description: 'Product not found' })
   async deleteProduct(@Param('id') id: string) {
     const product = await this.productsService.deleteProduct(id);
     return { success: true, data: product };
@@ -158,6 +209,12 @@ export class ProductsController {
   @Post('admin/products/:id/modifier-groups')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create modifier group for product' })
+  @ApiParam({ name: 'id', description: 'Product UUID' })
+  @ApiResponse({ status: 201, description: 'Modifier group created' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - superadmin only' })
   async createModifierGroup(
     @Param('id') id: string,
     @Body() body: CreateModifierGroupDto,
@@ -170,6 +227,12 @@ export class ProductsController {
   @Post('admin/modifier-groups/:id/options')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create modifier option for group' })
+  @ApiParam({ name: 'id', description: 'Modifier group UUID' })
+  @ApiResponse({ status: 201, description: 'Modifier option created' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - superadmin only' })
   async createModifierOption(
     @Param('id') id: string,
     @Body() body: CreateModifierOptionDto,
@@ -185,6 +248,13 @@ export class ProductsController {
   @Patch('admin/modifier-groups/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update modifier group' })
+  @ApiParam({ name: 'id', description: 'Modifier group UUID' })
+  @ApiResponse({ status: 200, description: 'Modifier group updated' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - superadmin only' })
+  @ApiResponse({ status: 404, description: 'Modifier group not found' })
   async updateModifierGroup(
     @Param('id') id: string,
     @Body() body: UpdateModifierGroupDto,
@@ -196,6 +266,13 @@ export class ProductsController {
   @Patch('admin/modifier-options/:id')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Update modifier option' })
+  @ApiParam({ name: 'id', description: 'Modifier option UUID' })
+  @ApiResponse({ status: 200, description: 'Modifier option updated' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - superadmin only' })
+  @ApiResponse({ status: 404, description: 'Modifier option not found' })
   async updateModifierOption(
     @Param('id') id: string,
     @Body() body: UpdateModifierOptionDto,

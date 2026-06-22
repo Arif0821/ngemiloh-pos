@@ -1,7 +1,10 @@
 <script lang="ts">
 	import { pos_store } from '$lib/stores/pos.store.svelte';
 	import { pos_service } from '$lib/services/pos.service';
+	import { member_store } from '$lib/stores/member.store.svelte';
+	import { toast } from '$lib/stores/toast.store.svelte';
 	import { CASH_PRESET_AMOUNTS } from '$lib/utils/format';
+	import type { OrderResponse } from '$lib/domain/models/types';
 
 	// Focus trap action for modals
 	function focus_trap(node: HTMLElement) {
@@ -59,26 +62,47 @@
 		await pos_service.process_payment(
 			// QRIS/Split callback
 			(data) =>
-				pos_service.start_qris_waiting(data, () => {
+				pos_service.start_qris_waiting(data, async () => {
 					if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
 					pos_service.cancel_qris_waiting();
 					pos_store.last_order_details = pos_store.qris_order_info;
 					pos_store.show_success_modal = true;
+					// Proses member points setelah pembayaran berhasil
+					await process_member_points(data);
 					setTimeout(() => {
 						if (pos_store.show_success_modal) pos_store.reset_pos();
 					}, 3000);
 				}),
 			// Cash callback
-			(data) => {
+			async (data) => {
 				pos_store.last_order_details = data;
 				pos_store.show_payment_modal = false;
 				pos_store.show_success_modal = true;
 				if (navigator.vibrate) navigator.vibrate([100, 50, 100]);
+				// Proses member points setelah pembayaran berhasil
+				await process_member_points(data);
 				setTimeout(() => {
 					if (pos_store.show_success_modal) pos_store.reset_pos();
 				}, 3000);
 			}
 		);
+	}
+
+	// Proses member points setelah pembayaran berhasil
+	async function process_member_points(order_data: OrderResponse) {
+		if (!member_store.current_member) return;
+		try {
+			const result = await member_store.process_points({
+				order_id: order_data.id,
+				transaction_subtotal: order_data.final_price,
+				redeem_requested: member_store.selected_for_redeem
+			});
+			if (result?.success) {
+				toast?.success(`Points ${member_store.selected_for_redeem ? 'ditukar' : 'diperbarui'}!`);
+			}
+		} catch (e) {
+			console.error('Failed to process member points:', e);
+		}
 	}
 
 	// Check if confirm button should be disabled

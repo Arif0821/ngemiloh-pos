@@ -5,23 +5,21 @@ import {
   NotFoundException,
   BadRequestException,
 } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from '../../../prisma/prisma.service';
 import { RedisService } from '../../../common/redis/redis.service';
 import { LoyaltyService } from './loyalty.service';
 import { IMemberRepository } from '../../domain/interfaces/member.repository.interface';
+import { MEMBER_CODE_MAX_ATTEMPTS } from '../../../common/utils/constants';
 
 @Injectable()
 export class MemberService {
-  private readonly prisma: PrismaClient;
-
   constructor(
     @Inject('MEMBER_REPOSITORY')
     private readonly memberRepository: IMemberRepository,
     private readonly redisService: RedisService,
     private readonly loyaltyService: LoyaltyService,
-  ) {
-    this.prisma = new PrismaClient();
-  }
+    private readonly prisma: PrismaService,
+  ) {}
 
   async register(data: {
     name: string;
@@ -46,9 +44,9 @@ export class MemberService {
         await this.memberRepository.findByMemberCode(memberCode);
       if (!existingCode) break;
       attempts++;
-    } while (attempts < 10);
+    } while (attempts < MEMBER_CODE_MAX_ATTEMPTS);
 
-    if (attempts >= 10) {
+    if (attempts >= MEMBER_CODE_MAX_ATTEMPTS) {
       throw new BadRequestException(
         'Gagal membuat kode member. Silakan coba lagi.',
       );

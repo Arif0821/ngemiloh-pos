@@ -1,5 +1,6 @@
 import { db, type LocalProduct } from '$lib/db';
 import { pos_store } from '../stores/pos.store.svelte';
+import { member_store } from '../stores/member.store.svelte';
 import { api } from '$lib/services/api.client';
 import { toast } from '$lib/stores/toast.store.svelte';
 import { goto } from '$app/navigation';
@@ -54,8 +55,16 @@ export class PosService {
 	}
 
 	async handle_open_shift(opening_balance: number) {
+		// FASE 4: Multi-Outlet - require outlet selection
+		if (!pos_store.selected_outlet_id) {
+			toast.error('Pilih outlet terlebih dahulu');
+			return false;
+		}
+
 		try {
-			const res = await api.post(`/cash/open`, { opening_balance });
+			const res = await api.post(`/pos/shift/start`, {
+				outlet_id: pos_store.selected_outlet_id
+			});
 			if (res.ok) {
 				pos_store.has_open_shift = true;
 				toast.success('Shift berhasil dibuka');
@@ -331,10 +340,15 @@ export class PosService {
 		const client_uuid = crypto.randomUUID();
 		const payload = {
 			client_uuid,
+			outlet_id: pos_store.selected_outlet_id, // FASE 4: Multi-Outlet
 			payment_method: pos_store.payment_method,
 			client_final_price: pos_store.cart_total,
 			discount_total: pos_store.discount_total,
 			discount_id: pos_store.applied_discount?.id,
+			// Sertakan member_id jika ada member yang dipilih
+			member_id: member_store.current_member?.id || null,
+			// Sertakan redeem_requested agar backend bisa proses points dengan benar
+			redeem_points: member_store.selected_for_redeem || false,
 			cash_amount:
 				pos_store.payment_method === 'cash'
 					? Number(pos_store.cash_amount)

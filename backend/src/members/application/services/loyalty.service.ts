@@ -1,13 +1,9 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from '../../../prisma/prisma.service';
 
 @Injectable()
 export class LoyaltyService {
-  private readonly prisma: PrismaClient;
-
-  constructor() {
-    this.prisma = new PrismaClient();
-  }
+  constructor(private readonly prisma: PrismaService) {}
 
   // Constants
   readonly POINTS_EARN_RATE = 5; // 5 points per Rp 1,000

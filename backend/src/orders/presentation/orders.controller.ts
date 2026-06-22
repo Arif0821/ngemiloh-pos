@@ -17,6 +17,14 @@ import {
   ParseUUIDPipe,
   BadRequestException,
 } from '@nestjs/common';
+import {
+  ApiTags,
+  ApiOperation,
+  ApiResponse,
+  ApiBearerAuth,
+  ApiQuery,
+  ApiParam,
+} from '@nestjs/swagger';
 import { OrdersService } from '../application/services/orders.service';
 import { JwtAuthGuard } from '../../auth/guards/jwt-auth.guard';
 import { RolesGuard } from '../../auth/guards/roles.guard';
@@ -27,12 +35,13 @@ import { ThrottlerGuard, Throttle } from '@nestjs/throttler';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { filter, map, fromEvent, merge, interval, Observable } from 'rxjs';
 import type { Response } from 'express';
-import { CreateOrderDto, SyncBatchDto } from './dto/create-order.dto';
+import { CreateOrderDto, SyncBatchDto, StartShiftDto } from './dto/create-order.dto';
 import type { AuthenticatedRequest } from '../../types/express';
 
 // SSE event type used by the @Sse() decorator return type
 type SseEvent = { data: Record<string, unknown> };
 
+@ApiTags('Orders')
 @Controller('api/v1')
 export class OrdersController {
   private readonly logger = new Logger(OrdersController.name);
@@ -44,6 +53,11 @@ export class OrdersController {
 
   @Post('orders')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Create new order' })
+  @ApiResponse({ status: 201, description: 'Order created successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid order data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async createOrder(
     @Body() body: CreateOrderDto,
     @Req() req: AuthenticatedRequest,
@@ -54,6 +68,10 @@ export class OrdersController {
 
   @Post('orders/sync-batch')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Sync batch of orders (offline mode)' })
+  @ApiResponse({ status: 201, description: 'Batch sync completed' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async syncBatchOrders(
     @Body() body: SyncBatchDto,
     @Req() req: AuthenticatedRequest,
@@ -68,6 +86,22 @@ export class OrdersController {
 
   @Get('orders')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get order history' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: String,
+    description: 'Page number (default: 1)',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: String,
+    description: 'Items per page (default: 50, max: 100)',
+  })
+  @ApiResponse({ status: 200, description: 'Order history retrieved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getHistory(
     @Req() req: AuthenticatedRequest,
     @Query('page') page: string = '1',
@@ -88,7 +122,24 @@ export class OrdersController {
   @Get('admin/reports/export')
   @UseGuards(JwtAuthGuard, RolesGuard, ThrottlerGuard)
   @Roles(Role.superadmin)
+  @ApiBearerAuth()
   @Throttle({ default: { limit: 5, ttl: 3600000 } })
+  @ApiOperation({ summary: 'Export orders to CSV' })
+  @ApiQuery({
+    name: 'startDate',
+    required: false,
+    type: String,
+    description: 'Start date (ISO 8601)',
+  })
+  @ApiQuery({
+    name: 'endDate',
+    required: false,
+    type: String,
+    description: 'End date (ISO 8601)',
+  })
+  @ApiResponse({ status: 200, description: 'CSV file download' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - superadmin only' })
   async exportCsv(
     @Query('startDate') startDate: string,
     @Query('endDate') endDate: string,
@@ -108,6 +159,16 @@ export class OrdersController {
 
   @Get('orders/shift')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get shift summary for current cashier' })
+  @ApiQuery({
+    name: 'kasir_id',
+    required: false,
+    type: String,
+    description: 'Kasir UUID (superadmin only)',
+  })
+  @ApiResponse({ status: 200, description: 'Shift summary retrieved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getShiftSummary(
     @Req() req: AuthenticatedRequest,
     @Query('kasir_id', new ParseUUIDPipe({ optional: true })) kasirId?: string,
@@ -137,6 +198,23 @@ export class OrdersController {
   @Get('admin/shifts')
   @UseGuards(JwtAuthGuard, RolesGuard)
   @Roles(Role.superadmin)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get all shifts for a cashier on a date' })
+  @ApiQuery({
+    name: 'kasir_id',
+    required: true,
+    type: String,
+    description: 'Kasir UUID',
+  })
+  @ApiQuery({
+    name: 'date',
+    required: true,
+    type: String,
+    description: 'Date (YYYY-MM-DD)',
+  })
+  @ApiResponse({ status: 200, description: 'Shifts retrieved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - superadmin only' })
   async getAllShifts(
     @Query(
       'kasir_id',
@@ -154,13 +232,21 @@ export class OrdersController {
 
   @Post('pos/shift/start')
   @UseGuards(JwtAuthGuard)
-  async startShift(@Req() req: AuthenticatedRequest) {
-    const shift = await this.ordersService.startShift(req.user.id);
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Start a new shift at selected outlet' })
+  @ApiResponse({ status: 201, description: 'Shift started' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async startShift(@Body() body: StartShiftDto, @Req() req: AuthenticatedRequest) {
+    const shift = await this.ordersService.startShift(req.user.id, body.outlet_id);
     return { success: true, data: shift };
   }
 
   @Get('pos/shift/status')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get shift status' })
+  @ApiResponse({ status: 200, description: 'Shift status retrieved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async checkShiftStatus(@Req() req: AuthenticatedRequest) {
     const shift = await this.ordersService.getCurrentShift(req.user.id);
     return { success: true, data: shift };
@@ -168,6 +254,14 @@ export class OrdersController {
 
   @Post('admin/transactions/:id/void')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Void a transaction' })
+  @ApiParam({ name: 'id', description: 'Transaction UUID' })
+  @ApiResponse({ status: 200, description: 'Transaction voided' })
+  @ApiResponse({ status: 400, description: 'Invalid transaction ID' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - superadmin only' })
+  @ApiResponse({ status: 404, description: 'Transaction not found' })
   async voidTransaction(
     @Param(
       'id',
@@ -191,6 +285,12 @@ export class OrdersController {
 
   @Patch('admin/transactions/:id/flag')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Flag a transaction for review' })
+  @ApiParam({ name: 'id', description: 'Transaction UUID' })
+  @ApiResponse({ status: 200, description: 'Transaction flagged' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - superadmin only' })
   async flagTransaction(
     @Param('id') id: string,
     @Body('status') status: string,
@@ -210,6 +310,12 @@ export class OrdersController {
 
   @Get('orders/:id/status')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get order status' })
+  @ApiParam({ name: 'id', description: 'Order UUID' })
+  @ApiResponse({ status: 200, description: 'Order status retrieved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - access denied' })
   async getOrderStatus(
     @Param('id', new ParseUUIDPipe()) id: string,
     @Req() req: AuthenticatedRequest,
@@ -231,6 +337,11 @@ export class OrdersController {
   }
   @Sse('orders/:id/sse')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Subscribe to order status updates (SSE)' })
+  @ApiParam({ name: 'id', description: 'Order UUID' })
+  @ApiResponse({ status: 200, description: 'SSE stream established' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   sse(@Param('id') id: string, @Req() _req: Request): Observable<SseEvent> {
     // SECURITY: JwtAuthGuard ensures only authenticated users can access SSE
     const orderEvents = fromEvent(this.eventEmitter, 'order.paid').pipe(
@@ -252,6 +363,8 @@ export class OrdersController {
 
   @Post('webhooks/midtrans')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Handle Midtrans payment webhook' })
+  @ApiResponse({ status: 200, description: 'Webhook processed' })
   async midtransWebhook(
     @Body() body: Record<string, unknown>,
     @Req() req: Request,

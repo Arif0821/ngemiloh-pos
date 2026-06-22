@@ -48,8 +48,8 @@ export interface OrderRepositoryInterface {
     include?: Prisma.OrderInclude,
     take?: number,
     skip?: number,
-  ): Promise<
-    Array<
+  ): Promise<{
+    orders: Array<
       Order & {
         cashier?: { name: string };
         items?: Array<{
@@ -61,8 +61,9 @@ export interface OrderRepositoryInterface {
           final_price: Prisma.Decimal;
         }>;
       }
-    >
-  >;
+    >;
+    total: number;
+  }>;
   createAuditLog(data: Prisma.AuditLogUncheckedCreateInput): Promise<AuditLog>;
   findCurrentShift(kasirId: string, date: Date): Promise<CashRegister | null>;
   getSetting(key: string): Promise<Setting | null>;

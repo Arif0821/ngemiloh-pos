@@ -6,12 +6,14 @@ import {
   IsBoolean,
   IsOptional,
   Min,
+  IsUUID,
 } from 'class-validator';
 
 export class ProcessMemberPointsDto {
   @ApiProperty()
   @IsString()
   @IsNotEmpty()
+  @IsUUID('4', { message: 'member_id must be a valid UUID' })
   member_id: string;
 
   @ApiPropertyOptional()

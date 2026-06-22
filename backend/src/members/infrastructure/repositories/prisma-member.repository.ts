@@ -1,5 +1,5 @@
 import { Injectable } from '@nestjs/common';
-import { PrismaClient } from '@prisma/client';
+import { PrismaService } from '../../../prisma/prisma.service';
 import {
   IMemberRepository,
   MemberWithTier,
@@ -7,7 +7,7 @@ import {
 
 @Injectable()
 export class PrismaMemberRepository implements IMemberRepository {
-  constructor(private readonly prisma: PrismaClient) {}
+  constructor(private readonly prisma: PrismaService) {}
 
   private get client() {
     return this.prisma;

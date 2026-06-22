@@ -4,6 +4,7 @@ import {
   Logger,
   NotFoundException,
   Inject,
+  Optional,
 } from '@nestjs/common';
 import {
   OrderStatus,
@@ -15,6 +16,7 @@ import {
 import * as crypto from 'crypto';
 import { InventoryService } from '../../../inventory/application/services/inventory.service';
 import { EmailService } from '../../../email/email.service';
+import { MemberService } from '../../../members/application/services/member.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import {
   ORDER_REPOSITORY,
@@ -22,11 +24,25 @@ import {
 } from '../../domain/interfaces/order.repository.interface';
 import { startOfDay, endOfDay } from '../../../common/utils/date';
 import { PrismaService } from '../../../prisma/prisma.service';
+import {
+  TAX_RATE,
+  MIN_QRIS_AMOUNT,
+  DEFAULT_PRICE_DELTA_THRESHOLD_PCT,
+  VOID_FRAUD_WINDOW_MS,
+  VOID_FRAUD_COUNT,
+  VOID_REASON_MIN_LENGTH,
+  MAX_EXPORT_ROWS,
+  DEFAULT_OPENING_BALANCE,
+} from '../../../common/utils/constants';
 
 import midtransClient, { CoreApi } from 'midtrans-client';
 
 import { CreateOrderDto } from '../../presentation/dto/create-order.dto';
 import type { ProductWithModifiers } from '../../domain/interfaces/order.repository.interface';
+import {
+  calculate_product_discount,
+  type DiscountItem,
+} from '../../domain/utils/discount.utils';
 
 /**
  * Escape CSV field to prevent formula injection and CSV injection attacks
@@ -71,6 +87,7 @@ export class OrdersService {
     private emailService: EmailService,
     private eventEmitter: EventEmitter2,
     private prisma: PrismaService,
+    @Optional() private memberService?: MemberService,
   ) {
     this.midtransCore = new midtransClient.CoreApi({
       isProduction: process.env.MIDTRANS_ENV === 'production',
@@ -180,38 +197,15 @@ export class OrdersService {
         throw new BadRequestException(`Product ${item.product_id} not found`);
 
       const basePrice = Number(product.base_price);
-      let maxDiscountAmount = 0;
-      let appliedDiscountId: string | null = null;
 
-      for (const disc of activeDiscounts) {
-        // TINGGI-03: Check applicable_days before applying discount
-        if (disc.applicable_days && disc.applicable_days.length > 0) {
-          const now = new Date();
-          // Use UTC day to match server timezone-agnostic discount schedule
-          const dayOfWeek = now.getUTCDay() || 7; // Convert Sunday (0) to 7
-          if (!disc.applicable_days.includes(dayOfWeek)) continue;
-        }
-
-        const isApplicable =
-          disc.scope === 'all_products' ||
-          (disc.scope === 'specific_product' &&
-            disc.target_id === product.id) ||
-          (disc.scope === 'category' && disc.target_id === product.category_id);
-
-        if (isApplicable) {
-          let currentDiscAmount = 0;
-          if (disc.type === 'percentage') {
-            currentDiscAmount = basePrice * (Number(disc.value) / 100);
-          } else if (disc.type === 'fixed_amount') {
-            currentDiscAmount = Math.min(Number(disc.value), basePrice);
-          }
-
-          if (currentDiscAmount > maxDiscountAmount) {
-            maxDiscountAmount = currentDiscAmount;
-            appliedDiscountId = disc.id;
-          }
-        }
-      }
+      // Use shared discount calculation utility (DRY)
+      const discountResult = calculate_product_discount(
+        basePrice,
+        activeDiscounts,
+        { product_id: product.id, category_id: product.category_id },
+      );
+      const maxDiscountAmount = discountResult.discount_amount;
+      const appliedDiscountId = discountResult.applied_discount_id;
 
       let itemTotal = basePrice - maxDiscountAmount;
       let modifierTotal = 0;
@@ -274,13 +268,15 @@ export class OrdersService {
       });
     }
 
-    const taxRate = 0;
-    const calculatedTax = calculatedSubtotal * taxRate;
+    const calculatedTax = calculatedSubtotal * TAX_RATE;
     const calculatedFinalPrice = calculatedSubtotal + calculatedTax;
 
     // Trust but Verify: Accept client's price but flag for review
     const clientFinalPrice = Number(data.client_final_price);
-    const thresholdPct = Number(process.env.PRICE_DELTA_THRESHOLD_PCT || '10');
+    const thresholdPct = Number(
+      process.env.PRICE_DELTA_THRESHOLD_PCT ||
+        DEFAULT_PRICE_DELTA_THRESHOLD_PCT,
+    );
 
     const diffPct =
       calculatedFinalPrice > 0
@@ -299,7 +295,10 @@ export class OrdersService {
       vStatus = 'Perlu Cek';
     }
 
-    if (data.payment_method === PaymentMethod.qris && clientFinalPrice < 1000) {
+    if (
+      data.payment_method === PaymentMethod.qris &&
+      clientFinalPrice < MIN_QRIS_AMOUNT
+    ) {
       throw new BadRequestException('Minimum transaksi QRIS adalah Rp 1.000');
     }
 
@@ -312,7 +311,7 @@ export class OrdersService {
           'Split payment amounts do not match total',
         );
       }
-      if (qrisAmount > 0 && qrisAmount < 1000) {
+      if (qrisAmount > 0 && qrisAmount < MIN_QRIS_AMOUNT) {
         throw new BadRequestException(
           'Minimum QRIS pada split payment adalah Rp 1.000',
         );
@@ -332,12 +331,14 @@ export class OrdersService {
         data: {
           client_uuid: data.client_uuid,
           cashier_id: kasirId,
+          outlet_id: data.outlet_id,
           order_number: orderNumber,
           client_created_at: new Date(),
           total_amount: clientFinalPrice,
           discount_total: totalDiscountAmount,
           verification_status: vStatus,
           customer_name: data.customer_name,
+          member_id: data.member_id,
           payment_method: data.payment_method,
           cash_amount: cashAmount,
           qris_amount: qrisAmount,
@@ -383,6 +384,16 @@ export class OrdersService {
             `Failed to reduce stock for order ${order.id}: ${msg}`,
           );
         });
+
+      // Process member points for completed (paid) orders
+      if (data.member_id && this.memberService) {
+        await this.process_member_points(
+          order.id,
+          data.member_id,
+          clientFinalPrice,
+          kasirId,
+        );
+      }
     }
 
     // KRITIS-05: Create QRIS charge for both qris and split payment (when qrisAmount > 0)
@@ -512,6 +523,20 @@ export class OrdersService {
             synced_from_offline: true,
           });
 
+          // Process member points for completed (cash) orders
+          if (
+            order.status === OrderStatus.completed &&
+            order.member_id &&
+            this.memberService
+          ) {
+            await this.process_member_points(
+              order.id,
+              order.member_id,
+              Number(order.total_amount),
+              kasirId,
+            );
+          }
+
           results.push({
             client_uuid: orderData.client_uuid,
             status: 'success',
@@ -605,7 +630,10 @@ export class OrdersService {
       0,
     );
     const clientFinalPrice = Number(data.client_final_price);
-    const thresholdPct = Number(process.env.PRICE_DELTA_THRESHOLD_PCT || '10');
+    const thresholdPct = Number(
+      process.env.PRICE_DELTA_THRESHOLD_PCT ||
+        DEFAULT_PRICE_DELTA_THRESHOLD_PCT,
+    );
     const diffPct =
       calculatedFinalPrice > 0
         ? (Math.abs(calculatedFinalPrice - clientFinalPrice) /
@@ -636,12 +664,14 @@ export class OrdersService {
         data: {
           client_uuid: data.client_uuid,
           cashier_id: kasirId,
+          outlet_id: data.outlet_id,
           order_number: orderNumber,
           client_created_at: new Date(),
           total_amount: clientFinalPrice, // Trust but Verify: use client's price
           discount_total: discountTotal,
           verification_status: vStatus, // Flag if discrepancy detected
           customer_name: data.customer_name,
+          member_id: data.member_id,
           payment_method: data.payment_method,
           cash_amount: data.cash_amount || 0,
           qris_amount: data.qris_amount || 0,
@@ -687,40 +717,15 @@ export class OrdersService {
       if (!product) continue;
 
       const basePrice = Number(product.base_price);
-      let maxDiscountAmount = 0;
-      let appliedDiscountId: string | null = null;
 
-      // Apply discount logic (same as createOrder)
-      if (activeDiscounts && activeDiscounts.length > 0) {
-        for (const disc of activeDiscounts) {
-          if (disc.applicable_days && disc.applicable_days.length > 0) {
-            const now = new Date();
-            const dayOfWeek = now.getUTCDay() || 7;
-            if (!disc.applicable_days.includes(dayOfWeek)) continue;
-          }
-
-          const isApplicable =
-            disc.scope === 'all_products' ||
-            (disc.scope === 'specific_product' &&
-              disc.target_id === product.id) ||
-            (disc.scope === 'category' &&
-              disc.target_id === product.category_id);
-
-          if (isApplicable) {
-            let currentDiscAmount = 0;
-            if (disc.type === 'percentage') {
-              currentDiscAmount = basePrice * (Number(disc.value) / 100);
-            } else if (disc.type === 'fixed_amount') {
-              currentDiscAmount = Math.min(Number(disc.value), basePrice);
-            }
-
-            if (currentDiscAmount > maxDiscountAmount) {
-              maxDiscountAmount = currentDiscAmount;
-              appliedDiscountId = disc.id;
-            }
-          }
-        }
-      }
+      // Use shared discount calculation utility (DRY)
+      const discountResult = calculate_product_discount(
+        basePrice,
+        activeDiscounts as DiscountItem[],
+        { product_id: product.id, category_id: product.category_id },
+      );
+      const maxDiscountAmount = discountResult.discount_amount;
+      const appliedDiscountId = discountResult.applied_discount_id;
 
       let itemTotal = basePrice - maxDiscountAmount;
       let modifierTotal = 0;
@@ -878,6 +883,16 @@ export class OrdersService {
             );
           });
 
+        // Process member points for settled QRIS payments
+        if (existingOrder.member_id && this.memberService) {
+          await this.process_member_points(
+            orderId,
+            existingOrder.member_id,
+            Number(existingOrder.total_amount),
+            existingOrder.cashier_id,
+          );
+        }
+
         this.eventEmitter.emit('order.paid', { orderId, status: newStatus });
       }
 
@@ -909,13 +924,20 @@ export class OrdersService {
       whereClause = { cashier_id: kasirId, created_at: { gte: today } };
     }
     const skip = (page - 1) * limit;
-    return this.orderRepository.findOrders(
+    const result = await this.orderRepository.findOrders(
       whereClause,
       { created_at: 'desc' },
       { items: true, cashier: { select: { name: true, username: true } } },
       limit,
       skip,
     );
+    return {
+      orders: result.orders,
+      total: result.total,
+      page,
+      limit,
+      total_pages: Math.ceil(result.total / limit),
+    };
   }
 
   async getShiftSummary(kasirId: string) {
@@ -946,20 +968,48 @@ export class OrdersService {
     return this.orderRepository.findCurrentShift(kasirId, startOfDay());
   }
 
-  async startShift(kasirId: string) {
-    const existing = await this.getCurrentShift(kasirId);
-    if (existing) return existing;
+  async startShift(kasirId: string, outletId: string) {
+    // Validate cashier is assigned to this outlet
+    const assignment = await this.prisma.userOutlet.findUnique({
+      where: {
+        user_id_outlet_id: {
+          user_id: kasirId,
+          outlet_id: outletId,
+        },
+      },
+      include: {
+        outlet: true,
+      },
+    });
 
+    if (!assignment || !assignment.outlet.is_active) {
+      throw new BadRequestException('Kasir tidak ditugaskan di outlet ini');
+    }
+
+    // Check if there's already an open shift for this cashier at this outlet today
     const today = startOfDay();
+    const existing = await this.prisma.cashRegister.findFirst({
+      where: {
+        cashier_id: kasirId,
+        outlet_id: outletId,
+        shift_date: today,
+        status: 'open',
+      },
+    });
+
+    if (existing) return existing;
 
     const setting = await this.orderRepository.getSetting(
       'DEFAULT_OPENING_BALANCE',
     );
     const openingBalance =
-      setting && setting.value ? Number(setting.value) : 500000;
+      setting && setting.value
+        ? Number(setting.value)
+        : DEFAULT_OPENING_BALANCE;
 
     return this.orderRepository.createShift({
       cashier_id: kasirId,
+      outlet_id: outletId,
       shift_date: today,
       opening_balance: openingBalance,
       status: 'open',
@@ -968,7 +1018,11 @@ export class OrdersService {
 
   async voidOrder(orderId: string, reason: string, adminId: string) {
     // SECURITY: Prevent type confusion attack - ensure reason is a string, not an array
-    if (typeof reason !== 'string' || !reason || reason.length < 10) {
+    if (
+      typeof reason !== 'string' ||
+      !reason ||
+      reason.length < VOID_REASON_MIN_LENGTH
+    ) {
       throw new BadRequestException('Alasan void wajib minimal 10 karakter');
     }
 
@@ -1014,14 +1068,15 @@ export class OrdersService {
       new_value: { status: 'voided', reason },
     });
 
-    const tenMinsAgo = new Date(Date.now() - 10 * 60 * 1000);
-    const recentVoids = await this.orderRepository.countRecentVoids(tenMinsAgo);
+    const fraudWindowStart = new Date(Date.now() - VOID_FRAUD_WINDOW_MS);
+    const recentVoids =
+      await this.orderRepository.countRecentVoids(fraudWindowStart);
 
-    if (recentVoids >= 3) {
+    if (recentVoids >= VOID_FRAUD_COUNT) {
       await this.emailService
         .sendAlert(
           'Indikasi Fraud - Banyak Void Transaksi',
-          `<p>Sistem mendeteksi ada <strong>${recentVoids} transaksi</strong> yang di-void dalam 10 menit terakhir.</p><p>Mohon segera periksa log audit untuk detail lebih lanjut.</p>`,
+          `<p>Sistem mendeteksi ada <strong>${recentVoids} transaksi</strong> yang di-void dalam ${VOID_FRAUD_WINDOW_MS / 60000} menit terakhir.</p><p>Mohon segera periksa log audit untuk detail lebih lanjut.</p>`,
         )
         .catch((err: unknown) => {
           const msg = err instanceof Error ? err.message : 'Unknown error';
@@ -1072,9 +1127,8 @@ export class OrdersService {
 
     // PERFORMANCE: Limit orders to prevent OOM
     // For very large exports, consider using streaming CSV or date chunking
-    const MAX_EXPORT_ROWS = 50000;
 
-    const orders = await this.orderRepository.findOrders(
+    const result = await this.orderRepository.findOrders(
       {
         created_at: { gte: start, lte: end },
       },
@@ -1089,6 +1143,7 @@ export class OrdersService {
       },
       MAX_EXPORT_ROWS, // take limit
     );
+    const orders = result.orders;
 
     const header =
       'Tanggal,ID Pesanan,Kasir,Metode Pembayaran,Status,Item,Kuantitas,Harga Dasar,Nama Diskon,Nominal Diskon,Harga Akhir\n';
@@ -1142,5 +1197,39 @@ export class OrdersService {
       { shift_start: 'desc' },
       50,
     );
+  }
+
+  private async process_member_points(
+    orderId: string,
+    memberId: string,
+    transactionSubtotal: number,
+    cashierId: string,
+    redeemRequested = false,
+  ) {
+    if (!this.memberService) {
+      this.logger.warn(
+        `MemberService not available, skipping points for order ${orderId}`,
+      );
+      return;
+    }
+
+    try {
+      const result = await this.memberService.process_points({
+        member_id: memberId,
+        order_id: orderId,
+        transaction_subtotal: transactionSubtotal,
+        redeem_requested: redeemRequested,
+        cashier_id: cashierId,
+      });
+      this.logger.log(
+        `Processed member points for order ${orderId}: earned=${result.points_earned}, new_balance=${result.new_balance}`,
+      );
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Unknown error';
+      this.logger.error(
+        `Failed to process member points for order ${orderId}: ${msg}`,
+      );
+      // Don't fail the order if points processing fails
+    }
   }
 }

@@ -100,7 +100,53 @@ async function main() {
 
   console.log('Seeded Category and Product with Modifiers');
 
-  // 4. Seed 26 Raw Materials
+  // 4. Create Default Outlet (FASE 4: Multi-Outlet)
+  const defaultOutlet = await prisma.outlet.upsert({
+    where: { id: '00000000-0000-0000-0000-000000000001' },
+    update: {},
+    create: {
+      id: '00000000-0000-0000-0000-000000000001',
+      name: 'Outlet Utama',
+      address: 'Jl. Raya Ngemiloh No. 1',
+      phone: '021-12345678',
+      is_active: true,
+    },
+  });
+  console.log(`Created Default Outlet: ${defaultOutlet.name}`);
+
+  // 5. Assign Superadmin and Kasir to Default Outlet
+  await prisma.userOutlet.upsert({
+    where: {
+      user_id_outlet_id: {
+        user_id: superadmin.id,
+        outlet_id: defaultOutlet.id,
+      }
+    },
+    update: {},
+    create: {
+      user_id: superadmin.id,
+      outlet_id: defaultOutlet.id,
+      is_primary: true,
+    },
+  });
+
+  await prisma.userOutlet.upsert({
+    where: {
+      user_id_outlet_id: {
+        user_id: kasir.id,
+        outlet_id: defaultOutlet.id,
+      }
+    },
+    update: {},
+    create: {
+      user_id: kasir.id,
+      outlet_id: defaultOutlet.id,
+      is_primary: true,
+    },
+  });
+  console.log('Assigned users to default outlet');
+
+  // 5. Seed 26 Raw Materials
   const rawMaterialsData = [
     { name: 'Makaroni Mentah', unit: 'Gram', min_stock: 1000 },
     { name: 'Mie Lidi Mentah', unit: 'Gram', min_stock: 1000 },

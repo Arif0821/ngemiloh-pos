@@ -5,6 +5,7 @@ import {
   IsOptional,
   MaxLength,
   Matches,
+  IsEmail,
 } from 'class-validator';
 
 export class RegisterMemberDto {
@@ -22,6 +23,7 @@ export class RegisterMemberDto {
   phone: string;
 
   @ApiPropertyOptional({ example: 'john@example.com' })
+  @IsEmail({}, { message: 'Email tidak valid' })
   @IsString()
   @IsOptional()
   @MaxLength(150)

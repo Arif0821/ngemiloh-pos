@@ -108,10 +108,14 @@ export class AuthController {
     };
   }
 
-  // PATCH /api/v1/auth/change-pin — Kasir ganti PIN sendiri (AUTH-13)
   @UseGuards(JwtAuthGuard)
   @Patch('change-pin')
   @HttpCode(HttpStatus.OK)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Change own PIN (kasir)' })
+  @ApiResponse({ status: 200, description: 'PIN changed successfully' })
+  @ApiResponse({ status: 400, description: 'Invalid PIN data' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async changePin(
     @Req() req: AuthenticatedRequest,
     @Body() dto: ChangePinDto,
@@ -132,6 +136,10 @@ export class AuthController {
 
   @Get('me')
   @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get current user profile' })
+  @ApiResponse({ status: 200, description: 'User profile retrieved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
   async getMe(@Req() req: AuthenticatedRequest) {
     const userId = req.user?.id;
     if (!userId) {
@@ -147,21 +155,27 @@ export class AuthController {
     };
   }
 
-  // POST /api/v1/auth/resend-otp — Kirim ulang OTP (AUTH-04)
   @UseGuards(ThrottlerGuard)
   @Post('resend-otp')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 3, ttl: 600000 } }) // 3 req / 10 menit per IP
+  @Throttle({ default: { limit: 3, ttl: 600000 } })
+  @ApiOperation({ summary: 'Resend OTP to email' })
+  @ApiResponse({ status: 200, description: 'New OTP sent' })
+  @ApiResponse({ status: 400, description: 'Invalid email' })
+  @ApiResponse({ status: 429, description: 'Too many requests' })
   async resendOtp(@Body() dto: ResendOtpDto) {
     await this.authService.sendOtp(dto.email);
     return { success: true, message: 'Kode OTP baru telah dikirim ke email' };
   }
 
-  // POST /api/v1/auth/verify-otp — Verifikasi OTP dan issue token (AUTH-03)
   @UseGuards(ThrottlerGuard)
   @Post('verify-otp')
   @HttpCode(HttpStatus.OK)
-  @Throttle({ default: { limit: 5, ttl: 600000 } }) // 5 req / 10 menit per IP
+  @Throttle({ default: { limit: 5, ttl: 600000 } })
+  @ApiOperation({ summary: 'Verify OTP and issue JWT token (admin login)' })
+  @ApiResponse({ status: 200, description: 'OTP verified, JWT issued' })
+  @ApiResponse({ status: 401, description: 'Invalid or expired OTP' })
+  @ApiResponse({ status: 429, description: 'Too many attempts' })
   async verifyOtp(
     @Req() req: Request,
     @Body() dto: VerifyOtpDto,
@@ -177,9 +191,10 @@ export class AuthController {
     return { success: true, data: result.user };
   }
 
-  // POST /api/v1/auth/logout — Clear cookies (KRITIS-04)
   @Post('logout')
   @HttpCode(HttpStatus.OK)
+  @ApiOperation({ summary: 'Logout and clear session cookies' })
+  @ApiResponse({ status: 200, description: 'Logged out successfully' })
   async logout(@Res({ passthrough: true }) response: Response) {
     response.clearCookie('access_token', {
       httpOnly: true,

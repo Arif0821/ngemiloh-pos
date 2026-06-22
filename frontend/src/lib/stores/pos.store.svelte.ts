@@ -13,6 +13,10 @@ export class PosStore {
 	is_offline: boolean = $state(false);
 	feature_flags: Record<string, boolean> = $state({});
 
+	// Outlet Selection (FASE 4: Multi-Outlet)
+	selected_outlet_id: string = $state('');
+	selected_outlet_name: string = $state('');
+
 	// Products & Cart
 	products: LocalProduct[] = $state([]);
 	cart: CartItem[] = $state([]);

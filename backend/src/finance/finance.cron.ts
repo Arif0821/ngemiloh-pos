@@ -2,11 +2,14 @@ import { Injectable, Logger } from '@nestjs/common';
 import { Cron } from '@nestjs/schedule';
 import { PrismaService } from '../prisma/prisma.service';
 import { EmailService } from '../email/email.service';
+import {
+  AUTO_CLOSE_GRACE_MS,
+  AUTO_CLOSE_WARNING_MS,
+} from '../common/utils/constants';
 
 @Injectable()
 export class FinanceCronService {
   private readonly logger = new Logger(FinanceCronService.name);
-  private readonly AUTO_CLOSE_GRACE_MS = 30 * 60 * 1000; // 30 minutes grace period
 
   constructor(
     private prisma: PrismaService,
@@ -26,7 +29,7 @@ export class FinanceCronService {
         status: 'open',
         planned_close_at: {
           not: null,
-          lte: new Date(now.getTime() - this.AUTO_CLOSE_GRACE_MS),
+          lte: new Date(now.getTime() - AUTO_CLOSE_GRACE_MS),
         },
       },
       include: {
@@ -47,7 +50,7 @@ export class FinanceCronService {
   @Cron('*/15 * * * *', { timeZone: process.env.TZ || 'Asia/Jakarta' })
   async sendAutoCloseWarnings() {
     const now = new Date();
-    const warningWindow = new Date(now.getTime() + 90 * 60 * 1000); // 90 min ahead
+    const warningWindow = new Date(now.getTime() + AUTO_CLOSE_WARNING_MS); // 90 min ahead
 
     // Find open shifts whose planned_close_at is within 90 minutes from now
     const shiftsNearClose = await this.prisma.cashRegister.findMany({

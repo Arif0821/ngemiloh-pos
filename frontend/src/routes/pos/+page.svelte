@@ -1,5 +1,6 @@
 <script lang="ts">
 	import { onMount, onDestroy } from 'svelte';
+	import { goto } from '$app/navigation';
 	import { pos_store } from '$lib/stores/pos.store.svelte';
 	import { pos_service } from '$lib/services/pos.service';
 	import { api } from '$lib/services/api.client';
@@ -18,6 +19,9 @@
 			// Lanjutkan logout walau request gagal
 		} finally {
 			localStorage.removeItem('user');
+			localStorage.removeItem('selected_outlet');
+			pos_store.selected_outlet_id = '';
+			pos_store.selected_outlet_name = '';
 			window.location.href = '/login';
 		}
 	}
@@ -67,6 +71,24 @@
 	});
 
 	onMount(async () => {
+		// FASE 4: Multi-Outlet - Load selected outlet from localStorage
+		const saved_outlet = localStorage.getItem('selected_outlet');
+		if (saved_outlet) {
+			try {
+				const outlet = JSON.parse(saved_outlet);
+				pos_store.selected_outlet_id = outlet.id;
+				pos_store.selected_outlet_name = outlet.name;
+			} catch (e) {
+				console.error('Failed to parse saved outlet:', e);
+			}
+		}
+
+		// Redirect to outlet selection if no outlet selected
+		if (!pos_store.selected_outlet_id) {
+			goto('/outlet-selection');
+			return;
+		}
+
 		// Set initial offline state from browser
 		pos_store.is_offline = !navigator.onLine;
 
@@ -125,7 +147,12 @@
 
 	<div class="flex-1 overflow-y-auto p-4 pb-32 md:p-6 md:pb-6">
 		<div class="mb-6 flex items-center justify-between pt-6">
-			<h1 class="text-brand-600 dark:text-brand-400 text-2xl font-bold">Ngemiloh POS</h1>
+			<div>
+				<h1 class="text-brand-600 dark:text-brand-400 text-2xl font-bold">Ngemiloh POS</h1>
+				{#if pos_store.selected_outlet_name}
+					<p class="text-sm text-slate-500 dark:text-slate-400">{pos_store.selected_outlet_name}</p>
+				{/if}
+			</div>
 			<div class="flex gap-2">
 				<span
 					class="dark:bg-surface-800 border-surface-200 dark:border-surface-700 flex items-center gap-2 rounded-full border bg-white px-4 py-2 text-sm font-medium shadow-sm"
@@ -133,13 +160,28 @@
 					<div
 						class="h-2 w-2 rounded-full {pos_store.is_offline ? 'bg-red-500' : 'bg-green-500'}"
 					></div>
-					Kasir
+					{pos_store.selected_outlet_name || 'Kasir'}
 				</span>
 				<button
 					onclick={() => (pos_store.show_close_shift_modal = true)}
 					class="flex items-center gap-2 rounded-full border border-amber-100 bg-amber-50 px-4 py-2 text-sm font-medium text-amber-600 shadow-sm transition-colors hover:bg-amber-100"
 				>
 					<span class="hidden font-bold sm:inline">Tutup Shift</span>
+				</button>
+				<button
+					onclick={() => goto('/outlet-selection')}
+					class="flex items-center gap-2 rounded-full border border-purple-100 bg-purple-50 px-4 py-2 text-sm font-medium text-purple-600 shadow-sm transition-colors hover:bg-purple-100 dark:border-purple-900/50 dark:bg-purple-900/20 dark:text-purple-400 dark:hover:bg-purple-900/40"
+					title="Ganti Outlet"
+				>
+					<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+						><path
+							stroke-linecap="round"
+							stroke-linejoin="round"
+							stroke-width="2"
+							d="M8 7h12m0 0l-4-4m4 4l-4 4m0 6H4m0 0l4 4m-4-4l4-4"
+						></path></svg
+					>
+					<span class="hidden sm:inline">Outlet</span>
 				</button>
 				<button
 					onclick={() => {

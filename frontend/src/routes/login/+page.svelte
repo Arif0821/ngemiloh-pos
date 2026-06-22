@@ -65,7 +65,8 @@
 				} else {
 					// Simpan user info ke localStorage (untuk role guard di layout)
 					localStorage.setItem('user', JSON.stringify(user_data));
-					goto('/pos');
+					// Redirect ke outlet selection page (FASE 4: Multi-Outlet)
+					goto('/outlet-selection');
 				}
 			} else {
 				error = data.message || 'Login gagal. Periksa username dan PIN.';

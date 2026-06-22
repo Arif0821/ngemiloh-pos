@@ -25,6 +25,7 @@ import { ReceiptsModule } from './receipts/receipts.module';
 import { JobsModule } from './jobs/jobs.module';
 import { PaymentModule } from './payment/payment.module';
 import { MembersModule } from './members/members.module';
+import { OutletModule } from './outlets/outlet.module';
 
 // Skip throttling for health check endpoints (used by Docker healthcheck)
 const skipThrottleForHealth = (context: {
@@ -108,6 +109,7 @@ const skipThrottleForHealth = (context: {
     JobsModule,
     PaymentModule,
     MembersModule,
+    OutletModule,
   ],
   controllers: [AppController],
   providers: [

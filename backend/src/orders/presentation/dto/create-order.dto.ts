@@ -6,6 +6,7 @@ import {
   IsArray,
   ValidateNested,
   IsEnum,
+  IsBoolean,
   Min,
   Max,
 } from 'class-validator';
@@ -39,6 +40,18 @@ export class OrderItemDto {
 export class CreateOrderDto {
   @IsUUID()
   client_uuid: string;
+
+  // FASE 4: Multi-Outlet - outlet_id is required
+  @IsUUID()
+  outlet_id: string;
+
+  @IsOptional()
+  @IsUUID()
+  member_id?: string;
+
+  @IsOptional()
+  @IsBoolean()
+  redeem_points?: boolean;
 
   @IsEnum(PaymentMethod)
   payment_method: PaymentMethod;
@@ -89,4 +102,9 @@ export class SyncBatchDto {
   @ValidateNested({ each: true })
   @Type(() => CreateOrderDto)
   orders: CreateOrderDto[];
+}
+
+export class StartShiftDto {
+  @IsUUID()
+  outlet_id: string;
 }

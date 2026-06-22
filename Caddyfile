@@ -21,27 +21,32 @@
 	}
 
 	# ── API Routes ───────────────────────────────────────────
-	handle /api/* {
+	@api path /api/*
+	handle @api {
 		reverse_proxy ngemiloh_api:3000
 	}
 
-	# ── Storage (file uploads) ──────────────────────────────
-	handle /storage/* {
+	# ── Public Member Registration (no auth required) ─────────
+	@member path /member/*
+	handle @member {
 		reverse_proxy ngemiloh_api:3000
 	}
 
 	# ── Webhooks (Midtrans) ────────────────────────────────
-	handle /webhooks/* {
+	@webhooks path /webhooks/*
+	handle @webhooks {
 		reverse_proxy ngemiloh_api:3000
 	}
 
 	# ── Health Check Endpoint ────────────────────────────────
-	handle /health {
+	@health path /health
+	handle @health {
 		respond "OK" 200
 	}
 
 	# ── Internal Health Check (bypasses rate limiting) ──────
-	handle /_health {
+	@internal_health path /_health
+	handle @internal_health {
 		reverse_proxy ngemiloh_api:3000
 	}
 

@@ -1,4 +1,11 @@
-import { Controller, Get, Param, Query, UseGuards } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Param,
+  Query,
+  UseGuards,
+  ParseUUIDPipe,
+} from '@nestjs/common';
 import {
   ApiTags,
   ApiOperation,
@@ -29,11 +36,16 @@ export class AdminMemberController {
     @Query('tier') tier?: string,
     @Query('search') search?: string,
   ) {
+    // Validate and cap parameters
+    const pageNum = Math.max(1, parseInt(page || '1') || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit || '20') || 20));
+    const searchStr = search?.slice(0, 100);
+
     const result = await this.memberService.get_all_members({
-      page: page ? parseInt(page) : 1,
-      limit: limit ? parseInt(limit) : 20,
+      page: pageNum,
+      limit: limitNum,
       tier,
-      search,
+      search: searchStr,
     });
     return { success: true, data: result };
   }
@@ -47,9 +59,10 @@ export class AdminMemberController {
   }
 
   @Get(':id')
+  @Throttle({ default: { limit: 30, ttl: 60000 } })
   @ApiOperation({ summary: 'Get member detail' })
   @ApiResponse({ status: 200, description: 'Member detail' })
-  async detail(@Param('id') id: string) {
+  async detail(@Param('id', new ParseUUIDPipe({ version: '4' })) id: string) {
     const member = await this.memberService.get_member_detail(id);
     return { success: true, data: member };
   }
