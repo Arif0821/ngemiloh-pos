@@ -297,31 +297,6 @@ export class InventoryService {
   }
 
   async getBomCoverage() {
-    const prisma =
-      (this.inventoryRepository as any).prisma ||
-      (this.inventoryRepository as any).client;
-    if (!prisma) {
-      throw new Error('Cannot access Prisma client');
-    }
-
-    const [totalProducts, productsWithBom] = await Promise.all([
-      prisma.product.count({ where: { is_active: true } }),
-      prisma.product.count({
-        where: {
-          is_active: true,
-          bom_recipes: { some: {} },
-        },
-      }),
-    ]);
-
-    return {
-      total_products: totalProducts,
-      products_with_bom: productsWithBom,
-      products_missing_bom: totalProducts - productsWithBom,
-      coverage_percentage:
-        totalProducts > 0
-          ? Math.round((productsWithBom / totalProducts) * 100)
-          : 0,
-    };
+    return this.inventoryRepository.getBomCoverage();
   }
 }

@@ -79,4 +79,15 @@ export interface IInventoryRepository {
    * Update BOM recipe quantity
    */
   updateBomRecipe(id: string, quantity: number): Promise<unknown>;
+
+  /**
+   * Get BOM coverage statistics for products
+   * Returns counts of products with/without BOM recipes
+   */
+  getBomCoverage(): Promise<{
+    total_products: number;
+    products_with_bom: number;
+    products_missing_bom: number;
+    coverage_percentage: number;
+  }>;
 }

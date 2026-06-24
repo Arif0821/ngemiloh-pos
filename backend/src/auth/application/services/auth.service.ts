@@ -46,6 +46,20 @@ export class AuthService {
     this.pepper = configuredPepper;
   }
 
+  /**
+   * Generate a hash key from IP address and User-Agent for rate limiting.
+   * This combines both to prevent bypass via IP switching while keeping
+   * the storage key non-sensitive (hash instead of raw data).
+   */
+  private get_ip_lockout_key(ipAddress: string, userAgent?: string): string {
+    const normalized_ip = ipAddress.trim().toLowerCase();
+    const normalized_ua = (userAgent || 'unknown').trim().toLowerCase();
+    return crypto
+      .createHash('sha256')
+      .update(`${normalized_ip}:${normalized_ua}`)
+      .digest('hex');
+  }
+
   private async hashPin(pin: string): Promise<string> {
     const saltRounds = 12;
     return bcrypt.hash(pin + this.pepper, saltRounds);
@@ -84,9 +98,11 @@ export class AuthService {
     usernameOrEmail: string,
     pinOrPassword: string,
     ipAddress: string = 'unknown',
+    userAgent?: string,
     res?: Response,
   ) {
-    const ipLock = await this.authRepository.findIpLockout(ipAddress);
+    const ipLockHash = this.get_ip_lockout_key(ipAddress, userAgent);
+    const ipLock = await this.authRepository.findIpLockout(ipLockHash);
 
     if (ipLock && ipLock.locked_until && ipLock.locked_until > new Date()) {
       throw new HttpException(
@@ -125,7 +141,7 @@ export class AuthService {
       const strengthError = this.getPasswordStrengthError(pinOrPassword);
       if (strengthError) {
         await this.authRepository.incrementUserFailedLogin(user.id);
-        await this.authRepository.incrementIpLockout(ipAddress);
+        await this.authRepository.incrementIpLockout(ipLockHash);
         throw new UnauthorizedException(strengthError);
       }
 
@@ -157,11 +173,12 @@ export class AuthService {
           );
       }
 
-      const updatedIp = await this.authRepository.incrementIpLockout(ipAddress);
+      const updatedIp =
+        await this.authRepository.incrementIpLockout(ipLockHash);
 
       if (updatedIp.failed_count >= LOCKOUT_THRESHOLD) {
         await this.authRepository.lockIpAddress(
-          ipAddress,
+          ipLockHash,
           new Date(Date.now() + LOCKOUT_DURATION_MS),
         );
         throw new HttpException(
@@ -174,7 +191,7 @@ export class AuthService {
     }
 
     await this.authRepository.resetUserFailedLogin(user.id);
-    await this.authRepository.resetIpLockout(ipAddress);
+    await this.authRepository.resetIpLockout(ipLockHash);
 
     const payload = { sub: user.id, role: user.role as string };
     const jti = crypto.randomUUID();
@@ -219,9 +236,11 @@ export class AuthService {
     email: string,
     password: string,
     ipAddress: string,
+    userAgent?: string,
     res?: Response,
   ) {
-    const ipLock = await this.authRepository.findIpLockout(ipAddress);
+    const ipLockHash = this.get_ip_lockout_key(ipAddress, userAgent);
+    const ipLock = await this.authRepository.findIpLockout(ipLockHash);
     if (ipLock && ipLock.locked_until && ipLock.locked_until > new Date()) {
       throw new HttpException(
         'IP is temporarily locked.',
@@ -246,7 +265,7 @@ export class AuthService {
     const strengthError = this.getPasswordStrengthError(password);
     if (strengthError) {
       await this.authRepository.incrementUserFailedLogin(user.id);
-      await this.authRepository.incrementIpLockout(ipAddress);
+      await this.authRepository.incrementIpLockout(ipLockHash);
       throw new UnauthorizedException(strengthError);
     }
 
@@ -256,7 +275,8 @@ export class AuthService {
       const updatedUser = await this.authRepository.incrementUserFailedLogin(
         user.id,
       );
-      const updatedIp = await this.authRepository.incrementIpLockout(ipAddress);
+      const updatedIp =
+        await this.authRepository.incrementIpLockout(ipLockHash);
       if (updatedUser.failed_login_count >= LOCKOUT_THRESHOLD) {
         await this.authRepository.lockUser(
           user.id,
@@ -265,7 +285,7 @@ export class AuthService {
       }
       if (updatedIp.failed_count >= LOCKOUT_THRESHOLD) {
         await this.authRepository.lockIpAddress(
-          ipAddress,
+          ipLockHash,
           new Date(Date.now() + LOCKOUT_DURATION_MS),
         );
       }
@@ -273,7 +293,7 @@ export class AuthService {
     }
 
     await this.authRepository.resetUserFailedLogin(user.id);
-    await this.authRepository.resetIpLockout(ipAddress);
+    await this.authRepository.resetIpLockout(ipLockHash);
 
     const payload = { sub: user.id, role: user.role as string };
     const jti = crypto.randomUUID();
@@ -367,9 +387,12 @@ export class AuthService {
     email: string,
     otpCode: string,
     ipAddress: string,
+    userAgent?: string,
     res?: Response,
   ) {
     if (!email) throw new BadRequestException('Email is required');
+
+    const ipLockHash = this.get_ip_lockout_key(ipAddress, userAgent);
 
     const userId = await this.redisService.get(
       `otp:email:${email.toLowerCase()}`,
@@ -445,7 +468,7 @@ export class AuthService {
     if (!user) throw new UnauthorizedException('User not found');
 
     await this.authRepository.resetUserFailedLogin(userId);
-    await this.authRepository.resetIpLockout(ipAddress);
+    await this.authRepository.resetIpLockout(ipLockHash);
 
     const payload = { sub: user.id, role: user.role as string };
     const jti = crypto.randomUUID();
@@ -536,6 +559,36 @@ export class AuthService {
         must_change_pin: false,
       },
     };
+  }
+
+  async revokeToken(token: string): Promise<void> {
+    // FIX #10: Implement JWT blocklist for token revocation
+    try {
+      // Decode the token to get jti and exp (without verifying signature for blocklist lookup)
+      const decoded = this.jwtService.decode(token);
+
+      if (!decoded || !decoded.jti || !decoded.exp) {
+        this.logger.warn('Invalid token provided for revocation');
+        return;
+      }
+
+      // Calculate TTL: remaining lifetime of the token
+      const now = Math.floor(Date.now() / 1000);
+      const ttl = decoded.exp - now;
+
+      if (ttl <= 0) {
+        // Token already expired, no need to blocklist
+        this.logger.debug('Token already expired, skipping blocklist');
+        return;
+      }
+
+      // Add JTI to Redis blocklist with TTL matching remaining token lifetime
+      await this.redisService.blockJwt(String(decoded.jti), ttl);
+      this.logger.log(`Token revoked: jti=${decoded.jti}`);
+    } catch (error) {
+      this.logger.error('Failed to revoke token', (error as Error).message);
+      throw new UnauthorizedException('Failed to revoke token');
+    }
   }
 
   async getUserById(userId: string) {

@@ -142,6 +142,13 @@ export class PrismaInventoryRepository implements IInventoryRepository {
       orderBy: { created_at: 'asc' }, // FIFO deduction order
     });
 
+    // Get raw material cost_per_unit for fallback
+    const rawMaterial = await this.client.rawMaterial.findUnique({
+      where: { id: rawMaterialId },
+      select: { cost_per_unit: true },
+    });
+    const defaultCostPerUnit = Number(rawMaterial?.cost_per_unit ?? 0);
+
     // Calculate remaining quantity per 'in' movement (batch)
     // Map: reference_order_id -> remaining quantity deducted
     const deductedQty = new Map<string, number>();
@@ -171,7 +178,8 @@ export class PrismaInventoryRepository implements IInventoryRepository {
           raw_material_id: rawMaterialId,
           qty_remaining: qtyRemaining,
           expiry_date: null, // TODO: Populate when expiry_date is added to StockMovement
-          cost_per_unit: 0, // TODO: Populate from RawMaterial or inbound cost when available
+          // Use default cost_per_unit from RawMaterial - this is the actual cost input by admin
+          cost_per_unit: defaultCostPerUnit,
         });
       }
     }
@@ -273,5 +281,32 @@ export class PrismaInventoryRepository implements IInventoryRepository {
       where: { id },
       data: { quantity_per_serving: quantity },
     });
+  }
+
+  async getBomCoverage(): Promise<{
+    total_products: number;
+    products_with_bom: number;
+    products_missing_bom: number;
+    coverage_percentage: number;
+  }> {
+    const [totalProducts, productsWithBom] = await Promise.all([
+      this.client.product.count({ where: { is_active: true } }),
+      this.client.product.count({
+        where: {
+          is_active: true,
+          bom_recipes: { some: {} },
+        },
+      }),
+    ]);
+
+    return {
+      total_products: totalProducts,
+      products_with_bom: productsWithBom,
+      products_missing_bom: totalProducts - productsWithBom,
+      coverage_percentage:
+        totalProducts > 0
+          ? Math.round((productsWithBom / totalProducts) * 100)
+          : 0,
+    };
   }
 }

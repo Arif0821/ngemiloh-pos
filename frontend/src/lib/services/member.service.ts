@@ -69,7 +69,8 @@ export class MemberService {
 		const res = await api.get(`/admin/members/${id}`, {
 			credentials: 'include'
 		});
-		const json: ApiResponse<MemberData & { transactions: MemberTransactionData[] }> = await res.json();
+		const json: ApiResponse<MemberData & { transactions: MemberTransactionData[] }> =
+			await res.json();
 		return json;
 	}
 

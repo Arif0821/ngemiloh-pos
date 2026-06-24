@@ -8,10 +8,18 @@ import * as Sentry from '@sentry/node';
 import { nodeProfilingIntegration } from '@sentry/profiling-node';
 import compression from 'compression';
 import express from 'express';
+import { randomBytes } from 'crypto';
 
 import { GlobalExceptionFilter } from './common/filters/http-exception.filter';
 import { SentryErrorInterceptor } from './common/interceptors/sentry-error.interceptor';
 import { setupSwagger } from './common/swagger/swagger.setup';
+
+// ========================================
+// CSP NONCE GENERATION
+// ========================================
+function generateCspNonce(): string {
+  return randomBytes(16).toString('base64');
+}
 
 // ========================================
 // SECRETS VALIDATION
@@ -117,31 +125,64 @@ async function bootstrap() {
         })
     : ['https://api.sandbox.midtrans.com', 'https://api.midtrans.com'];
 
+  // CSP nonce middleware - generates unique nonce per request
+  // Also sets CSP header directly with nonce for inline scripts
+  app.use(
+    (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction,
+    ) => {
+      const nonce = generateCspNonce();
+      // Store nonce in res.locals for access in templates (if needed)
+      res.locals.cspNonce = nonce;
+      // Also store in cookie for frontend access (httpOnly for security)
+      res.cookie('csp-nonce', nonce, {
+        httpOnly: false, // Frontend needs to read this
+        secure: process.env.NODE_ENV === 'production',
+        sameSite: 'strict',
+        maxAge: 24 * 60 * 60 * 1000, // 24 hours
+      });
+      next();
+    },
+  );
+
+  // Disable Helmet's automatic CSP (we'll set it manually with nonce)
   app.use(
     helmet({
-      contentSecurityPolicy: {
-        // Enable CSP in production
-        directives: {
-          defaultSrc: ["'self'"],
-          baseUri: ["'self'"],
-          blockAllMixedContent: [],
-          childSrc: ["'self'", 'blob:'],
-          frameAncestors: ["'self'"],
-          imgSrc: ["'self'", 'data:', 'https:', 'blob:'],
-          fontSrc: ["'self'", 'data:'],
-          formAction: ["'self'"],
-          frameSrc: ["'self'", ...midtransFrameDomains], // Midtrans
-          connectSrc: ["'self'", ...midtransConnectDomains], // Midtrans
-          // HIGH FIX S-04: Removed Tailwind CDN - CSS is bundled at build time
-          scriptSrc: ["'self'"],
-          styleSrc: ["'self'"],
-          upgradeInsecureRequests: [],
-        },
-      },
-      crossOriginEmbedderPolicy: false, // Disable for SvelteKit compatibility
+      contentSecurityPolicy: false, // Disable default CSP
+      crossOriginEmbedderPolicy: false,
       crossOriginResourcePolicy: { policy: 'cross-origin' },
       frameguard: { action: 'deny' },
     }),
+  );
+
+  // CSP middleware - set CSP header with per-request nonce
+  app.use(
+    (
+      req: express.Request,
+      res: express.Response,
+      next: express.NextFunction,
+    ) => {
+      const nonce = res.locals.cspNonce;
+      const cspDirectives = [
+        "default-src 'self'",
+        "base-uri 'self'",
+        'block-all-mixed-content',
+        "child-src 'self' blob:",
+        "frame-ancestors 'self'",
+        "img-src 'self' data: https: blob:",
+        "font-src 'self' data:",
+        "form-action 'self'",
+        `frame-src 'self' ${midtransFrameDomains.join(' ')}`,
+        `connect-src 'self' ${midtransConnectDomains.join(' ')}`,
+        `script-src 'self' 'nonce-${nonce}'`,
+        `style-src 'self' 'nonce-${nonce}'`,
+        'upgrade-insecure-requests',
+      ].join('; ');
+      res.setHeader('Content-Security-Policy', cspDirectives);
+      next();
+    },
   );
 
   // ========================================

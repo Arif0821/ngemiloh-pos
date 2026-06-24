@@ -13,7 +13,6 @@ import {
   ProductModifierOption,
   Order,
 } from '@prisma/client';
-import * as crypto from 'crypto';
 import { InventoryService } from '../../../inventory/application/services/inventory.service';
 import { EmailService } from '../../../email/email.service';
 import { MemberService } from '../../../members/application/services/member.service';
@@ -35,7 +34,10 @@ import {
   DEFAULT_OPENING_BALANCE,
 } from '../../../common/utils/constants';
 
-import midtransClient, { CoreApi } from 'midtrans-client';
+import {
+  PAYMENT_GATEWAY,
+  type PaymentGateway,
+} from '../../../payment/payment-gateway.interface';
 
 import { CreateOrderDto } from '../../presentation/dto/create-order.dto';
 import type { ProductWithModifiers } from '../../domain/interfaces/order.repository.interface';
@@ -78,7 +80,6 @@ function escape_csv_field(value: unknown): string {
 @Injectable()
 export class OrdersService {
   private readonly logger = new Logger(OrdersService.name);
-  private midtransCore: CoreApi;
 
   constructor(
     @Inject(ORDER_REPOSITORY)
@@ -87,25 +88,14 @@ export class OrdersService {
     private emailService: EmailService,
     private eventEmitter: EventEmitter2,
     private prisma: PrismaService,
+    @Inject(PAYMENT_GATEWAY) private readonly paymentGateway: PaymentGateway,
     @Optional() private memberService?: MemberService,
-  ) {
-    this.midtransCore = new midtransClient.CoreApi({
-      isProduction: process.env.MIDTRANS_ENV === 'production',
-      serverKey:
-        process.env.MIDTRANS_ENV === 'production'
-          ? process.env.MIDTRANS_SERVER_KEY_PRODUCTION
-          : process.env.MIDTRANS_SERVER_KEY_SANDBOX,
-      clientKey:
-        process.env.MIDTRANS_ENV === 'production'
-          ? process.env.MIDTRANS_CLIENT_KEY_PRODUCTION
-          : process.env.MIDTRANS_CLIENT_KEY_SANDBOX,
-    });
-  }
+  ) {}
 
   /**
    * Generate a unique order number in format: TRX-YYYYMMDD-{cashier_letter}{SEQ}
    * Sequence resets each day per cashier.
-   * Uses PostgreSQL advisory lock to prevent race conditions.
+   * Uses PostgreSQL advisory lock with retry to prevent race conditions.
    */
   async generateOrderNumber(
     cashierLetter: string,
@@ -114,27 +104,56 @@ export class OrdersService {
     const dateStr = date.toISOString().split('T')[0].replace(/-/g, ''); // YYYYMMDD
     const lockKey = `ordernum:${dateStr}:${cashierLetter}`;
 
-    // Use advisory lock to prevent race conditions when generating sequence numbers
+    // Use advisory lock with retry to prevent race conditions when generating sequence numbers
     const lockId = this.hashStringToBigInt(lockKey);
 
-    try {
-      // Acquire advisory lock (blocks until available)
-      await this.prisma.$executeRaw`SELECT pg_advisory_lock(${lockId})`;
+    const maxRetries = 5;
+    const retryDelayMs = 100;
 
-      const existingCount = await this.prisma.order.count({
-        where: {
-          order_number: {
-            startsWith: `TRX-${dateStr}-${cashierLetter}`,
-          },
-        },
-      });
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      // Try to acquire non-blocking advisory lock
+      const lockAcquired = await this.prisma
+        .$executeRaw<number>`SELECT pg_try_advisory_lock(${lockId})`;
 
-      const sequence = String(existingCount + 1).padStart(3, '0');
-      return `TRX-${dateStr}-${cashierLetter}${sequence}`;
-    } finally {
-      // Always release the lock
-      await this.prisma.$executeRaw`SELECT pg_advisory_unlock(${lockId})`;
+      if (lockAcquired === 1) {
+        // Lock acquired successfully, proceed with order number generation
+        try {
+          const existingCount = await this.prisma.order.count({
+            where: {
+              order_number: {
+                startsWith: `TRX-${dateStr}-${cashierLetter}`,
+              },
+            },
+          });
+
+          const sequence = String(existingCount + 1).padStart(3, '0');
+          return `TRX-${dateStr}-${cashierLetter}${sequence}`;
+        } finally {
+          // Always release the lock
+          await this.prisma.$executeRaw`SELECT pg_advisory_unlock(${lockId})`;
+        }
+      }
+
+      // Lock not acquired, check if this is the last attempt
+      if (attempt < maxRetries) {
+        this.logger.warn(
+          `[generateOrderNumber] Advisory lock busy for ${lockKey}, retrying (${attempt + 1}/${maxRetries})`,
+        );
+        // Wait before retry with jitter to reduce contention
+        const jitter = Math.floor(Math.random() * 50);
+        await new Promise((resolve) =>
+          setTimeout(resolve, retryDelayMs + jitter),
+        );
+      }
     }
+
+    // All retries exhausted
+    this.logger.error(
+      `[generateOrderNumber] Failed to acquire advisory lock for ${lockKey} after ${maxRetries + 1} attempts`,
+    );
+    throw new Error(
+      `Failed to acquire advisory lock for order number generation: ${lockKey}`,
+    );
   }
 
   /**
@@ -407,45 +426,21 @@ export class OrdersService {
             ? Math.round(qrisAmount)
             : Math.round(clientFinalPrice);
 
-        const qrisParams = {
-          payment_type: 'qris',
-          transaction_details: {
-            order_id: order.id,
-            gross_amount: chargeAmount,
-          },
-          qris: {
-            acquirer: 'gopay',
-          },
-          custom_expiry: {
-            expiry_duration: process.env.QRIS_EXPIRY_SECONDS
-              ? Number(process.env.QRIS_EXPIRY_SECONDS)
-              : 900,
-            unit: 'second',
-          },
-        };
+        const qrisResult = await this.paymentGateway.createQris(
+          order.id,
+          chargeAmount,
+        );
 
-        const qrisResponse = await this.midtransCore.charge(qrisParams);
-
-        if (qrisResponse.actions && qrisResponse.actions.length > 0) {
-          const qrString = qrisResponse.actions.find(
-            (a) => a.name === 'generate-qr-code',
-          )?.url;
-
-          // CRITICAL: Validate qrString exists before returning
-          if (!qrString) {
-            this.logger.warn('QRIS URL not found in response actions');
-            throw new Error('QRIS URL not found in response');
-          }
-
+        if (qrisResult.qr_string) {
           await this.orderRepository.updateOrder(order.id, {
-            payment_gateway_ref: qrisResponse.transaction_id,
-            payment_raw_response: qrString,
+            payment_gateway_ref: qrisResult.transaction_id,
+            payment_raw_response: qrisResult.qr_string,
           });
 
           return {
             ...order,
-            qr_string: qrString,
-            midtrans_transaction_id: qrisResponse.transaction_id,
+            qr_string: qrisResult.qr_string,
+            midtrans_transaction_id: qrisResult.transaction_id,
           };
         }
       } catch (err: unknown) {
@@ -479,9 +474,7 @@ export class OrdersService {
   }
 
   async syncBatchOrders(orders: CreateOrderDto[], kasirId: string) {
-    const results = [];
-
-    // PERFORMANCE: Fetch discounts and products ONCE for entire batch
+    // PERFORMANCE: Pre-fetch products ONCE for entire batch to avoid N+1 queries
     let products: ProductWithModifiers[] = [];
     try {
       const productIdSet = this.extractProductIds(orders);
@@ -499,64 +492,90 @@ export class OrdersService {
       }));
     }
 
-    // FIX: Wrap entire batch processing in a transaction for data consistency
-    await this.prisma.$transaction(async () => {
-      for (const orderData of orders) {
-        try {
-          // FIX: Don't mutate the original DTO - create a mutable copy instead
-          const mutableOrderData = { ...orderData };
+    // PERFORMANCE: Process orders in PARALLEL for better throughput
+    // Each order's idempotency is guaranteed by SELECT FOR UPDATE in createOrderWithCache
+    const orderPromises = orders.map((orderData) =>
+      this.processSingleOfflineOrder(orderData, kasirId, products),
+    );
 
-          // Trust but Verify: Allow QRIS offline but mark as pending_sync for later settlement
-          if (mutableOrderData.payment_method === PaymentMethod.qris) {
-            mutableOrderData.payment_method = PaymentMethod.qris; // Already set, just for clarity
-          }
-
-          // PERFORMANCE: Use pre-fetched discounts and products
-          const order = await this.createOrderWithCache(
-            mutableOrderData,
-            kasirId,
-            products,
-          );
-
-          // Ensure it is marked as synced_from_offline
-          await this.orderRepository.updateOrder(order.id, {
-            synced_from_offline: true,
-          });
-
-          // Process member points for completed (cash) orders
-          if (
-            order.status === OrderStatus.completed &&
-            order.member_id &&
-            this.memberService
-          ) {
-            await this.process_member_points(
-              order.id,
-              order.member_id,
-              Number(order.total_amount),
-              kasirId,
-            );
-          }
-
-          results.push({
-            client_uuid: orderData.client_uuid,
-            status: 'success',
-            server_id: order.id,
-          });
-        } catch (err: unknown) {
-          const message = err instanceof Error ? err.message : 'Unknown error';
-          this.logger.error(
-            `Failed to sync offline order ${orderData.client_uuid}: ${message}`,
-          );
-          results.push({
-            client_uuid: orderData.client_uuid,
-            status: 'error',
-            message: message,
-          });
-        }
-      }
-    }); // End transaction
+    const results = await Promise.all(orderPromises);
 
     return results;
+  }
+
+  /**
+   * PERFORMANCE: Process a single offline order with pre-fetched products
+   * Called in parallel from syncBatchOrders
+   */
+  private async processSingleOfflineOrder(
+    orderData: CreateOrderDto,
+    kasirId: string,
+    products: ProductWithModifiers[],
+  ): Promise<{
+    client_uuid: string;
+    status: string;
+    server_id?: string;
+    message?: string;
+  }> {
+    try {
+      // Trust but Verify: Allow QRIS offline but mark as pending_sync for later settlement
+      // Don't mutate the original DTO
+      const paymentMethod =
+        orderData.payment_method === PaymentMethod.qris
+          ? PaymentMethod.qris
+          : orderData.payment_method;
+
+      // PERFORMANCE: Use pre-fetched products and create order
+      const order = await this.createOrderWithCache(
+        { ...orderData, payment_method: paymentMethod },
+        kasirId,
+        products,
+      );
+
+      if (!order) {
+        // Idempotency: order already exists (created by another parallel request)
+        return {
+          client_uuid: orderData.client_uuid,
+          status: 'success',
+          server_id: undefined,
+        };
+      }
+
+      // Ensure it is marked as synced_from_offline
+      await this.orderRepository.updateOrder(order.id, {
+        synced_from_offline: true,
+      });
+
+      // Process member points for completed (cash) orders
+      if (
+        order.status === OrderStatus.completed &&
+        order.member_id &&
+        this.memberService
+      ) {
+        await this.process_member_points(
+          order.id,
+          order.member_id,
+          Number(order.total_amount),
+          kasirId,
+        );
+      }
+
+      return {
+        client_uuid: orderData.client_uuid,
+        status: 'success',
+        server_id: order.id,
+      };
+    } catch (err: unknown) {
+      const message = err instanceof Error ? err.message : 'Unknown error';
+      this.logger.error(
+        `Failed to sync offline order ${orderData.client_uuid}: ${message}`,
+      );
+      return {
+        client_uuid: orderData.client_uuid,
+        status: 'error',
+        message: message,
+      };
+    }
   }
 
   /**
@@ -781,46 +800,26 @@ export class OrdersService {
 
   async handleMidtransWebhook(notification: Record<string, unknown>) {
     try {
-      const statusResponse =
-        await this.midtransCore.transaction.notification(notification);
+      // Extract order_id and signature from notification
+      const orderId = notification.order_id as string;
+      const signatureKey = notification.signature_key as string | undefined;
 
-      const orderId = statusResponse.order_id;
-      const transactionStatus = statusResponse.transaction_status;
-
-      // SECURITY: Validate signature_key exists before comparison
-      const signatureKey = statusResponse.signature_key;
+      // SECURITY: Validate signature using payment gateway
       if (!signatureKey) {
         this.logger.warn('Missing signature_key in Midtrans webhook');
         return { status: 'IGNORED' };
       }
 
-      const serverKey =
-        process.env.MIDTRANS_ENV === 'production'
-          ? process.env.MIDTRANS_SERVER_KEY_PRODUCTION
-          : process.env.MIDTRANS_SERVER_KEY_SANDBOX;
-      const hash = crypto
-        .createHash('sha512')
-        .update(
-          orderId +
-            statusResponse.status_code +
-            statusResponse.gross_amount +
-            serverKey,
-        )
-        .digest('hex');
-
-      const expectedBuffer = Buffer.from(hash, 'hex');
-      const signatureBuffer = Buffer.from(signatureKey, 'hex');
-
-      // SECURITY: Check buffer lengths match before timingSafeEqual
-      if (expectedBuffer.length !== signatureBuffer.length) {
+      if (
+        !this.paymentGateway.verifyWebhookSignature(notification, signatureKey)
+      ) {
         this.logger.warn(`Invalid Midtrans Signature Key: order ${orderId}`);
         return { status: 'IGNORED' };
       }
 
-      if (!crypto.timingSafeEqual(expectedBuffer, signatureBuffer)) {
-        this.logger.warn(`Invalid Midtrans Signature Key: order ${orderId}`);
-        return { status: 'IGNORED' };
-      }
+      // Extract transaction status from notification
+      const transactionStatus = notification.transaction_status as string;
+      const transactionId = notification.transaction_id as string | undefined;
 
       let newStatus: OrderStatus = OrderStatus.pending_sync;
       let paymentStatus: string = 'unpaid';
@@ -869,7 +868,7 @@ export class OrdersService {
           entity_type: 'Order',
           entity_id: orderId,
           new_value: {
-            payment_provider_ref: statusResponse.transaction_id,
+            payment_provider_ref: transactionId,
             total_amount: Number(existingOrder.total_amount),
           },
         });
@@ -1205,12 +1204,12 @@ export class OrdersService {
     transactionSubtotal: number,
     cashierId: string,
     redeemRequested = false,
-  ) {
+  ): Promise<{ success: boolean; error?: string }> {
     if (!this.memberService) {
       this.logger.warn(
         `MemberService not available, skipping points for order ${orderId}`,
       );
-      return;
+      return { success: false, error: 'MemberService not available' };
     }
 
     try {
@@ -1224,12 +1223,13 @@ export class OrdersService {
       this.logger.log(
         `Processed member points for order ${orderId}: earned=${result.points_earned}, new_balance=${result.new_balance}`,
       );
+      return { success: true };
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Unknown error';
       this.logger.error(
         `Failed to process member points for order ${orderId}: ${msg}`,
       );
-      // Don't fail the order if points processing fails
+      return { success: false, error: msg };
     }
   }
 }

@@ -41,9 +41,33 @@ import {
   StartShiftDto,
 } from './dto/create-order.dto';
 import type { AuthenticatedRequest } from '../../types/express';
+import { Address4 } from 'ip-address';
 
 // SSE event type used by the @Sse() decorator return type
 type SseEvent = { data: Record<string, unknown> };
+
+/**
+ * Validates if an IP address is within a CIDR range using the ip-address library.
+ * Properly handles all valid CIDR prefix lengths (/0 to /32).
+ */
+function is_ip_in_cidr(clientIp: string, cidr: string): boolean {
+  try {
+    const subnet = new Address4(cidr);
+    const client = new Address4(clientIp);
+    return client.isInSubnet(subnet);
+  } catch {
+    // If parsing fails, try exact match as fallback
+    return clientIp === cidr;
+  }
+}
+
+/**
+ * Checks if a client IP is allowed based on a list of allowed CIDRs/IPs.
+ * Uses proper CIDR validation via the ip-address library.
+ */
+function is_ip_allowed(clientIp: string, allowedList: string[]): boolean {
+  return allowedList.some((allowed) => is_ip_in_cidr(clientIp, allowed));
+}
 
 @ApiTags('Orders')
 @Controller('api/v1')
@@ -387,7 +411,7 @@ export class OrdersController {
         ? forwardedFor.split(',')[0].trim()
         : req.socket.remoteAddress || 'unknown';
 
-    // SECURITY: Verify request comes from Midtrans IPs
+    // SECURITY: Verify request comes from Midtrans IPs using proper CIDR validation
     // Midtrans official IP ranges (production)
     const midtransIps = (process.env.MIDTRANS_ALLOWED_IPS || '')
       .split(',')
@@ -403,30 +427,7 @@ export class OrdersController {
 
     const allowedIps =
       midtransIps.length > 0 ? midtransIps : defaultMidtransIps;
-    const isAllowed = allowedIps.some((allowedIp) => {
-      // Support /32 (single IP), /24, and /16 CIDR blocks
-      if (allowedIp.includes('/')) {
-        const [baseIp, prefix] = allowedIp.split('/');
-        const prefixNum = parseInt(prefix, 10);
-        if (prefixNum === 32) {
-          return ip === baseIp;
-        }
-        if (prefixNum === 24) {
-          return ip.startsWith(baseIp.substring(0, baseIp.lastIndexOf('.')));
-        }
-        if (prefixNum === 16) {
-          return ip.startsWith(
-            baseIp.substring(0, baseIp.indexOf('.', baseIp.indexOf('.') + 1)),
-          );
-        }
-        // SECURITY: Log warning for unsupported CIDR notation
-        this.logger.warn(
-          `Unsupported CIDR notation: ${allowedIp} in MIDTRANS_ALLOWED_IPS`,
-        );
-        return false;
-      }
-      return ip === allowedIp;
-    });
+    const isAllowed = is_ip_allowed(ip, allowedIps);
 
     // SECURITY: Only bypass IP validation in known test environments
     const isDevOrTest =

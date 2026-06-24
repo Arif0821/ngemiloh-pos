@@ -3,10 +3,10 @@ import { User, IpLockout, AuditLog, Prisma } from '@prisma/client';
 export const AUTH_REPOSITORY = Symbol('AUTH_REPOSITORY');
 
 export interface AuthRepositoryInterface {
-  findIpLockout(ipAddress: string): Promise<IpLockout | null>;
-  incrementIpLockout(ipAddress: string): Promise<IpLockout>;
-  lockIpAddress(ipAddress: string, lockedUntil: Date): Promise<IpLockout>;
-  resetIpLockout(ipAddress: string): Promise<IpLockout>;
+  findIpLockout(ipHash: string): Promise<IpLockout | null>;
+  incrementIpLockout(ipHash: string): Promise<IpLockout>;
+  lockIpAddress(ipHash: string, lockedUntil: Date): Promise<IpLockout>;
+  resetIpLockout(ipHash: string): Promise<IpLockout>;
 
   findUserByUsernameOrEmail(identifier: string): Promise<User | null>;
   findUserByUsername(username: string): Promise<User | null>;

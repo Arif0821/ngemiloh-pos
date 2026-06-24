@@ -2,12 +2,113 @@
 	import { api } from '$lib/services/api.client';
 	import { goto } from '$app/navigation';
 
+	// Cookie utilities for secure user data storage
+	function set_user_cookie(user_data: Record<string, unknown>): void {
+		const expires = new Date();
+		expires.setDate(expires.getDate() + 7); // 7 days expiry
+		const cookie_value = encodeURIComponent(JSON.stringify(user_data));
+		document.cookie = `pos_user=${cookie_value};expires=${expires.toUTCString()};path=/;SameSite=Lax`;
+	}
+
+	function get_user_cookie(): Record<string, unknown> | null {
+		const match = document.cookie.match(/pos_user=([^;]+)/);
+		if (match) {
+			try {
+				return JSON.parse(decodeURIComponent(match[1]));
+			} catch {
+				return null;
+			}
+		}
+		return null;
+	}
+
+	function clear_user_cookie(): void {
+		document.cookie = 'pos_user=;expires=Thu, 01 Jan 1970 00:00:00 GMT;path=/';
+	}
+
 	// Kasir Login - Username + PIN (sesuai backend auth.service.ts)
 	// Kasir login dengan username (dari admin) + PIN 4-6 digit
 	let username = $state('');
 	let pin: string = $state('');
 	let error: string = $state('');
 	let is_loading: boolean = $state(false);
+
+	// Rate limiting state for PIN entry (defense-in-depth)
+	interface rate_limit_state {
+		attempts: number;
+		locked_until: number | null;
+		last_attempt: number;
+	}
+	let rate_limit: rate_limit_state = $state({
+		attempts: 0,
+		locked_until: null,
+		last_attempt: 0
+	});
+
+	// Constants for rate limiting
+	const MAX_PIN_ATTEMPTS = 5;
+	const LOCKOUT_DURATION_MS = 30000; // 30 seconds
+	const COOLDOWN_BETWEEN_ATTEMPTS_MS = 1000; // 1 second minimum between attempts
+
+	function is_rate_limited(): boolean {
+		if (rate_limit.locked_until !== null) {
+			if (Date.now() < rate_limit.locked_until) {
+				return true;
+			}
+			// Lockout expired, reset
+			rate_limit.attempts = 0;
+			rate_limit.locked_until = null;
+		}
+		return false;
+	}
+
+	function get_rate_limit_message(): string {
+		if (rate_limit.locked_until !== null) {
+			const remaining_seconds = Math.ceil((rate_limit.locked_until - Date.now()) / 1000);
+			if (remaining_seconds > 0) {
+				return `Terlalu banyak percobaan. Coba lagi dalam ${remaining_seconds} detik.`;
+			}
+		}
+		const remaining = MAX_PIN_ATTEMPTS - rate_limit.attempts;
+		if (remaining <= 2) {
+			return `${remaining} percobaan tersisa sebelum terkunci.`;
+		}
+		return '';
+	}
+
+	function can_attempt_login(): { allowed: boolean; message: string } {
+		// Check if currently locked out
+		if (is_rate_limited()) {
+			return { allowed: false, message: get_rate_limit_message() };
+		}
+
+		// Check cooldown between attempts
+		const time_since_last = Date.now() - rate_limit.last_attempt;
+		if (rate_limit.attempts > 0 && time_since_last < COOLDOWN_BETWEEN_ATTEMPTS_MS) {
+			const wait_ms = COOLDOWN_BETWEEN_ATTEMPTS_MS - time_since_last;
+			return {
+				allowed: false,
+				message: `Mohon tunggu ${Math.ceil(wait_ms / 1000)} detik sebelum mencoba lagi.`
+			};
+		}
+
+		return { allowed: true, message: '' };
+	}
+
+	function record_failed_attempt(): void {
+		rate_limit.attempts++;
+		rate_limit.last_attempt = Date.now();
+
+		if (rate_limit.attempts >= MAX_PIN_ATTEMPTS) {
+			rate_limit.locked_until = Date.now() + LOCKOUT_DURATION_MS;
+		}
+	}
+
+	function reset_rate_limit(): void {
+		rate_limit.attempts = 0;
+		rate_limit.locked_until = null;
+		rate_limit.last_attempt = 0;
+	}
 
 	function handle_pin_input(num: string) {
 		if (pin.length < 6) {
@@ -27,6 +128,13 @@
 	}
 
 	async function login() {
+		// Check rate limiting first
+		const check = can_attempt_login();
+		if (!check.allowed) {
+			error = check.message;
+			return;
+		}
+
 		// Validasi username
 		if (!username.trim()) {
 			error = 'Masukkan username kasir';
@@ -54,22 +162,36 @@
 			const data = await res.json();
 
 			if (data.success || data.accessToken || data.data) {
-				// SECURITY FIX F-01: CSRF token is now set as httpOnly cookie by backend
-				// No need to store in localStorage anymore
+				// Reset rate limit on successful login
+				reset_rate_limit();
+
+				// SECURITY FIX F-01: Store user data in cookie instead of localStorage
+				// Cookies are more secure and not accessible via JavaScript (when httpOnly)
+				// For frontend-readable cookies, we use non-httpOnly with SameSite=Lax
 				const user_data = data.data || data;
 
 				if (user_data.must_change_pin) {
-					// Simpan user ke localStorage untuk change-pin page
-					localStorage.setItem('pending_pin_change', JSON.stringify(user_data));
-					goto('/change-pin');
+					// PIN reset hanya bisa dilakukan oleh admin - redirect ke outlet selection
+					// Admin dapat reset PIN kasir via /admin/cashiers
+					set_user_cookie(user_data as Record<string, unknown>);
+					goto('/outlet-selection');
 				} else {
-					// Simpan user info ke localStorage (untuk role guard di layout)
-					localStorage.setItem('user', JSON.stringify(user_data));
+					// Simpan user info ke cookie (untuk role guard di layout)
+					set_user_cookie(user_data as Record<string, unknown>);
 					// Redirect ke outlet selection page (FASE 4: Multi-Outlet)
 					goto('/outlet-selection');
 				}
 			} else {
+				// Record failed attempt for rate limiting
+				record_failed_attempt();
 				error = data.message || 'Login gagal. Periksa username dan PIN.';
+
+				// Show rate limit warning if approaching limit
+				const warning = get_rate_limit_message();
+				if (warning) {
+					error = `${error} ${warning}`;
+				}
+
 				clear_pin();
 			}
 		} catch (err) {
@@ -144,12 +266,12 @@
 					{/each}
 				</div>
 
-				<!-- Error message -->
-				{#if error}
+				<!-- Error/Rate limit message -->
+				{#if error || get_rate_limit_message()}
 					<div
 						class="mb-6 rounded-xl border border-red-500/50 bg-red-500/20 px-4 py-3 text-sm font-bold text-red-400"
 					>
-						{error}
+						{error || get_rate_limit_message()}
 					</div>
 				{:else}
 					<p class="mb-6 text-center text-xs font-medium text-slate-500">
@@ -163,7 +285,7 @@
 						<button
 							class="h-16 rounded-2xl bg-slate-800/80 text-2xl font-bold text-white transition-all hover:bg-slate-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
 							onclick={() => handle_pin_input(num)}
-							disabled={is_loading || pin.length >= 6}
+							disabled={is_loading || pin.length >= 6 || is_rate_limited()}
 						>
 							{num}
 						</button>
@@ -171,7 +293,7 @@
 					<button
 						class="flex h-16 items-center justify-center rounded-2xl bg-slate-800/80 text-xl text-slate-400 transition-all hover:bg-red-500/20 hover:text-red-400 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
 						onclick={clear_pin}
-						disabled={is_loading || pin.length === 0}
+						disabled={is_loading || pin.length === 0 || is_rate_limited()}
 						aria-label="Hapus semua input PIN"
 					>
 						<svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -186,14 +308,14 @@
 					<button
 						class="h-16 rounded-2xl bg-slate-800/80 text-2xl font-bold text-white transition-all hover:bg-slate-700 active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
 						onclick={() => handle_pin_input('0')}
-						disabled={is_loading || pin.length >= 6}
+						disabled={is_loading || pin.length >= 6 || is_rate_limited()}
 					>
 						0
 					</button>
 					<button
 						class="flex h-16 items-center justify-center rounded-2xl bg-slate-800/80 text-slate-400 transition-all hover:bg-slate-700 hover:text-white active:scale-95 disabled:cursor-not-allowed disabled:opacity-50"
 						onclick={delete_pin}
-						disabled={is_loading || pin.length === 0}
+						disabled={is_loading || pin.length === 0 || is_rate_limited()}
 						aria-label="Hapus digit terakhir PIN"
 					>
 						<svg class="h-7 w-7" fill="none" stroke="currentColor" viewBox="0 0 24 24"
@@ -209,13 +331,12 @@
 
 				<!-- Login button -->
 				<button
-					class="mt-8 h-14 w-full max-w-xs rounded-xl font-bold tracking-wide transition-all disabled:cursor-not-allowed disabled:opacity-50 {pin.length >=
-						4 &&
-					username.trim() &&
-					!is_loading
-						? 'bg-linear-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30 hover:from-indigo-500 hover:to-purple-500 active:scale-98'
-						: 'bg-slate-700 text-slate-500'}"
-					disabled={pin.length < 4 || !username.trim() || is_loading}
+					class="mt-8 h-14 w-full max-w-xs rounded-xl font-bold tracking-wide transition-all disabled:cursor-not-allowed disabled:opacity-50 {is_rate_limited()
+						? 'bg-red-600/50 text-slate-400'
+						: pin.length >= 4 && username.trim() && !is_loading
+							? 'bg-linear-to-r from-indigo-600 to-purple-600 text-white shadow-lg shadow-indigo-500/30 hover:from-indigo-500 hover:to-purple-500 active:scale-98'
+							: 'bg-slate-700 text-slate-500'}"
+					disabled={pin.length < 4 || !username.trim() || is_loading || is_rate_limited()}
 					onclick={login}
 				>
 					{#if is_loading}
@@ -235,6 +356,18 @@
 								></path></svg
 							>
 							Memproses...
+						</span>
+					{:else if is_rate_limited()}
+						<span class="flex items-center justify-center gap-2">
+							<svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+								><path
+									stroke-linecap="round"
+									stroke-linejoin="round"
+									stroke-width="2"
+									d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z"
+								></path></svg
+							>
+							Terkunci
 						</span>
 					{:else}
 						MASUK

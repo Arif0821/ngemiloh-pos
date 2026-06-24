@@ -5,6 +5,21 @@ networks:
     driver: bridge
     internal: true
 
+volumes:
+  # Named volumes for data safety (Windows + Linux compatible)
+  postgres_data:
+    name: ngemiloh_postgres_data
+  redis_data:
+    name: ngemiloh_redis_data
+  caddy_data:
+    name: ngemiloh_caddy_data
+  caddy_config:
+    name: ngemiloh_caddy_config
+  storage_data:
+    name: ngemiloh_storage_data
+  backup_data:
+    name: ngemiloh_backup_data
+
 services:
   # PostgreSQL Database
   postgres:
@@ -21,8 +36,8 @@ services:
       POSTGRES_DB: ngemiloh_db
       POSTGRES_INITDB_ARGS: "--auth-host=scram-sha-256"
     volumes:
-      # Bind mounts for Windows compatibility - permissions work correctly
-      - ./data/postgres:/var/lib/postgresql/data
+      # Named volumes for data safety
+      - postgres_data:/var/lib/postgresql/data
       - ./data/postgres_init:/docker-entrypoint-initdb.d:ro
     networks:
       - backend_network
@@ -70,8 +85,8 @@ services:
         fi
       "
     volumes:
-      # Bind mount for Windows compatibility
-      - ./data/redis:/data
+      # Named volumes for data safety
+      - redis_data:/data
       # Development entrypoint (no password)
       - ./scripts/docker/redis-entrypoint.sh:/docker-entrypoint.sh:ro
       # Production entrypoint (with password)
@@ -133,9 +148,14 @@ services:
       - DISCREPANCY_THRESHOLD=${DISCREPANCY_THRESHOLD:-5000}
       - PRICE_DELTA_THRESHOLD_PCT=${PRICE_DELTA_THRESHOLD_PCT:-10}
       - TZ=${TZ:-Asia/Jakarta}
+      # Backup settings
+      - BACKUP_DIR=${BACKUP_DIR:-/var/backups/ngemiloh}
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
     volumes:
-      # Bind mount for Windows compatibility
-      - ./data/storage:/var/storage/ngemiloh
+      # Named volumes for data safety
+      - storage_data:/var/storage/ngemiloh
+      # Backup script
+      - ./scripts/docker/schedule-backup.sh:/scripts/schedule-backup.sh:ro
     networks:
       - frontend_network
       - backend_network
@@ -190,10 +210,9 @@ services:
       - RATE_LIMIT_BURST=${RATE_LIMIT_BURST:-50}
       - CADDY_ALLOWED_IPS=${CADDY_ALLOWED_IPS:-}
     volumes:
-      # NOTE: Caddy data directory is required for TLS certificates
-      # Using bind mount
-      - ./data/caddy:/data
-      - ./data/caddy_config:/config
+      # Named volumes for data safety
+      - caddy_data:/data
+      - caddy_config:/config
     depends_on:
       nestjs-api:
         condition: service_healthy
@@ -214,4 +233,114 @@ services:
       interval: 10s
       timeout: 5s
       retries: 3
+    restart: unless-stopped
+
+  # ===========================================
+  # Backup Service (Cron-based)
+  # Runs at 02:00 WIB daily
+  # ===========================================
+  backup:
+    image: postgres:17-alpine
+    container_name: ngemiloh_backup
+    env_file:
+      - path: ./docker/production.env
+        required: false
+      - path: ./docker/backup.env
+        required: false
+    environment:
+      # Database connection
+      - DB_NAME=${DB_NAME:-ngemiloh_db}
+      - DB_USER=${DB_USER:-ngemiloh}
+      - DB_PASSWORD=${DB_PASSWORD:-dev_password_2024}
+      # Backup settings
+      - BACKUP_DIR=${BACKUP_DIR:-/var/backups/ngemiloh}
+      - BACKUP_RETENTION_DAYS=${BACKUP_RETENTION_DAYS:-30}
+      - BACKUP_ENCRYPTION_KEY=${BACKUP_ENCRYPTION_KEY:-}
+      # Optional alerts
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN:-}
+      - TELEGRAM_CHAT_ID=${TELEGRAM_CHAT_ID:-}
+      - BACKUP_WEBHOOK_URL=${BACKUP_WEBHOOK_URL:-}
+      # Optional cloud upload
+      - BACKUP_RCLONE_REMOTE=${BACKUP_RCLONE_REMOTE:-}
+      # Timezone
+      - TZ=${TZ:-Asia/Jakarta}
+    volumes:
+      # Named volume for backups
+      - backup_data:/var/backups/ngemiloh
+      # Backup scripts
+      - ./scripts/docker/schedule-backup.sh:/scripts/schedule-backup.sh:ro
+    networks:
+      - backend_network
+    # Cron scheduler (use dockertectonics/cron or similar)
+    # Alternative: Use NestJS built-in scheduler
+    entrypoint: >
+      /bin/sh -c "
+        echo 'Starting backup cron service...';
+        echo 'Backup will run daily at 02:00 WIB';
+        echo 'Manual backup: docker compose exec backup /scripts/schedule-backup.sh';
+        # Run crond in foreground
+        crond -f -l 2
+      "
+    command: >
+      /bin/sh -c "
+        # Set up cron schedule: 02:00 WIB daily
+        echo '0 2 * * * /scripts/schedule-backup.sh >> /var/backups/ngemiloh/backup.log 2>&1' > /etc/crontabs/root;
+        echo '30 2 * * * find /var/backups/ngemiloh -name \"*.gz\" -mtime +30 -delete >> /var/backups/ngemiloh/backup.log 2>&1' >> /etc/crontabs/root;
+        echo '00 3 * * 0 /scripts/backup-config.sh >> /var/backups/ngemiloh/config-backup.log 2>&1' >> /etc/crontabs/root;
+        crond;
+        tail -f /dev/null
+      "
+    deploy:
+      resources:
+        limits:
+          memory: 128M
+          cpus: '0.1'
+        reservations:
+          memory: 32M
+    restart: unless-stopped
+    # Only run when postgres is healthy
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # ===========================================
+  # Cron Service (Shared for all scheduled tasks)
+  # Alternative: NestJS built-in @nestjs/schedule
+  # ===========================================
+  cron:
+    image: alpine:3.19
+    container_name: ngemiloh_cron
+    env_file:
+      - path: ./docker/production.env
+        required: false
+    environment:
+      - TZ=${TZ:-Asia/Jakarta}
+    volumes:
+      # Mount docker socket for health checks
+      - /var/run/docker.sock:/var/run/docker.sock:ro
+      # Backup scripts
+      - ./scripts/docker/schedule-backup.sh:/scripts/schedule-backup.sh:ro
+      - ./scripts/backup-config.sh:/scripts/backup-config.sh:ro
+      # Backup volume
+      - backup_data:/var/backups/ngemiloh
+    command: >
+      /bin/sh -c "
+        apk add --no-cache dcron postgresql-client bash gzip openssl coreutils;
+        # Set up cron schedule
+        echo '0 2 * * * /scripts/schedule-backup.sh >> /var/backups/ngemiloh/backup.log 2>&1' > /var/spool/cron/crontabs/root;
+        echo '0 3 * * * /scripts/backup-config.sh >> /var/backups/ngemiloh/config-backup.log 2>&1' >> /var/spool/cron/crontabs/root;
+        echo '';
+        echo 'Scheduled Jobs:';
+        echo '  - Database backup: Daily at 02:00 WIB';
+        echo '  - Config backup: Daily at 03:00 WIB';
+        echo '';
+        crond -f -l 2
+      "
+    networks:
+      - backend_network
+    deploy:
+      resources:
+        limits:
+          memory: 64M
+          cpus: '0.1'
     restart: unless-stopped

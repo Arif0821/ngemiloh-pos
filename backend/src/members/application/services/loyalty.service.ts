@@ -1,35 +1,39 @@
 import { Injectable } from '@nestjs/common';
+import { randomInt } from 'crypto';
 import { PrismaService } from '../../../prisma/prisma.service';
+import {
+  LOYALTY_POINTS_EARN_RATE,
+  LOYALTY_POINTS_EARN_PER,
+  LOYALTY_POINTS_REDEEM_RATE,
+  LOYALTY_POINTS_REDEEM_PER,
+  LOYALTY_CODE_PREFIX,
+  LOYALTY_CODE_CHARS,
+  LOYALTY_CODE_LENGTH,
+} from '../../../common/utils/constants';
 
 @Injectable()
 export class LoyaltyService {
   constructor(private readonly prisma: PrismaService) {}
 
-  // Constants
-  readonly POINTS_EARN_RATE = 5; // 5 points per Rp 1,000
-  readonly POINTS_EARN_PER = 1000; // per Rp 1,000
-  readonly POINTS_REDEEM_RATE = 5; // 5 points = Rp 1,000
-  readonly POINTS_REDEEM_PER = 1000;
-  readonly COOLDOWN_MINUTES = 2;
-  readonly GRACE_DAYS = 30;
-
   calculate_points_earned(subtotal: number): number {
-    return Math.floor(subtotal / this.POINTS_EARN_PER) * this.POINTS_EARN_RATE;
+    return (
+      Math.floor(subtotal / LOYALTY_POINTS_EARN_PER) * LOYALTY_POINTS_EARN_RATE
+    );
   }
 
   calculate_redeem_value(points: number): number {
     return (
-      Math.floor(points / this.POINTS_REDEEM_RATE) * this.POINTS_REDEEM_PER
+      Math.floor(points / LOYALTY_POINTS_REDEEM_RATE) *
+      LOYALTY_POINTS_REDEEM_PER
     );
   }
 
   generate_member_code(): string {
-    const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
     let code = '';
-    for (let i = 0; i < 6; i++) {
-      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    for (let i = 0; i < LOYALTY_CODE_LENGTH; i++) {
+      code += LOYALTY_CODE_CHARS[randomInt(LOYALTY_CODE_CHARS.length)];
     }
-    return `MBR-${code}`;
+    return `${LOYALTY_CODE_PREFIX}${code}`;
   }
 
   async evaluate_tier(

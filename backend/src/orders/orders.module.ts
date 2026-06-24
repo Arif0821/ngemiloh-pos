@@ -5,9 +5,10 @@ import { InventoryModule } from '../inventory/inventory.module';
 import { ORDER_REPOSITORY } from './domain/interfaces/order.repository.interface';
 import { PrismaOrderRepository } from './infrastructure/repositories/prisma-order.repository';
 import { MembersModule } from '../members/members.module';
+import { PaymentModule } from '../payment/payment.module';
 
 @Module({
-  imports: [InventoryModule, MembersModule],
+  imports: [InventoryModule, MembersModule, PaymentModule],
   providers: [
     {
       provide: ORDER_REPOSITORY,

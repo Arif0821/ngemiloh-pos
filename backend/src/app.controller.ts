@@ -5,7 +5,6 @@ import {
   Body,
   UseGuards,
   Req,
-  Param,
   Res,
   HttpStatus,
 } from '@nestjs/common';
@@ -94,54 +93,6 @@ export class AppController {
     @Req() req: AuthenticatedRequest,
   ) {
     const data = await this.appService.updateSettings(body, req.user.id);
-    return { success: true, data };
-  }
-
-  @Get('api/v1/admin/feature-flags')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.superadmin)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get feature flags' })
-  @ApiResponse({ status: 200, description: 'Feature flags retrieved' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - superadmin only' })
-  async getFeatureFlags() {
-    const data = await this.appService.getFeatureFlags();
-    return { success: true, data };
-  }
-
-  @Patch('api/v1/admin/feature-flags/:id')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.superadmin)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Toggle feature flag' })
-  @ApiResponse({ status: 200, description: 'Feature flag toggled' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - superadmin only' })
-  @ApiResponse({ status: 404, description: 'Feature flag not found' })
-  async toggleFeatureFlag(
-    @Param('id') id: string,
-    @Body('is_enabled') isEnabled: boolean,
-    @Req() req: AuthenticatedRequest,
-  ) {
-    const data = await this.appService.toggleFeatureFlag(
-      id,
-      isEnabled,
-      req.user.id,
-    );
-    return { success: true, data };
-  }
-
-  @Get('api/v1/admin/audit-logs')
-  @UseGuards(JwtAuthGuard, RolesGuard)
-  @Roles(Role.superadmin)
-  @ApiBearerAuth()
-  @ApiOperation({ summary: 'Get audit logs' })
-  @ApiResponse({ status: 200, description: 'Audit logs retrieved' })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden - superadmin only' })
-  async getAuditLogs() {
-    const data = await this.appService.getAuditLogs();
     return { success: true, data };
   }
 }

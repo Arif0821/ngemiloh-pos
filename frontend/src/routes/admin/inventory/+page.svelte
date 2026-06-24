@@ -15,6 +15,11 @@
 	// Tab state
 	let activeTab: 'stock' | 'waste' | 'bom' = $state('stock');
 
+	// Cost editing state
+	let editingCostId = $state<string | null>(null);
+	let editingCostValue = $state(0);
+	let isSavingCost = $state(false);
+
 	// Waste tracking state
 	let wasteMaterialId = $state('');
 	let wasteQuantity = $state(1);
@@ -329,6 +334,51 @@
 	function onBomProductChange() {
 		fetchBomRecipes();
 	}
+
+	// Cost per unit editing
+	function startEditCost(material: RawMaterial) {
+		editingCostId = material.id;
+		editingCostValue = Number(material.cost_per_unit) || 0;
+	}
+
+	function cancelEditCost() {
+		editingCostId = null;
+		editingCostValue = 0;
+	}
+
+	async function saveCost(materialId: string) {
+		if (editingCostValue < 0) {
+			toast.error('Harga tidak boleh negatif');
+			return;
+		}
+
+		isSavingCost = true;
+		try {
+			const res = await api.request(`/admin/inventory/materials/${materialId}`, {
+				method: 'PATCH',
+				headers: { 'Content-Type': 'application/json' },
+				credentials: 'include',
+				body: JSON.stringify({ cost_per_unit: editingCostValue })
+			});
+
+			if (res.ok) {
+				toast.success('Harga berhasil diupdate!');
+				editingCostId = null;
+				fetchInventory();
+				// Refresh BOM recipes if in BOM tab
+				if (activeTab === 'bom') {
+					fetchBomRecipes();
+				}
+			} else {
+				const json = await res.json();
+				toast.error(json.message || 'Gagal update harga');
+			}
+		} catch {
+			toast.error('Terjadi kesalahan jaringan');
+		} finally {
+			isSavingCost = false;
+		}
+	}
 </script>
 
 <svelte:head>
@@ -466,6 +516,9 @@
 											>Selisih</th
 										>
 									{/if}
+									<th class="px-6 py-4 text-right text-xs font-semibold text-slate-500 uppercase"
+										>Harga/Unit (Rp)</th
+									>
 									<th class="px-6 py-4 text-left text-xs font-semibold text-slate-500 uppercase"
 										>Status</th
 									>

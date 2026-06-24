@@ -81,3 +81,25 @@ export const MAX_PAGE_SIZE = 100;
 // ═══════════════════════════════════════════════════════════════════
 /** Slow query threshold in milliseconds */
 export const SLOW_QUERY_THRESHOLD_MS = 1000;
+
+// ═══════════════════════════════════════════════════════════════════
+// LOYALTY SYSTEM
+// ═══════════════════════════════════════════════════════════════════
+/** Loyalty points earned per Rp POINTS_EARN_PER */
+export const LOYALTY_POINTS_EARN_RATE = 5;
+/** Amount in Rupiah that earns LOYALTY_POINTS_EARN_RATE points */
+export const LOYALTY_POINTS_EARN_PER = 1000;
+/** Points required for each Rp redemption unit */
+export const LOYALTY_POINTS_REDEEM_RATE = 5;
+/** Rupiah value per redemption unit */
+export const LOYALTY_POINTS_REDEEM_PER = 1000;
+/** Cooldown between point transactions (minutes) */
+export const LOYALTY_COOLDOWN_MINUTES = 2;
+/** Grace period for tier validity (days) */
+export const LOYALTY_GRACE_DAYS = 30;
+/** Member code prefix */
+export const LOYALTY_CODE_PREFIX = 'MBR-';
+/** Character set for member code generation */
+export const LOYALTY_CODE_CHARS = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
+/** Length of member code (without prefix) */
+export const LOYALTY_CODE_LENGTH = 6;

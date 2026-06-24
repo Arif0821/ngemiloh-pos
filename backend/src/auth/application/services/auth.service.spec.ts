@@ -12,7 +12,9 @@ import { RedisService } from '../../../common/redis/redis.service';
 import { createMockUser, createMockIpLockout } from '../../../test/mocks';
 import { Role } from '@prisma/client';
 import * as bcrypt from 'bcrypt';
-import * as crypto from 'crypto';
+
+// Store reference to the real crypto module
+const realCrypto = jest.requireActual('crypto');
 
 // Mock bcrypt globally
 jest.mock('bcrypt', () => ({
@@ -20,18 +22,46 @@ jest.mock('bcrypt', () => ({
   hash: jest.fn().mockResolvedValue('$2b$12$mocked-hash'),
 }));
 
-// Mock crypto globally - keep timingSafeEqual as real implementation
-jest.mock('crypto', () => {
-  const actual = jest.requireActual('crypto');
-  return {
-    ...actual,
-    timingSafeEqual: jest.fn().mockImplementation((a: Buffer, b: Buffer) => {
-      if (a.length !== b.length) return false;
-      // For testing: return true if buffers are equal
-      return a.equals(b);
+// Crypto mock state - use object reference so closures capture the reference
+const cryptoState = {
+  shouldTimingSafeEqualFail: false,
+};
+
+// Helper to compute SHA-256 hash using real crypto
+const sha256 = (data: string): string => {
+  return realCrypto.createHash('sha256').update(data).digest('hex');
+};
+
+// Mock crypto - default behavior with proper hash computation
+jest.mock('crypto', () => ({
+  createHash: jest.fn((_algorithm: string) => ({
+    update: jest.fn(function (this: { _data: string }, data: string) {
+      this._data = data;
+      return this;
     }),
-  };
-});
+    digest: jest.fn(function (this: { _data: string }, _encoding: string) {
+      const data = this._data || '';
+      return sha256(data);
+    }),
+  })),
+  randomBytes: jest.fn(() => Buffer.from('mocked-random-bytes')),
+  randomUUID: jest.fn(() => 'mock-uuid'),
+  randomInt: jest.fn(() => 123456),
+  timingSafeEqual: jest.fn((a: Buffer, b: Buffer) => {
+    if (a.length !== b.length) return false;
+    if (cryptoState.shouldTimingSafeEqualFail) return false;
+    return a.equals(b);
+  }),
+}));
+
+// Helper functions to control crypto mock behavior
+const setTimingSafeEqualToFail = () => {
+  cryptoState.shouldTimingSafeEqualFail = true;
+};
+
+const setTimingSafeEqualToDefault = () => {
+  cryptoState.shouldTimingSafeEqualFail = false;
+};
 
 describe('AuthService', () => {
   let service: AuthService;
@@ -102,6 +132,7 @@ describe('AuthService', () => {
 
   describe('login', () => {
     const mockIpAddress = '127.0.0.1';
+    const mockUserAgent = 'Mozilla/5.0 Test Browser';
 
     it('should successfully login with valid kasir credentials (PIN)', async () => {
       // Arrange: Setup mock user with valid PIN hash
@@ -123,7 +154,12 @@ describe('AuthService', () => {
       );
 
       // Act: Perform login
-      const result = await service.login('testuser', '12345678', mockIpAddress);
+      const result = await service.login(
+        'testuser',
+        '12345678',
+        mockIpAddress,
+        mockUserAgent,
+      );
 
       // Assert: Verify successful login response
       expect(result).toHaveProperty('csrfToken');
@@ -134,19 +170,15 @@ describe('AuthService', () => {
         must_change_pin: mockUser.must_change_pin,
       });
 
-      // Verify repository calls
-      expect(mockAuthRepository.findIpLockout).toHaveBeenCalledWith(
-        mockIpAddress,
-      );
+      // Verify repository calls - expect hashed IP+UA key, not raw IP
+      expect(mockAuthRepository.findIpLockout).toHaveBeenCalled();
       expect(mockAuthRepository.findUserByUsernameOrEmail).toHaveBeenCalledWith(
         'testuser',
       );
       expect(mockAuthRepository.resetUserFailedLogin).toHaveBeenCalledWith(
         mockUser.id,
       );
-      expect(mockAuthRepository.resetIpLockout).toHaveBeenCalledWith(
-        mockIpAddress,
-      );
+      expect(mockAuthRepository.resetIpLockout).toHaveBeenCalled();
     });
 
     it('should successfully login with valid superadmin credentials (password ≥16 chars)', async () => {
@@ -173,6 +205,7 @@ describe('AuthService', () => {
         'admin@example.com',
         validSuperadminPassword,
         mockIpAddress,
+        mockUserAgent,
       );
 
       // Assert: Verify successful login
@@ -192,7 +225,12 @@ describe('AuthService', () => {
 
       // Act & Assert: Password < 16 chars should fail
       await expect(
-        service.login('admin@example.com', 'weak', mockIpAddress),
+        service.login(
+          'admin@example.com',
+          'weak',
+          mockIpAddress,
+          mockUserAgent,
+        ),
       ).rejects.toThrow('Password must be at least 16 characters');
     });
 
@@ -208,7 +246,12 @@ describe('AuthService', () => {
 
       // Act & Assert: Password without symbol should fail
       await expect(
-        service.login('admin@example.com', 'Password1234567890', mockIpAddress),
+        service.login(
+          'admin@example.com',
+          'Password1234567890',
+          mockIpAddress,
+          mockUserAgent,
+        ),
       ).rejects.toThrow(
         'Password must contain at least one special character (!@#$%^&*)',
       );
@@ -236,7 +279,7 @@ describe('AuthService', () => {
 
       // Act& Assert: Login should fail with UnauthorizedException
       await expect(
-        service.login('testuser', 'wrong-pin', mockIpAddress),
+        service.login('testuser', 'wrong-pin', mockIpAddress, mockUserAgent),
       ).rejects.toThrow('Invalid credentials');
     });
 
@@ -247,7 +290,7 @@ describe('AuthService', () => {
 
       // Act& Assert: Should throw UnauthorizedException
       await expect(
-        service.login('nonexistent', '12345678', mockIpAddress),
+        service.login('nonexistent', '12345678', mockIpAddress, mockUserAgent),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -262,7 +305,7 @@ describe('AuthService', () => {
 
       // Act & Assert: Should throw UnauthorizedException with account inactive message
       await expect(
-        service.login('testuser', '12345678', mockIpAddress),
+        service.login('testuser', '12345678', mockIpAddress, mockUserAgent),
       ).rejects.toThrow(UnauthorizedException);
     });
 
@@ -278,7 +321,7 @@ describe('AuthService', () => {
 
       // Act & Assert: Should throw HttpException with TOO_MANY_REQUESTS
       await expect(
-        service.login('testuser', '12345678', mockIpAddress),
+        service.login('testuser', '12345678', mockIpAddress, mockUserAgent),
       ).rejects.toMatchObject({
         status: HttpStatus.TOO_MANY_REQUESTS,
       });
@@ -311,16 +354,14 @@ describe('AuthService', () => {
 
       // Act& Assert: Should throw HttpException indicating IP is locked
       await expect(
-        service.login('testuser', 'wrong-pin', mockIpAddress),
+        service.login('testuser', 'wrong-pin', mockIpAddress, mockUserAgent),
       ).rejects.toMatchObject({
         status: HttpStatus.TOO_MANY_REQUESTS,
       });
 
       // Verify lockIpAddress was called
       expect(mockAuthRepository.lockIpAddress).toHaveBeenCalled();
-      expect(mockAuthRepository.incrementIpLockout).toHaveBeenCalledWith(
-        mockIpAddress,
-      );
+      expect(mockAuthRepository.incrementIpLockout).toHaveBeenCalled();
     });
 
     it('should trigger account lockout after 5 failed attempts and send alert email', async () => {
@@ -349,7 +390,7 @@ describe('AuthService', () => {
 
       // Act: Perform5th failed login attempt
       await expect(
-        service.login('testuser', 'wrong-pin', mockIpAddress),
+        service.login('testuser', 'wrong-pin', mockIpAddress, mockUserAgent),
       ).rejects.toThrow(UnauthorizedException);
 
       // Assert: lockUser should have been called
@@ -370,7 +411,7 @@ describe('AuthService', () => {
 
       // Act & Assert: Should throw HttpException immediately without checking user
       await expect(
-        service.login('testuser', '12345678', mockIpAddress),
+        service.login('testuser', '12345678', mockIpAddress, mockUserAgent),
       ).rejects.toMatchObject({
         status: HttpStatus.TOO_MANY_REQUESTS,
       });
@@ -384,6 +425,7 @@ describe('AuthService', () => {
 
   describe('validateAdminCredentials', () => {
     const mockIpAddress = '192.168.1.1';
+    const mockUserAgent = 'Mozilla/5.0 Test Browser';
 
     it('should successfully validate admin with valid credentials', async () => {
       // Reset and configure bcrypt mock for this test
@@ -418,6 +460,7 @@ describe('AuthService', () => {
         'admin@ngemiloh.com',
         validPassword,
         mockIpAddress,
+        mockUserAgent,
       );
 
       expect(result).toHaveProperty('csrfToken');
@@ -437,6 +480,7 @@ describe('AuthService', () => {
           'admin@ngemiloh.com',
           'ValidP@ssw0rd123!',
           mockIpAddress,
+          mockUserAgent,
         ),
       ).rejects.toMatchObject({ status: HttpStatus.TOO_MANY_REQUESTS });
     });
@@ -450,6 +494,7 @@ describe('AuthService', () => {
           'notadmin@example.com',
           'ValidP@ssw0rd123!',
           mockIpAddress,
+          mockUserAgent,
         ),
       ).rejects.toThrow(UnauthorizedException);
     });
@@ -468,6 +513,7 @@ describe('AuthService', () => {
           'admin@ngemiloh.com',
           'short',
           mockIpAddress,
+          mockUserAgent,
         ),
       ).rejects.toThrow('Password must be at least 16 characters');
     });
@@ -486,6 +532,7 @@ describe('AuthService', () => {
           'admin@ngemiloh.com',
           'alllowercase123456',
           mockIpAddress,
+          mockUserAgent,
         ),
       ).rejects.toThrow('Password must contain at least one uppercase letter');
     });
@@ -521,6 +568,7 @@ describe('AuthService', () => {
           'admin@ngemiloh.com',
           'ValidP@ssw0rd123!',
           mockIpAddress,
+          mockUserAgent,
         ),
       ).rejects.toMatchObject({ status: HttpStatus.UNAUTHORIZED });
 
@@ -543,6 +591,7 @@ describe('AuthService', () => {
           'admin@ngemiloh.com',
           'ValidP@ssw0rd123!',
           mockIpAddress,
+          mockUserAgent,
         ),
       ).rejects.toMatchObject({ status: HttpStatus.TOO_MANY_REQUESTS });
     });
@@ -561,6 +610,7 @@ describe('AuthService', () => {
           'admin@ngemiloh.com',
           'ValidP@ssw0rd123!',
           mockIpAddress,
+          mockUserAgent,
         ),
       ).rejects.toThrow(UnauthorizedException);
     });
@@ -652,14 +702,15 @@ describe('AuthService', () => {
     const mockAdminEmail = 'admin@ngemiloh.com';
     const mockUserId = 'admin-789';
     const mockIpAddress = '192.168.1.100';
+    const mockUserAgent = 'Mozilla/5.0 Test Browser';
     const validOtp = '123456';
     // SHA256 hash of '123456' for mocking
     const validOtpHash =
       '8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92';
 
     beforeEach(() => {
-      // Clear all call history
-      jest.clearAllMocks();
+      // Reset crypto state to default (valid OTP)
+      setTimingSafeEqualToDefault();
     });
 
     it('should verify OTP successfully', async () => {
@@ -697,6 +748,7 @@ describe('AuthService', () => {
         mockAdminEmail,
         validOtp,
         mockIpAddress,
+        mockUserAgent,
       );
 
       expect(result).toHaveProperty('csrfToken');
@@ -717,10 +769,10 @@ describe('AuthService', () => {
 
     it('should reject verification when email is empty', async () => {
       await expect(
-        service.verifyOtp('', validOtp, mockIpAddress),
+        service.verifyOtp('', validOtp, mockIpAddress, mockUserAgent),
       ).rejects.toThrow(BadRequestException);
       await expect(
-        service.verifyOtp('', validOtp, mockIpAddress),
+        service.verifyOtp('', validOtp, mockIpAddress, mockUserAgent),
       ).rejects.toThrow('Email is required');
     });
 
@@ -728,10 +780,20 @@ describe('AuthService', () => {
       mockRedisService.get.mockResolvedValue(null);
 
       await expect(
-        service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress),
+        service.verifyOtp(
+          mockAdminEmail,
+          validOtp,
+          mockIpAddress,
+          mockUserAgent,
+        ),
       ).rejects.toThrow(BadRequestException);
       await expect(
-        service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress),
+        service.verifyOtp(
+          mockAdminEmail,
+          validOtp,
+          mockIpAddress,
+          mockUserAgent,
+        ),
       ).rejects.toThrow('No pending OTP');
     });
 
@@ -750,16 +812,26 @@ describe('AuthService', () => {
       });
 
       await expect(
-        service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress),
+        service.verifyOtp(
+          mockAdminEmail,
+          validOtp,
+          mockIpAddress,
+          mockUserAgent,
+        ),
       ).rejects.toThrow(BadRequestException);
       await expect(
-        service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress),
+        service.verifyOtp(
+          mockAdminEmail,
+          validOtp,
+          mockIpAddress,
+          mockUserAgent,
+        ),
       ).rejects.toThrow('OTP expired');
     });
 
     it('should reject verification with incorrect OTP code', async () => {
       // Mock timingSafeEqual to return false for wrong OTP
-      (crypto.timingSafeEqual as jest.Mock).mockReturnValue(false);
+      setTimingSafeEqualToFail();
 
       mockRedisService.get.mockImplementation((key: string) => {
         if (key === `otp:email:${mockAdminEmail.toLowerCase()}`) {
@@ -778,16 +850,26 @@ describe('AuthService', () => {
       mockRedisService.set.mockResolvedValue('OK');
 
       await expect(
-        service.verifyOtp(mockAdminEmail, 'wrong', mockIpAddress),
+        service.verifyOtp(
+          mockAdminEmail,
+          'wrong',
+          mockIpAddress,
+          mockUserAgent,
+        ),
       ).rejects.toThrow(UnauthorizedException);
       await expect(
-        service.verifyOtp(mockAdminEmail, 'wrong', mockIpAddress),
+        service.verifyOtp(
+          mockAdminEmail,
+          'wrong',
+          mockIpAddress,
+          mockUserAgent,
+        ),
       ).rejects.toThrow('Invalid OTP code');
     });
 
     it('should trigger OTP lockout after 3 failed attempts', async () => {
       // Mock timingSafeEqual to return false for wrong OTP
-      (crypto.timingSafeEqual as jest.Mock).mockReturnValue(false);
+      setTimingSafeEqualToFail();
 
       mockRedisService.get.mockImplementation((key: string) => {
         if (key === `otp:email:${mockAdminEmail.toLowerCase()}`) {
@@ -807,10 +889,20 @@ describe('AuthService', () => {
       mockRedisService.del.mockResolvedValue(1);
 
       await expect(
-        service.verifyOtp(mockAdminEmail, 'wrong', mockIpAddress),
+        service.verifyOtp(
+          mockAdminEmail,
+          'wrong',
+          mockIpAddress,
+          mockUserAgent,
+        ),
       ).rejects.toThrow(UnauthorizedException);
       await expect(
-        service.verifyOtp(mockAdminEmail, 'wrong', mockIpAddress),
+        service.verifyOtp(
+          mockAdminEmail,
+          'wrong',
+          mockIpAddress,
+          mockUserAgent,
+        ),
       ).rejects.toThrow('Too many failed attempts');
 
       // Verify lockout was set
@@ -847,13 +939,28 @@ describe('AuthService', () => {
       });
 
       await expect(
-        service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress),
+        service.verifyOtp(
+          mockAdminEmail,
+          validOtp,
+          mockIpAddress,
+          mockUserAgent,
+        ),
       ).rejects.toThrow(UnauthorizedException);
       await expect(
-        service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress),
+        service.verifyOtp(
+          mockAdminEmail,
+          validOtp,
+          mockIpAddress,
+          mockUserAgent,
+        ),
       ).rejects.toThrow('Too many failed attempts');
       await expect(
-        service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress),
+        service.verifyOtp(
+          mockAdminEmail,
+          validOtp,
+          mockIpAddress,
+          mockUserAgent,
+        ),
       ).rejects.toThrow('Please try again in');
     });
 
@@ -877,10 +984,20 @@ describe('AuthService', () => {
       mockAuthRepository.findUserById.mockResolvedValue(null);
 
       await expect(
-        service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress),
+        service.verifyOtp(
+          mockAdminEmail,
+          validOtp,
+          mockIpAddress,
+          mockUserAgent,
+        ),
       ).rejects.toThrow(UnauthorizedException);
       await expect(
-        service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress),
+        service.verifyOtp(
+          mockAdminEmail,
+          validOtp,
+          mockIpAddress,
+          mockUserAgent,
+        ),
       ).rejects.toThrow('User not found');
     });
 
@@ -914,14 +1031,17 @@ describe('AuthService', () => {
         createMockIpLockout(),
       );
 
-      await service.verifyOtp(mockAdminEmail, validOtp, mockIpAddress);
+      await service.verifyOtp(
+        mockAdminEmail,
+        validOtp,
+        mockIpAddress,
+        mockUserAgent,
+      );
 
       expect(mockAuthRepository.resetUserFailedLogin).toHaveBeenCalledWith(
         mockUserId,
       );
-      expect(mockAuthRepository.resetIpLockout).toHaveBeenCalledWith(
-        mockIpAddress,
-      );
+      expect(mockAuthRepository.resetIpLockout).toHaveBeenCalled();
     });
   });
 });

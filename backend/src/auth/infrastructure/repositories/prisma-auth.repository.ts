@@ -7,35 +7,33 @@ import { User, IpLockout, AuditLog, Prisma } from '@prisma/client';
 export class PrismaAuthRepository implements AuthRepositoryInterface {
   constructor(private readonly prisma: PrismaService) {}
 
-  async findIpLockout(ipAddress: string): Promise<IpLockout | null> {
+  async findIpLockout(ipHash: string): Promise<IpLockout | null> {
     return this.prisma.ipLockout.findUnique({
-      where: { ip_address: ipAddress },
+      where: { ip_hash: ipHash },
     });
   }
 
-  async incrementIpLockout(ipAddress: string): Promise<IpLockout> {
+  async incrementIpLockout(ipHash: string): Promise<IpLockout> {
+    // Use atomic upsert operation
     return this.prisma.ipLockout.upsert({
-      where: { ip_address: ipAddress },
+      where: { ip_hash: ipHash },
       update: { failed_count: { increment: 1 } },
-      create: { ip_address: ipAddress, failed_count: 1 },
+      create: { ip_hash: ipHash, failed_count: 1 },
     });
   }
 
-  async lockIpAddress(
-    ipAddress: string,
-    lockedUntil: Date,
-  ): Promise<IpLockout> {
+  async lockIpAddress(ipHash: string, lockedUntil: Date): Promise<IpLockout> {
     return this.prisma.ipLockout.update({
-      where: { ip_address: ipAddress },
+      where: { ip_hash: ipHash },
       data: { locked_until: lockedUntil },
     });
   }
 
-  async resetIpLockout(ipAddress: string): Promise<IpLockout> {
+  async resetIpLockout(ipHash: string): Promise<IpLockout> {
     return this.prisma.ipLockout.upsert({
-      where: { ip_address: ipAddress },
+      where: { ip_hash: ipHash },
       update: { failed_count: 0, locked_until: null },
-      create: { ip_address: ipAddress, failed_count: 0 },
+      create: { ip_hash: ipHash, failed_count: 0 },
     });
   }
 

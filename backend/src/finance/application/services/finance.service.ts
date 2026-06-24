@@ -261,21 +261,17 @@ export class FinanceService {
 
       // F19 FIX: Batch fetch all orders to avoid N+1
       const cashierIds = [...new Set(closedShifts.map((s) => s.cashier_id))];
-      const allOrders = await this.financeRepository.findOrders({
-        cashier_id: { in: cashierIds },
-        status: { not: 'voided' },
-        created_at: { gte: start, lte: end },
-      });
 
-      // Group orders by cashier_id
-      const orders_by_cashier = new Map<string, typeof allOrders>();
-      for (const order of allOrders) {
-        const existing_cashier = orders_by_cashier.get(order.cashier_id) || [];
-        existing_cashier.push(order);
-        orders_by_cashier.set(order.cashier_id, existing_cashier);
-      }
+      // ISSUE #14: Use database-level aggregation instead of in-memory processing
+      // This is much more efficient for large datasets and avoids OOM issues
+      const cashierAggregations =
+        await this.financeRepository.aggregateOrdersByCashier(
+          start,
+          end,
+          cashierIds,
+        );
 
-      // Aggregate sales + orders per cashier from pre-fetched data
+      // Map cashier aggregations with their shift counts
       const cashier_map = new Map<
         string,
         {
@@ -287,31 +283,18 @@ export class FinanceService {
         }
       >();
 
-      for (const shift of closedShifts) {
-        const cashier_id = shift.cashier_id;
-        const orders = orders_by_cashier.get(cashier_id) || [];
-        const sales = orders.reduce((s, o) => s + Number(o.total_amount), 0);
-
-        const existing = cashier_map.get(cashier_id);
-        if (existing) {
-          existing.total_sales += sales;
-          existing.total_orders += orders.length;
-          existing.shift_count += 1;
-        } else {
-          // Get cashier name from shift if available, otherwise use cashier_id
-          const cashier_name =
-            'cashier' in shift &&
-            (shift as { cashier?: { name: string } }).cashier?.name
-              ? (shift as { cashier?: { name: string } }).cashier.name
-              : cashier_id;
-          cashier_map.set(cashier_id, {
-            cashier_id,
-            cashier_name,
-            total_sales: sales,
-            total_orders: orders.length,
-            shift_count: 1,
-          });
-        }
+      // Get shift counts per cashier
+      for (const cashierAgg of cashierAggregations) {
+        const cashierShifts = closedShifts.filter(
+          (s) => s.cashier_id === cashierAgg.cashier_id,
+        );
+        cashier_map.set(cashierAgg.cashier_id, {
+          cashier_id: cashierAgg.cashier_id,
+          cashier_name: cashierAgg.cashier_name,
+          total_sales: cashierAgg.total_sales,
+          total_orders: cashierAgg.total_orders,
+          shift_count: cashierShifts.length,
+        });
       }
 
       if (cashier_map.size > 0) {
@@ -329,13 +312,13 @@ export class FinanceService {
         }> = [];
 
         for (const [, data] of cashier_map) {
-          let share_amount: number;
-          if (share.revenue > 0) {
-            share_amount =
-              (data.total_sales / share.revenue) * share.cashierShare;
-          } else {
-            share_amount = share.cashierShare / cashier_map.size;
-          }
+          // SECURITY: Prevent division by zero - use ternary for explicit guard
+          const share_amount =
+            share.revenue > 0
+              ? (data.total_sales / share.revenue) * share.cashierShare
+              : cashier_map.size > 0
+                ? share.cashierShare / cashier_map.size
+                : 0;
           details.push({
             profit_share_log_id: log.id,
             cashier_id: data.cashier_id,
@@ -535,92 +518,30 @@ export class FinanceService {
       startDate.setMonth(now.getMonth() - 12);
     }
 
-    // PERFORMANCE: Limit orders to prevent OOM
-    // For very large datasets, use database aggregations instead
-    const MAX_ANALYTICS_ORDERS = 10000;
-
-    type OrderWithItems = Order & {
-      items: Array<{
-        product_id: string;
-        product_name_snapshot: string | null;
-        quantity: number;
-        subtotal: Prisma.Decimal;
-      }>;
-    };
-
-    const orders = (await this.financeRepository.findOrders(
-      { created_at: { gte: startDate }, status: { not: 'voided' } },
-      { items: true },
-      MAX_ANALYTICS_ORDERS, // take limit
-    )) as OrderWithItems[];
-
-    const trend = this.buildTrend(orders, period);
-
-    const product_map = new Map<
-      string,
-      { name: string; qty: number; revenue: number }
-    >();
-    for (const o of orders) {
-      for (const item of o.items) {
-        const p_id = item.product_id;
-        const current = product_map.get(p_id) || {
-          name: item.product_name_snapshot,
-          qty: 0,
-          revenue: 0,
-        };
-        current.qty += item.quantity;
-        current.revenue += Number(item.subtotal);
-        product_map.set(p_id, current);
-      }
-    }
-    const product_stats = Array.from(product_map.values());
-    const top_by_qty = [...product_stats]
-      .sort((a, b) => b.qty - a.qty)
-      .slice(0, 5);
-    const top_by_revenue = [...product_stats]
-      .sort((a, b) => b.revenue - a.revenue)
-      .slice(0, 5);
-
-    let cash = 0,
-      qris = 0,
-      split = 0;
-    let cash_val = 0,
-      qris_val = 0,
-      split_val = 0;
-    for (const o of orders) {
-      if (o.payment_method === 'cash') {
-        cash++;
-        cash_val += Number(o.total_amount);
-      } else if (o.payment_method === 'qris') {
-        qris++;
-        qris_val += Number(o.total_amount);
-      } else if (o.payment_method === 'split') {
-        split++;
-        split_val += Number(o.total_amount);
-      }
-    }
-    const counts = { cash, qris, split };
-    const values = { cash: cash_val, qris: qris_val, split: split_val };
-
-    const hoursCount = new Array(24).fill(0);
-    for (const o of orders) {
-      const h = o.client_created_at
-        ? new Date(o.client_created_at).getHours()
-        : o.created_at.getHours();
-      hoursCount[h]++;
-    }
+    // ISSUE #14: Use database-level aggregation instead of loading orders into memory
+    // This is much more efficient for large datasets and avoids OOM issues
+    const analytics = await this.financeRepository.aggregateAnalytics(
+      startDate,
+      now,
+      period,
+    );
 
     return {
-      trend,
+      trend: analytics.trend,
       topProducts: {
-        byQty: top_by_qty,
-        byRevenue: top_by_revenue,
+        byQty: analytics.topProductsByQty.map((p) => ({
+          name: p.product_name,
+          qty: p.qty,
+          revenue: p.revenue,
+        })),
+        byRevenue: analytics.topProductsByRevenue.map((p) => ({
+          name: p.product_name,
+          qty: p.qty,
+          revenue: p.revenue,
+        })),
       },
-      paymentDistribution: {
-        counts,
-        values,
-      },
-      peakHours: hoursCount.map((count, hour) => ({ hour, count })),
+      paymentDistribution: analytics.paymentDistribution,
+      peakHours: analytics.peakHours,
     };
   }
 

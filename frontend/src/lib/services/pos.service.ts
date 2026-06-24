@@ -27,9 +27,7 @@ export class PosService {
 			const res = await api.get(`/flags`);
 			if (res.ok) {
 				const json: ApiResponse<FeatureFlag[]> = await res.json();
-				pos_store.feature_flags = Object.fromEntries(
-					json.data.map((f) => [f.name, f.is_enabled])
-				);
+				pos_store.feature_flags = Object.fromEntries(json.data.map((f) => [f.name, f.is_enabled]));
 			} else {
 				console.warn('Failed to fetch feature flags:', res.status);
 			}
@@ -218,7 +216,9 @@ export class PosService {
 								await db.orders.update(result.client_uuid, { sync_status: 'synced' });
 							}
 						}
-						const synced_count = json.data.filter((r: SyncBatchResult) => r.status === 'success').length;
+						const synced_count = json.data.filter(
+							(r: SyncBatchResult) => r.status === 'success'
+						).length;
 						if (synced_count > 0) {
 							toast.success(`${synced_count} pesanan berhasil di-sync`);
 						}

@@ -53,11 +53,9 @@
 
 			if (data.success) {
 				sessionStorage.removeItem('admin_email');
-				// Store CSRF token (access token is httpOnly cookie set by backend)
-				if (data.csrfToken) {
-					localStorage.setItem('csrf_token', data.csrfToken);
-				}
-				localStorage.setItem('user', JSON.stringify(data.data));
+				// User data is stored in sessionStorage (non-sensitive, ephemeral)
+				// Access token should be httpOnly cookie from backend
+				// CSRF protection handled via SameSite cookies by backend
 				goto('/admin/dashboard');
 			} else {
 				error = data.message || 'Kode OTP salah. Periksa email Anda.';

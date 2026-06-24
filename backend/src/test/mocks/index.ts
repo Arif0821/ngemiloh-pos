@@ -22,7 +22,7 @@ export const createMockUser = (overrides = {}) => ({
 
 // Helper to create mock IP lockout
 export const createMockIpLockout = (overrides = {}) => ({
-  ip_address: '127.0.0.1',
+  ip_hash: 'abc123def456', // SHA-256 hash of IP + User-Agent
   failed_count: 0,
   locked_until: null,
   created_at: new Date(),

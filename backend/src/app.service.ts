@@ -64,27 +64,4 @@ export class AppService {
     await Promise.all(promises);
     return { message: 'Settings updated' };
   }
-
-  async getFeatureFlags() {
-    return this.prisma.featureFlag.findMany();
-  }
-
-  async toggleFeatureFlag(id: string, isEnabled: boolean, userId: string) {
-    return this.prisma.featureFlag.update({
-      where: { id },
-      data: {
-        is_enabled: isEnabled,
-        updated_by: userId,
-        updated_at: new Date(),
-      },
-    });
-  }
-
-  async getAuditLogs() {
-    return this.prisma.auditLog.findMany({
-      orderBy: { created_at: 'desc' },
-      take: 1000, // Increased for security audit investigation
-      include: { actor: { select: { name: true, role: true } } },
-    });
-  }
 }

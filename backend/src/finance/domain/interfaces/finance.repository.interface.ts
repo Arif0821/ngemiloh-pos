@@ -23,6 +23,49 @@ export interface ProfitShareDetailResult {
   updated_at: Date;
 }
 
+/**
+ * Interface for analytics aggregation results
+ */
+export interface AnalyticsTrendResult {
+  label: string;
+  value: number;
+}
+
+export interface ProductAnalyticsResult {
+  product_id: string;
+  product_name: string | null;
+  qty: number;
+  revenue: number;
+}
+
+export interface PaymentDistributionResult {
+  payment_method: string;
+  count: number;
+  total_value: number;
+}
+
+export interface HourlyDistributionResult {
+  hour: number;
+  count: number;
+}
+
+export interface AggregatedAnalytics {
+  trend: AnalyticsTrendResult[];
+  topProductsByQty: ProductAnalyticsResult[];
+  topProductsByRevenue: ProductAnalyticsResult[];
+  paymentDistribution: {
+    counts: { cash: number; qris: number; split: number };
+    values: { cash: number; qris: number; split: number };
+  };
+  peakHours: { hour: number; count: number }[];
+}
+
+export interface ProfitShareAggregation {
+  revenue: number;
+  totalHpp: number;
+  ordersCount: number;
+}
+
 export const FINANCE_REPOSITORY = Symbol('FINANCE_REPOSITORY');
 
 export interface IFinanceRepository {
@@ -89,5 +132,30 @@ export interface IFinanceRepository {
         cashier: { id: string; name: string };
       }
     >
+  >;
+
+  /**
+   * ISSUE #14: Database-level aggregation for analytics instead of in-memory
+   */
+  aggregateAnalytics(
+    startDate: Date,
+    endDate: Date,
+    period: 'daily' | 'weekly' | 'monthly',
+  ): Promise<AggregatedAnalytics>;
+
+  /**
+   * ISSUE #14: Aggregate orders by cashier for profit share calculation
+   */
+  aggregateOrdersByCashier(
+    start: Date,
+    end: Date,
+    cashierIds: string[],
+  ): Promise<
+    Array<{
+      cashier_id: string;
+      cashier_name: string;
+      total_sales: number;
+      total_orders: number;
+    }>
   >;
 }

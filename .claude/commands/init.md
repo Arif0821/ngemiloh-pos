@@ -40,77 +40,178 @@ Offline-first POS, QRIS payment (Midtrans), shift management, audit logging, mul
 
 ---
 
-## Workflow (Agent-Skills)
+## Agent-Skills Overview
 
-```
-SPEC-DRIVEN-DEVELOPMENT → PLANNING-AND-TASK-BREAKDOWN → INCREMENTAL-IMPLEMENTATION
-                                                                          ↓
-                                                              TEST-DRIVEN-DEVELOPMENT
-                                                                          ↓
-                                                              CODE-REVIEW-AND-QUALITY
-                                                                          ↓
-                                                              SHIP (git-workflow)
-```
+Agent-skills adalah 24 structured workflows untuk production-grade engineering. Skills orchestrate development lifecycle secara otomatis.
 
----
+### 7 Slash Commands (Entry Points)
 
-## Available Skills (Agent-Skills)
+| Command | Phase | Description |
+|---------|-------|-------------|
+| `/spec` | DEFINE | Buat spec PRD sebelum coding |
+| `/plan` | PLAN | Breakdown jadi small, atomic tasks |
+| `/build` | BUILD | Implementasi incremental (thin slices) |
+| `/test` | VERIFY | Prove it works dengan tests |
+| `/review` | REVIEW | Quality gate sebelum merge |
+| `/code-simplify` | REVIEW | Simplify code, clarity over cleverness |
+| `/ship` | SHIP | Deploy to production |
 
-Invoke via `Skill` tool. See `agent-skills/` folder for full documentation.
+**Example:** `/build` internally calls: `incremental-implementation`, `test-driven-development`, `frontend-ui-engineering`, `api-and-interface-design`, dll sesuai konteks task.
 
-### Define Phase
-| Skill | When to Use |
-|-------|-------------|
-| `spec-driven-development` | New project/feature with requirements |
-| `interview-me` | User request is underspecified |
-| `idea-refine` | Rough concept needing exploration |
+### 24 Skills (Auto-Activated)
 
-### Plan Phase
-| Skill | When to Use |
-|-------|-------------|
-| `planning-and-task-breakdown` | Spec ready, need implementable tasks |
+Skills activate otomatis berdasarkan konteks task. Gunakan `Skill` tool untuk invoke manual.
 
-### Build Phase
-| Skill | When to Use |
-|-------|-------------|
-| `incremental-implementation` | Any multi-file change |
-| `test-driven-development` | Implementing logic, fixing bugs |
-| `frontend-ui-engineering` | Building UI components |
-| `api-and-interface-design` | Designing APIs |
-| `source-driven-development` | Need doc-verified implementation |
-| `doubt-driven-development` | High-stakes decisions |
-| `context-engineering` | Need better context loading |
+#### Define → Plan → Build
+| Skill | When |
+|-------|-------|
+| `interview-me` | Request underspecified |
+| `idea-refine` | Rough concept |
+| `spec-driven-development` | New feature |
+| `planning-and-task-breakdown` | Need task breakdown |
+| `incremental-implementation` | Multi-file change |
+| `test-driven-development` | Implementing logic, bugs |
+| `frontend-ui-engineering` | UI work |
+| `api-and-interface-design` | API design |
+| `source-driven-development` | Need official docs |
+| `doubt-driven-development` | High-stakes, unfamiliar |
+| `context-engineering` | Session/task switch |
 
-### Verify Phase
-| Skill | When to Use |
-|-------|-------------|
-| `browser-testing-with-devtools` | Browser-based debugging |
-| `debugging-and-error-recovery` | Tests fail, bugs, errors |
-
-### Review Phase
-| Skill | When to Use |
-|-------|-------------|
+#### Verify → Review → Ship
+| Skill | When |
+|-------|-------|
+| `browser-testing-with-devtools` | Browser debugging |
+| `debugging-and-error-recovery` | Tests fail, errors |
 | `code-review-and-quality` | Before merge |
-| `code-simplification` | Code works but too complex |
-| `security-and-hardening` | Input handling, auth, data |
-| `performance-optimization` | Performance requirements |
-
-### Ship Phase
-| Skill | When to Use |
-|-------|-------------|
+| `code-simplification` | Complex code |
+| `security-and-hardening` | Security concerns |
+| `performance-optimization` | Performance issues |
 | `git-workflow-and-versioning` | Every commit |
 | `ci-cd-and-automation` | CI/CD setup |
-| `shipping-and-launch` | Production deployment |
-| `deprecation-and-migration` | Removing old features |
+| `shipping-and-launch` | Production deploy |
+| `deprecation-and-migration` | Remove features |
 | `documentation-and-adrs` | Architectural decisions |
+| `observability-and-instrumentation` | Add telemetry |
 
 ### Specialist Agents (via `Agent` tool)
-| Agent | When to Use |
+| Agent | Perspective |
 |-------|-------------|
-| `code-reviewer` | Thorough code review |
-| `security-auditor` | Security vulnerability scan |
-| `test-engineer` | Test strategy and coverage |
+| `code-reviewer` | Staff Engineer code review |
+| `security-auditor` | Vulnerability detection |
+| `test-engineer` | Test strategy, coverage |
 | `web-performance-auditor` | Core Web Vitals audit |
+
+### Reference Checklists (MANDATORY)
+
+References adalah **cheat sheet** yang WAJIB di-load saat relevant. Mereka companion ke skills.
+
+| Reference | Skill Companion | Kapan Load |
+|-----------|---------------|------------|
+| `agent-skills/references/testing-patterns.md` | `test-driven-development` | Writing tests, mocking |
+| `agent-skills/references/security-checklist.md` | `security-and-hardening` | Auth, input, OWASP |
+| `agent-skills/references/performance-checklist.md` | `performance-optimization` | Core Web Vitals, bundle |
+| `agent-skills/references/accessibility-checklist.md` | `frontend-ui-engineering` | WCAG 2.1 AA, ARIA |
+| `agent-skills/references/orchestration-patterns.md` | `git-workflow-and-versioning` | Multi-agent work |
+
+### Reference-by-Skill Mapping (COMPLETE)
+
+Pemetaan menyeluruh skills + references ke seluruh struktur project.
+
+#### Skill → Reference Quick Reference
+
+| Skill | Reference File | Primary Use Case |
+|-------|---------------|------------------|
+| `test-driven-development` | `agent-skills/references/testing-patterns.md` | Unit tests, mocking, assertions |
+| `frontend-ui-engineering` | `agent-skills/references/accessibility-checklist.md` | Svelte components, WCAG 2.1 AA |
+| `security-and-hardening` | `agent-skills/references/security-checklist.md` | Auth, payment, OWASP Top 10 |
+| `performance-optimization` | `agent-skills/references/performance-checklist.md` | Queries, bundle, Core Web Vitals |
+| `git-workflow-and-versioning` | `agent-skills/references/orchestration-patterns.md` | Multi-agent, parallel work |
+
+#### Backend File Mapping (Key Files)
+
+| File Pattern | Primary Skill | Secondary Skills |
+|--------------|--------------|------------------|
+| `auth/**/*.ts` | `security-and-hardening` | `test-driven-development` |
+| `orders/**/*.ts` | `test-driven-development` | `security-and-hardening` |
+| `payment/**/*.ts` | `security-and-hardening` | `test-driven-development` |
+| `finance/**/*.ts` | `test-driven-development` | `security-and-hardening` |
+| `inventory/**/*.ts` | `test-driven-development` | `performance-optimization` |
+| `products/**/*.ts` | `test-driven-development` | `performance-optimization` |
+| `discounts/**/*.ts` | `test-driven-development` | `security-and-hardening` |
+| `members/**/*.ts` | `security-and-hardening` | `test-driven-development` |
+| `email/**/*.ts` | `security-and-hardening` | `test-driven-development` |
+| `audit/**/*.ts` | `security-and-hardening` | - |
+| `jobs/**/*.ts` | `performance-optimization` | `test-driven-development` |
+| `common/**/*.ts` | `security-and-hardening` | `performance-optimization` |
+| `**/repository.ts` | `performance-optimization` | `test-driven-development` |
+| `**/*controller.ts` | `security-and-hardening` | `performance-optimization` |
+
+#### Frontend File Mapping (Key Files)
+
+| File Pattern | Primary Skill | Secondary Skills |
+|--------------|--------------|------------------|
+| `routes/**/+.svelte` | `frontend-ui-engineering` | `security-and-hardening` |
+| `lib/components/**/*.svelte` | `frontend-ui-engineering` | `test-driven-development` |
+| `pos/**` | `frontend-ui-engineering` | `performance-optimization` |
+| `login/**` | `frontend-ui-engineering` | `security-and-hardening` |
+| `admin/**` | `frontend-ui-engineering` | `security-and-hardening` |
+
+#### Complete Reference Loading Workflow
+
+```
+Task arrives
+    │
+    ├── Identify primary skill based on task type
+    │
+    ├── Load associated reference(s):
+    │   ├── Writing tests → agent-skills/references/testing-patterns.md
+    │   ├── UI components → agent-skills/references/accessibility-checklist.md
+    │   ├── Auth/payment → agent-skills/references/security-checklist.md
+    │   ├── DB/API → agent-skills/references/performance-checklist.md
+    │   └── Multi-agent → agent-skills/references/orchestration-patterns.md
+    │
+    ├── Apply checklist items from reference
+    │
+    └── Continue with skill workflow
+```
+
+#### Decision Matrix
+
+| Task Type | Primary Skill | Reference to Load |
+|-----------|--------------|-------------------|
+| Writing unit tests | `test-driven-development` | `agent-skills/references/testing-patterns.md` |
+| Building Svelte components | `frontend-ui-engineering` | `agent-skills/references/accessibility-checklist.md` |
+| Auth endpoint changes | `security-and-hardening` | `agent-skills/references/security-checklist.md` |
+| Payment integration | `security-and-hardening` | `agent-skills/references/security-checklist.md` |
+| Database queries | `performance-optimization` | `agent-skills/references/performance-checklist.md` |
+| API design | `api-and-interface-design` | - |
+| Browser debugging | `browser-testing-with-devtools` | - |
+| Bug fixing | `debugging-and-error-recovery` | - |
+| Pre-merge review | `code-review-and-quality` | `agent-skills/references/security-checklist.md` |
+| Code complexity | `code-simplification` | - |
+| Multi-agent work | `git-workflow-and-versioning` | `agent-skills/references/orchestration-patterns.md` |
+| Production deploy | `shipping-and-launch` | `agent-skills/references/security-checklist.md` + `agent-skills/references/performance-checklist.md` |
+
+#### Verification Checklist
+
+- [ ] Skill identified based on task type
+- [ ] Relevant reference(s) loaded
+- [ ] Checklist items applied
+- [ ] Tests written with testing patterns
+- [ ] Accessibility features implemented
+- [ ] Security controls in place
+- [ ] Performance optimized
+
+### Development Lifecycle
+
+```
+  DEFINE          PLAN           BUILD          VERIFY         REVIEW          SHIP
+┌──────┐      ┌──────┐      ┌──────┐      ┌──────┐      ┌──────┐      ┌──────┐
+│ Spec │ ───▶ │ Plan │ ───▶ │ Code │ ───▶ │ Test │ ───▶ │  QA  │ ───▶ │  Go  │
+│     │      │     │      │ Impl │      │Debug │      │ Gate │      │ Live │
+└──────┘      └──────┘      └──────┘      └──────┘      └──────┘      └──────┘
+  /spec          /plan          /build        /test         /review       /ship
+```
 
 ---
 
@@ -129,46 +230,15 @@ Use `SELECT ... FOR UPDATE` pattern for idempotent state transitions (payment, v
 
 ---
 
-## Unique Selling Points (USPs)
-
-| # | USP | Description |
-|---|-----|-------------|
-| 1 | Freelance Kasir Model | Flexible, cost-effective staffing |
-| 2 | Multi-Shift dengan Carry-Over | Cocok untuk 24/7 operations |
-| 3 | Rolling Loyalty Tier | Fair untuk frequent customers (Bronze/Silver/Gold) |
-| 4 | Pro-Rata Profit Sharing | Transparent, motivates kasir |
-| 5 | Waste Tracking | Accurate HPP untuk food business |
-| 6 | Centralized Dashboard | Owner visibility across outlets |
-
----
-
-## Missing Features (Needs Implementation)
+## Missing Features (Priority)
 
 | Feature | Priority | Status |
 |---------|----------|--------|
 | Waste Tracking | MEDIUM | ❌ Not Built |
-| BOM Recipes | MEDIUM | ⚠️ Partial (1 product seeded) |
+| BOM Recipes | MEDIUM | ⚠️ Partial |
 | Outlet Management | HIGH | ⚠️ Partial |
 | Check-in System | MEDIUM | ⚠️ Partial |
 | Online Order Integration | LOW | Future |
-
----
-
-## Risk Analysis
-
-### Technical Risks
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| Printer tidak compatible | MEDIUM | MEDIUM | Browser print fallback ready |
-| Redis connection fails | LOW | HIGH | Error handling ready |
-| Database corruption | LOW | CRITICAL | Backup system needed |
-
-### Business Risks
-| Risk | Likelihood | Impact | Mitigation |
-|------|-----------|--------|------------|
-| Kasir resign mid-month | MEDIUM | MEDIUM | Pro-rata calculation ready |
-| Stockout sebelum reorder | MEDIUM | HIGH | 10-day alert system |
-| Internet offline | MEDIUM | LOW | Offline mode ready |
 
 ---
 
@@ -230,17 +300,6 @@ frontend/
 └── secrets/            # Docker secrets files
 ```
 
-### Agent-Skills Plugin
-```
-agent-skills/            # Production-grade engineering skills
-├── skills/               # 24 skill workflows (source of truth)
-├── agents/              # Specialist agent personas
-├── docs/                # Setup guides
-├── references/          # Supplementary checklists
-├── hooks/                # Session lifecycle hooks
-└── plugin.json
-```
-
 ---
 
 ## Commands
@@ -267,6 +326,7 @@ npm run test            # Vitest unit tests
 ### Docker
 ```bash
 docker compose up -d              # Start all services
+docker compose down                # Stop all services
 docker compose logs -f           # View logs
 docker compose exec nestjs-api sh # Shell into API container
 ```
@@ -295,7 +355,7 @@ Frontend: npm run lint → npm run check → npm run test → npm run build
 
 ---
 
-## Skill Discovery
+## Skill Discovery Flow
 
 ```
 Task arrives
@@ -310,7 +370,7 @@ Task arrives
     │   ├── High stakes? ────────────────→ doubt-driven-development
     │   └── Tests / bugs? ───────────────→ test-driven-development
     ├── Something broke? ─────────────────→ debugging-and-error-recovery
-    ├── Browser issues? ─────────────────→ browser-testing-with-devtools
+    ├── Browser issues? ──────────────────→ browser-testing-with-devtools
     ├── Before merge? ───────────────────→ code-review-and-quality
     ├── Code too complex? ───────────────→ code-simplification
     ├── Security concerns? ───────────────→ security-and-hardening
@@ -320,13 +380,13 @@ Task arrives
 
 ---
 
-## Core Operating Behaviors (from Agent-Skills)
+## Core Operating Behaviors
 
 These behaviors apply at all times:
 
 1. **Surface Assumptions** - State assumptions before implementing
 2. **Manage Confusion Actively** - STOP when inconsistent, ask not guess
 3. **Push Back When Warranted** - You are not a yes-machine
-4. **Enforce Simplicity** - Resist overcomplication
+4. **Enforce Simplicity** - resist overcomplication
 5. **Scope Discipline** - Touch only what you're asked to touch
 6. **Verify, Don't Assume** - Evidence before assertions

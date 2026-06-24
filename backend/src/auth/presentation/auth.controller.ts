@@ -26,12 +26,18 @@ import { VerifyOtpDto } from '../dto/verify-otp.dto';
 import { ResendOtpDto } from '../dto/resend-otp.dto';
 import { ChangePinDto } from '../dto/change-pin.dto';
 import type { AuthenticatedRequest } from '../../types/express';
+import { RedisService } from '../../common/redis/redis.service';
+import { JwtService } from '@nestjs/jwt';
 
 @ApiTags('Auth')
 @ApiBearerAuth()
 @Controller('api/v1/auth')
 export class AuthController {
-  constructor(private readonly authService: AuthService) {}
+  constructor(
+    private readonly authService: AuthService,
+    private readonly redisService: RedisService,
+    private readonly jwtService: JwtService,
+  ) {}
 
   private getClientIp(req: Request): string {
     const forwardedFor = req.headers['x-forwarded-for'];
@@ -39,6 +45,10 @@ export class AuthController {
     if (typeof forwardedFor === 'string')
       return forwardedFor.split(',')[0].trim();
     return req.socket.remoteAddress || 'unknown';
+  }
+
+  private getUserAgent(req: Request): string | undefined {
+    return req.headers['user-agent'];
   }
 
   @UseGuards(ThrottlerGuard)
@@ -73,6 +83,7 @@ export class AuthController {
         loginIdentifier,
         loginSecret,
         this.getClientIp(req),
+        this.getUserAgent(req),
         response,
       );
       return { success: true, data: result.user };
@@ -84,6 +95,7 @@ export class AuthController {
       loginIdentifier,
       loginSecret,
       this.getClientIp(req),
+      this.getUserAgent(req),
       response,
     );
 
@@ -93,6 +105,7 @@ export class AuthController {
         loginIdentifier,
         loginSecret,
         this.getClientIp(req),
+        this.getUserAgent(req),
         response,
       );
       return { success: true, data: result.user };
@@ -185,6 +198,7 @@ export class AuthController {
       dto.email,
       dto.otp,
       this.getClientIp(req),
+      this.getUserAgent(req),
       response,
     );
 
@@ -193,10 +207,43 @@ export class AuthController {
 
   @Post('logout')
   @HttpCode(HttpStatus.OK)
-  @ApiOperation({ summary: 'Logout and clear session cookies' })
+  @ApiOperation({ summary: 'Logout and revoke JWT token' })
   @ApiResponse({ status: 200, description: 'Logged out successfully' })
-  async logout(@Res({ passthrough: true }) response: Response) {
+  async logout(
+    @Req() req: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    // FIX #10: Block JWT tokens in Redis on logout
+    // Handle both access_token (kasir) and admin_token
+    const tokens = [
+      req.cookies?.['access_token'],
+      req.cookies?.['admin_token'],
+    ];
+
+    for (const token of tokens) {
+      if (token) {
+        try {
+          // Decode token to extract JTI and expiry
+          const decoded = this.jwtService.decode(token);
+          if (decoded?.jti) {
+            // Calculate remaining TTL until token expiry
+            const now = Math.floor(Date.now() / 1000);
+            const ttl = decoded.exp ? Math.max(0, decoded.exp - now) : 86400; // Default 24h if no exp
+            await this.redisService.blockJwt(decoded.jti, ttl);
+          }
+        } catch {
+          // Token decode failed - continue with logout anyway
+        }
+      }
+    }
+
     response.clearCookie('access_token', {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+    });
+    response.clearCookie('admin_token', {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
