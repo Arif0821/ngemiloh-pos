@@ -133,7 +133,9 @@ describe('FinanceCronService', () => {
 
         await service.checkExpiredQrisOrders();
 
-        expect(mockInventoryService.restoreStockForOrder).not.toHaveBeenCalled();
+        expect(
+          mockInventoryService.restoreStockForOrder,
+        ).not.toHaveBeenCalled();
         expect(mockEmailService.sendAlert).not.toHaveBeenCalled();
         expect(mockPrismaService.systemLog.create).not.toHaveBeenCalled();
       });
@@ -164,9 +166,9 @@ describe('FinanceCronService', () => {
         await service.checkExpiredQrisOrders();
 
         // Verify inventory restore was called
-        expect(
-          mockInventoryService.restoreStockForOrder,
-        ).toHaveBeenCalledWith('order-123');
+        expect(mockInventoryService.restoreStockForOrder).toHaveBeenCalledWith(
+          'order-123',
+        );
 
         // Verify order was updated to voided
         expect(mockPrismaService.order.update).toHaveBeenCalledWith({
@@ -205,9 +207,24 @@ describe('FinanceCronService', () => {
 
       it('should void multiple expired orders', async () => {
         const mockOrders = [
-          { ...mockExpiredOrder, id: 'order-1', order_number: 'ORD-001', total_amount: 30000 },
-          { ...mockExpiredOrder, id: 'order-2', order_number: 'ORD-002', total_amount: 45000 },
-          { ...mockExpiredOrder, id: 'order-3', order_number: 'ORD-003', total_amount: 25000 },
+          {
+            ...mockExpiredOrder,
+            id: 'order-1',
+            order_number: 'ORD-001',
+            total_amount: 30000,
+          },
+          {
+            ...mockExpiredOrder,
+            id: 'order-2',
+            order_number: 'ORD-002',
+            total_amount: 45000,
+          },
+          {
+            ...mockExpiredOrder,
+            id: 'order-3',
+            order_number: 'ORD-003',
+            total_amount: 25000,
+          },
         ];
 
         mockPrismaService.featureFlag.findFirst.mockResolvedValue({
@@ -222,9 +239,9 @@ describe('FinanceCronService', () => {
         await service.checkExpiredQrisOrders();
 
         // Verify all orders were voided
-        expect(
-          mockInventoryService.restoreStockForOrder,
-        ).toHaveBeenCalledTimes(3);
+        expect(mockInventoryService.restoreStockForOrder).toHaveBeenCalledTimes(
+          3,
+        );
         expect(mockPrismaService.order.update).toHaveBeenCalledTimes(3);
         expect(mockPrismaService.auditLog.create).toHaveBeenCalledTimes(3);
 
@@ -345,8 +362,18 @@ describe('FinanceCronService', () => {
 
       it('should send alert with order numbers', async () => {
         const mockOrders = [
-          { id: 'order-1', order_number: 'ORD-FIRST', total_amount: 10000, qris_expiry_at: new Date() },
-          { id: 'order-2', order_number: 'ORD-SECOND', total_amount: 20000, qris_expiry_at: new Date() },
+          {
+            id: 'order-1',
+            order_number: 'ORD-FIRST',
+            total_amount: 10000,
+            qris_expiry_at: new Date(),
+          },
+          {
+            id: 'order-2',
+            order_number: 'ORD-SECOND',
+            total_amount: 20000,
+            qris_expiry_at: new Date(),
+          },
         ];
 
         mockPrismaService.featureFlag.findFirst.mockResolvedValue({
@@ -376,7 +403,12 @@ describe('FinanceCronService', () => {
           is_enabled: true,
         });
         mockPrismaService.order.findMany.mockResolvedValue([
-          { id: 'order-1', order_number: 'ORD-001', total_amount: 10000, qris_expiry_at: new Date() },
+          {
+            id: 'order-1',
+            order_number: 'ORD-001',
+            total_amount: 10000,
+            qris_expiry_at: new Date(),
+          },
         ]);
         mockPrismaService.order.update.mockResolvedValue({});
         mockPrismaService.auditLog.create.mockResolvedValue({});
@@ -398,7 +430,12 @@ describe('FinanceCronService', () => {
           is_enabled: true,
         });
         mockPrismaService.order.findMany.mockResolvedValue([
-          { id: 'order-1', order_number: 'ORD-001', total_amount: 10000, qris_expiry_at: new Date() },
+          {
+            id: 'order-1',
+            order_number: 'ORD-001',
+            total_amount: 10000,
+            qris_expiry_at: new Date(),
+          },
         ]);
         mockPrismaService.order.update.mockResolvedValue({});
         mockPrismaService.auditLog.create.mockResolvedValue({});
@@ -421,7 +458,12 @@ describe('FinanceCronService', () => {
           is_enabled: true,
         });
         mockPrismaService.order.findMany.mockResolvedValue([
-          { id: 'order-1', order_number: 'ORD-001', total_amount: 10000, qris_expiry_at: new Date() },
+          {
+            id: 'order-1',
+            order_number: 'ORD-001',
+            total_amount: 10000,
+            qris_expiry_at: new Date(),
+          },
         ]);
         mockPrismaService.order.update.mockResolvedValue({});
         mockPrismaService.auditLog.create.mockResolvedValue({});
@@ -444,7 +486,12 @@ describe('FinanceCronService', () => {
           is_enabled: true,
         });
         mockPrismaService.order.findMany.mockResolvedValue([
-          { id: 'order-1', order_number: 'ORD-001', total_amount: 10000, qris_expiry_at: new Date() },
+          {
+            id: 'order-1',
+            order_number: 'ORD-001',
+            total_amount: 10000,
+            qris_expiry_at: new Date(),
+          },
         ]);
         mockPrismaService.order.update.mockResolvedValue({});
         mockPrismaService.auditLog.create.mockResolvedValue({});

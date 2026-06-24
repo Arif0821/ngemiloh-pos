@@ -9,6 +9,7 @@ export interface EmailJobData {
   message: string;
   recipientEmail?: string;
   otpCode?: string;
+  retryCount?: number;
 }
 
 @Processor('SEND_EMAIL')
@@ -20,7 +21,9 @@ export class EmailProcessor extends WorkerHost {
   }
 
   async process(job: Job<EmailJobData>): Promise<void> {
-    this.logger.log(`Processing email job ${job.id} - type: ${job.data.type}`);
+    this.logger.log(
+      `Processing email job ${job.id} - type: ${job.data.type}, attempt: ${job.attemptsMade + 1}/${job.opts.attempts}`,
+    );
 
     try {
       switch (job.data.type) {
@@ -58,25 +61,48 @@ export class EmailProcessor extends WorkerHost {
 
       this.logger.log(`Email job ${job.id} completed successfully`);
     } catch (error) {
-      this.logger.error(`Email job ${job.id} failed: ${error.message}`);
+      this.logger.error(
+        `Email job ${job.id} failed (attempt ${job.attemptsMade + 1}/${job.opts.attempts}): ${error.message}`,
+      );
       throw error; // Re-throw to trigger BullMQ retry mechanism
     }
   }
 
   @OnWorkerEvent('completed')
   onCompleted(job: Job<EmailJobData>) {
-    this.logger.log(`Email job ${job.id} completed`);
+    this.logger.log(
+      `Email job ${job.id} completed after ${job.attemptsMade + 1} attempt(s)`,
+    );
   }
 
   @OnWorkerEvent('failed')
-  onFailed(job: Job<EmailJobData>, error: Error) {
-    this.logger.error(
-      `Email job ${job.id} failed with error: ${error.message}`,
-    );
+  onFailed(job: Job<EmailJobData> | undefined, error: Error) {
+    if (!job) {
+      this.logger.error(
+        `Email job failed without job context: ${error.message}`,
+      );
+      return;
+    }
+
+    const attempts = job.attemptsMade ?? 0;
+    const maxAttempts = job.opts.attempts ?? 0;
+
+    if (attempts >= maxAttempts) {
+      // Job exhausted all retries - moved to DLQ
+      this.logger.error(
+        `Email job ${job.id} moved to DLQ after ${attempts} attempts. Last error: ${error.message}`,
+      );
+    } else {
+      this.logger.warn(
+        `Email job ${job.id} failed, will retry (${attempts}/${maxAttempts}): ${error.message}`,
+      );
+    }
   }
 
   @OnWorkerEvent('active')
   onActive(job: Job<EmailJobData>) {
-    this.logger.debug(`Email job ${job.id} is now active`);
+    this.logger.debug(
+      `Email job ${job.id} is now active (attempt ${job.attemptsMade + 1})`,
+    );
   }
 }

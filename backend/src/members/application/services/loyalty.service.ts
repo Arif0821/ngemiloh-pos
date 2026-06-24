@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, BadRequestException } from '@nestjs/common';
 import { randomInt } from 'crypto';
 import { PrismaService } from '../../../prisma/prisma.service';
 import {
@@ -91,5 +91,60 @@ export class LoyaltyService {
     });
 
     return product ? { free_item: product.name } : null;
+  }
+
+  /**
+   * Admin manual tier adjustment - allows upgrade or downgrade
+   */
+  async admin_adjust_tier(memberId: string, tierName: string) {
+    // Find target tier
+    const tier = await this.prisma.loyaltyTier.findFirst({
+      where: {
+        name: { equals: tierName, mode: 'insensitive' },
+        is_active: true,
+      },
+    });
+
+    if (!tier) {
+      throw new BadRequestException(`Tier "${tierName}" tidak ditemukan`);
+    }
+
+    // Get current member tier
+    const member = await this.prisma.member.findUnique({
+      where: { id: memberId },
+      include: { tier: true },
+    });
+
+    if (!member) {
+      throw new BadRequestException('Member tidak ditemukan');
+    }
+
+    const oldTier = member.tier?.name || 'Unknown';
+
+    // Update member tier
+    const updated = await this.prisma.member.update({
+      where: { id: memberId },
+      data: { current_tier_id: tier.id },
+      include: { tier: true },
+    });
+
+    // Create audit log entry
+    await this.prisma.auditLog.create({
+      data: {
+        actor_id: 'admin',
+        action: 'MEMBER_TIER_ADJUSTED',
+        entity_type: 'Member',
+        entity_id: memberId,
+        old_value: { tier: oldTier },
+        new_value: { tier: tier.name, tier_id: tier.id },
+      },
+    });
+
+    return {
+      member_id: memberId,
+      old_tier: oldTier,
+      new_tier: tier.name,
+      tier: updated.tier,
+    };
   }
 }

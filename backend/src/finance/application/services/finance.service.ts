@@ -645,68 +645,198 @@ export class FinanceService {
 
     if (!shift) throw new NotFoundException('Tidak ada shift aktif.');
 
-    // TINGGI-01: Get all orders (cash + split) to calculate cash portion from split payment
-    const allOrders = await this.financeRepository.findOrders({
-      cashier_id: cashierId,
+    // FIX #13: Use advisory lock to prevent race condition with auto-close
+    const lockKey = `shift:close:${shift.id}`;
+    const lockId = this.hashStringToBigInt(lockKey);
+    const maxRetries = 3;
+    const retryDelayMs = 100;
+
+    let closeResult = null;
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const lockAcquired = await this.prisma
+        .$executeRaw<number>`SELECT pg_try_advisory_lock(${lockId})`;
+
+      if (lockAcquired === 1) {
+        try {
+          // Double-check shift is still open (optimistic locking)
+          const currentShift = await this.prisma.cashRegister.findUnique({
+            where: { id: shift.id },
+            select: { status: true },
+          });
+
+          if (!currentShift || currentShift.status !== 'open') {
+            throw new BadRequestException(
+              'Shift sudah ditutup oleh proses lain.',
+            );
+          }
+
+          // TINGGI-01: Get all orders (cash + split) to calculate cash portion from split payment
+          const allOrders = await this.financeRepository.findOrders({
+            cashier_id: cashierId,
+            status: 'completed',
+            created_at: { gte: shift.shift_start },
+          });
+
+          // Calculate total cash from both cash and split payment methods
+          const totalCashSales = allOrders.reduce((sum, o) => {
+            if (o.payment_method === 'cash') {
+              return sum + Number(o.total_amount);
+            }
+            if (o.payment_method === 'split') {
+              // Only count the cash portion from split payment
+              return sum + Number(o.cash_amount || 0);
+            }
+            return sum; // qris doesn't go into cash drawer
+          }, 0);
+
+          const expected_balance =
+            Number(shift.opening_balance) + totalCashSales;
+          const discrepancy = actual_cash - expected_balance;
+
+          closeResult = await this.financeRepository.updateCashRegister(
+            shift.id,
+            {
+              actual_close_at: new Date(),
+              closing_balance: actual_cash,
+              system_cash_total: expected_balance,
+              discrepancy: discrepancy,
+              is_auto_closed: is_auto_closed,
+              notes: notes ?? null,
+              status: 'closed',
+            },
+          );
+
+          const threshold = Number(process.env.DISCREPANCY_THRESHOLD || 5000);
+          if (Math.abs(discrepancy) > threshold) {
+            await this.emailService
+              .sendAlert(
+                'Peringatan Selisih Laci Kasir',
+                `<p>Shift kasir dengan ID <strong>${cashierId}</strong> telah ditutup dengan <strong>selisih (discrepancy) Rp ${discrepancy}</strong>.</p>
+               <p>Batas toleransi sistem adalah Rp ${threshold}. Mohon segera verifikasi laci kas.</p>`,
+              )
+              .catch((err: unknown) =>
+                this.logger.error(
+                  'Failed to send discrepancy alert:',
+                  (err as Error).message,
+                ),
+              );
+          }
+
+          await this.financeRepository.createAuditLog({
+            actor_id: cashierId,
+            action: 'CASH_REGISTER_CLOSE',
+            entity_type: 'CashRegister',
+            entity_id: shift.id,
+            new_value: {
+              closing_balance: actual_cash,
+              discrepancy: discrepancy,
+              system_cash_total: expected_balance,
+              is_auto_closed: is_auto_closed,
+            },
+          });
+        } finally {
+          await this.prisma.$executeRaw`SELECT pg_advisory_unlock(${lockId})`;
+        }
+        return closeResult; // Success
+      }
+
+      // Lock not acquired, retry with backoff
+      if (attempt < maxRetries) {
+        const jitter = Math.floor(Math.random() * 50);
+        await new Promise((resolve) =>
+          setTimeout(resolve, retryDelayMs + jitter),
+        );
+      }
+    }
+
+    throw new Error('Gagal menutup shift: sibuk, coba lagi');
+  }
+
+  /**
+   * Admin escape hatch: Force close any shift by ID
+   * Bypasses normal flow for stuck shifts
+   */
+  async forceCloseShift(
+    shiftId: string,
+    actualCash: number,
+    reason: string,
+    adminId: string,
+  ) {
+    const shift = await this.prisma.cashRegister.findUnique({
+      where: { id: shiftId },
+    });
+
+    if (!shift) {
+      throw new NotFoundException('Shift tidak ditemukan');
+    }
+
+    if (shift.status === 'closed') {
+      throw new BadRequestException('Shift sudah ditutup');
+    }
+
+    // Calculate totals
+    const orders = await this.financeRepository.findOrders({
+      cashier_id: shift.cashier_id,
       status: 'completed',
       created_at: { gte: shift.shift_start },
     });
 
-    // Calculate total cash from both cash and split payment methods
-    const totalCashSales = allOrders.reduce((sum, o) => {
-      if (o.payment_method === 'cash') {
-        return sum + Number(o.total_amount);
-      }
-      if (o.payment_method === 'split') {
-        // Only count the cash portion from split payment
-        return sum + Number(o.cash_amount || 0);
-      }
-      return sum; // qris doesn't go into cash drawer
+    const totalCashSales = orders.reduce((sum, o) => {
+      if (o.payment_method === 'cash') return sum + Number(o.total_amount);
+      if (o.payment_method === 'split') return sum + Number(o.cash_amount || 0);
+      return sum;
     }, 0);
 
-    const expected_balance = Number(shift.opening_balance) + totalCashSales;
-    const discrepancy = actual_cash - expected_balance;
+    const expectedBalance = Number(shift.opening_balance) + totalCashSales;
+    const discrepancy = actualCash - expectedBalance;
 
-    const closed = await this.financeRepository.updateCashRegister(shift.id, {
-      actual_close_at: new Date(),
-      closing_balance: actual_cash,
-      system_cash_total: expected_balance,
-      discrepancy: discrepancy,
-      is_auto_closed: is_auto_closed,
-      notes: notes ?? null,
-      status: 'closed',
-    });
-
-    const threshold = Number(process.env.DISCREPANCY_THRESHOLD || 5000);
-    if (Math.abs(discrepancy) > threshold) {
-      await this.emailService
-        .sendAlert(
-          'Peringatan Selisih Laci Kasir',
-          `<p>Shift kasir dengan ID <strong>${cashierId}</strong> telah ditutup dengan <strong>selisih (discrepancy) Rp ${discrepancy}</strong>.</p>
-         <p>Batas toleransi sistem adalah Rp ${threshold}. Mohon segera verifikasi laci kas.</p>`,
-        )
-        .catch((err: unknown) =>
-          this.logger.error(
-            'Failed to send discrepancy alert:',
-            (err as Error).message,
-          ),
-        );
-    }
-
-    await this.financeRepository.createAuditLog({
-      actor_id: cashierId,
-      action: 'CASH_REGISTER_CLOSE',
-      entity_type: 'CashRegister',
-      entity_id: shift.id,
-      new_value: {
-        closing_balance: actual_cash,
-        discrepancy: discrepancy,
-        system_cash_total: expected_balance,
-        is_auto_closed: is_auto_closed,
+    // Close shift
+    const closed = await this.prisma.cashRegister.update({
+      where: { id: shiftId },
+      data: {
+        status: 'closed',
+        actual_close_at: new Date(),
+        closing_balance: actualCash,
+        system_cash_total: expectedBalance,
+        discrepancy,
+        notes: `[ESCAPE HATCH] ${reason}`,
+        is_auto_closed: true,
       },
     });
 
+    // Audit log with escape hatch marker
+    await this.financeRepository.createAuditLog({
+      actor_id: adminId,
+      action: 'CASH_REGISTER_ESCAPE_HATCH',
+      entity_type: 'CashRegister',
+      entity_id: shiftId,
+      old_value: { status: 'open', cashier: shift.cashier_id },
+      new_value: {
+        status: 'closed',
+        closing_balance: actualCash,
+        discrepancy,
+        reason,
+        forced_by: adminId,
+      },
+    });
+
+    this.logger.warn(
+      `ESCAPE HATCH: Shift ${shiftId} force-closed by admin ${adminId}. Reason: ${reason}`,
+    );
+
     return closed;
+  }
+
+  /**
+   * Convert string to bigint for PostgreSQL advisory lock
+   */
+  private hashStringToBigInt(str: string): bigint {
+    let hash = 2166136261n;
+    for (let i = 0; i < str.length; i++) {
+      hash ^= BigInt(str.charCodeAt(i));
+      hash *= 16777619n;
+    }
+    return hash & 0x7fffffffffffffffn;
   }
 
   async getShifts() {

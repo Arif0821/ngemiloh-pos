@@ -273,4 +273,31 @@ export class FinanceController {
     const data = await this.financeService.getShifts();
     return { success: true, data };
   }
+
+  /**
+   * Admin escape hatch: Force close any shift
+   * Bypasses the normal closeShift flow to handle stuck shifts
+   */
+  @Post('cash/shifts/:id/force-close')
+  @Throttle({ default: { limit: 10, ttl: 60000 } })
+  @ApiOperation({ summary: 'Force close a shift (admin escape hatch)' })
+  @ApiResponse({ status: 200, description: 'Shift force closed' })
+  @ApiResponse({
+    status: 400,
+    description: 'Shift not found or already closed',
+  })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  async forceCloseShift(
+    @Param('id') shiftId: string,
+    @Body() body: { actual_cash: number; reason: string },
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const data = await this.financeService.forceCloseShift(
+      shiftId,
+      body.actual_cash,
+      body.reason,
+      req.user.id,
+    );
+    return { status: 'success', data };
+  }
 }

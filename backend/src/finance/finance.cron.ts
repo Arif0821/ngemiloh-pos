@@ -341,7 +341,10 @@ export class FinanceCronService {
     }
 
     // Calculate expiry minutes from env
-    const expiry_seconds = parseInt(process.env.QRIS_EXPIRY_SECONDS || '900', 10);
+    const expiry_seconds = parseInt(
+      process.env.QRIS_EXPIRY_SECONDS || '900',
+      10,
+    );
     const expiry_minutes = Math.round(expiry_seconds / 60);
 
     const now = new Date();
@@ -508,7 +511,9 @@ export class FinanceCronService {
     await this.emailService
       .sendAlert('Laporan Void QRIS Kadaluarsa', htmlBody)
       .catch((err) =>
-        this.logger.error(`Failed to send QRIS expiry alert: ${err instanceof Error ? err.message : String(err)}`),
+        this.logger.error(
+          `Failed to send QRIS expiry alert: ${err instanceof Error ? err.message : String(err)}`,
+        ),
       );
   }
 }
