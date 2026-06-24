@@ -80,6 +80,49 @@ describe('FinanceCronService', () => {
       });
     });
 
+    describe('query parameter verification', () => {
+      it('should query only expired QRIS orders with correct filters', async () => {
+        const expiredOrders = [
+          {
+            id: 'order-1',
+            order_number: 'TRX-001',
+            total_amount: 50000,
+            qris_expiry_at: new Date(Date.now() - 1000),
+          },
+        ];
+
+        mockPrismaService.featureFlag.findFirst.mockResolvedValue({
+          name: 'FEATURE_QRIS_EXPIRY_ENFORCEMENT',
+          is_enabled: true,
+        });
+        mockPrismaService.order.findMany.mockResolvedValue(expiredOrders);
+        mockPrismaService.order.update.mockResolvedValue({});
+        mockPrismaService.auditLog.create.mockResolvedValue({});
+        mockPrismaService.systemLog.create.mockResolvedValue({});
+
+        await service.checkExpiredQrisOrders();
+
+        // Verify the query filters are correct
+        expect(mockPrismaService.order.findMany).toHaveBeenCalledWith({
+          where: {
+            payment_method: { in: ['qris', 'split'] },
+            status: 'pending_sync',
+            payment_status: 'unpaid',
+            qris_expiry_at: {
+              not: null,
+              lt: expect.any(Date),
+            },
+          },
+          select: {
+            id: true,
+            order_number: true,
+            total_amount: true,
+            qris_expiry_at: true,
+          },
+        });
+      });
+    });
+
     describe('no expired orders', () => {
       it('should skip when no expired orders found', async () => {
         mockPrismaService.featureFlag.findFirst.mockResolvedValue({
