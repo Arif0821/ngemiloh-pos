@@ -20,6 +20,7 @@ const mockFinanceRepository = {
   findAssets: jest.fn(),
   findManyCashRegisters: jest.fn(),
   countCashRegisters: jest.fn(),
+  aggregateAnalytics: jest.fn(),
 };
 
 const mockEmailService = {
@@ -28,9 +29,16 @@ const mockEmailService = {
 
 const mockPrismaService = {
   order: {
-    aggregate: jest.fn(),
+    aggregate: jest.fn().mockResolvedValue({ _sum: null, _count: 0 }),
   },
-  $queryRaw: jest.fn(),
+  cashRegister: {
+    findMany: jest.fn().mockResolvedValue([]),
+  },
+  userOutlet: {
+    findUnique: jest.fn(),
+    findMany: jest.fn(),
+  },
+  $queryRaw: jest.fn().mockResolvedValue([]),
 };
 
 describe('FinanceService', () => {
@@ -54,6 +62,14 @@ describe('FinanceService', () => {
   });
 
   describe('openShift', () => {
+    beforeEach(() => {
+      // Mock userOutlet assignment check - return valid outlet assignment
+      mockPrismaService.userOutlet.findUnique.mockResolvedValue({
+        outlet: { id: 'outlet-1', is_active: true },
+      });
+      mockPrismaService.cashRegister.findMany.mockResolvedValue([]);
+    });
+
     it('should throw BadRequestException if shift already open', async () => {
       mockFinanceRepository.findFirstCashRegister.mockResolvedValue({
         id: 'shift-1',

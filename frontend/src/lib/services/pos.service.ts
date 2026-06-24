@@ -5,6 +5,7 @@ import { api } from '$lib/services/api.client';
 import { toast } from '$lib/stores/toast.store.svelte';
 import { goto } from '$app/navigation';
 import { QRIS_POLLING_INTERVAL_MS } from '../utils/format';
+import { printer_service } from './printer.service';
 import type {
 	ApiResponse,
 	Discount,
@@ -393,6 +394,46 @@ export class PosService {
 					sync_status: 'pending',
 					created_at: Date.now()
 				});
+
+				// Save receipt for offline printing
+				const cart_items_for_receipt = pos_store.cart.map((c) => {
+					const base_price = Number(c.base_price) || 0;
+					const modifier_total = c.selected_modifiers.reduce(
+						(sum, m) => sum + (Number(m.additional_price) || 0),
+						0
+					);
+					const item_price = base_price + modifier_total;
+					const subtotal = item_price * c.quantity;
+					return {
+						id: crypto.randomUUID(),
+						product_id: c.id,
+						product_name_snapshot: c.name,
+						quantity: c.quantity,
+						subtotal
+					};
+				});
+				const offline_order_data: OrderResponse = {
+					id: client_uuid,
+					client_uuid,
+					total_amount: pos_store.cart_total,
+					items: cart_items_for_receipt
+				} as OrderResponse;
+				const receipt_text = printer_service.format_receipt(
+					offline_order_data,
+					'NGEMILOH',
+					'Terima kasih!'
+				);
+				const receipt_html = printer_service.generate_html_receipt(
+					offline_order_data,
+					'NGEMILOH',
+					'Terima kasih!'
+				);
+				await printer_service.save_receipt_for_offline(
+					offline_order_data,
+					receipt_text,
+					receipt_html
+				);
+
 				toast.success('Offline: Pesanan disimpan dan akan di-sync nanti');
 				pos_store.reset_cart();
 			} else {

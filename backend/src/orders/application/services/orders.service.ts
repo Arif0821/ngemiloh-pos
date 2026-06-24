@@ -45,6 +45,7 @@ import {
   calculate_product_discount,
   type DiscountItem,
 } from '../../domain/utils/discount.utils';
+import { RedisService } from '../../../common/redis/redis.service';
 
 /**
  * Escape CSV field to prevent formula injection and CSV injection attacks
@@ -90,6 +91,7 @@ export class OrdersService {
     private prisma: PrismaService,
     @Inject(PAYMENT_GATEWAY) private readonly paymentGateway: PaymentGateway,
     @Optional() private memberService?: MemberService,
+    @Optional() private redisService?: RedisService,
   ) {}
 
   /**
@@ -171,6 +173,26 @@ export class OrdersService {
   }
 
   async createOrder(data: CreateOrderDto, kasirId: string) {
+    // F16 + ENHANCEMENT: Use Redis cache for fast idempotency check before DB
+    // Redis check is O(1) vs DB check which requires index scan
+    // If order exists in Redis cache, return it immediately without DB hit
+    if (this.redisService) {
+      const cachedOrderId = await this.redisService.getIdempotencyKey(
+        data.client_uuid,
+      );
+      if (cachedOrderId) {
+        const cachedOrder = await this.orderRepository.findOrderByClientUuid(
+          data.client_uuid,
+        );
+        if (cachedOrder) {
+          this.logger.log(
+            `Idempotency hit for client_uuid ${data.client_uuid}, returning cached order`,
+          );
+          return cachedOrder;
+        }
+      }
+    }
+
     // F16: Use SELECT FOR UPDATE for idempotency to prevent race conditions
     // If two requests with same client_uuid arrive simultaneously, the FOR UPDATE lock
     // ensures only one passes the existence check. The other gets the existing order.
@@ -179,6 +201,13 @@ export class OrdersService {
     >`SELECT id, "client_uuid" FROM "Order" WHERE "client_uuid" = ${data.client_uuid} FOR UPDATE`;
 
     if (existingOrderRaw.length > 0) {
+      // Cache in Redis for future fast lookups
+      if (this.redisService) {
+        await this.redisService.setIdempotencyKey(
+          data.client_uuid,
+          existingOrderRaw[0].id,
+        );
+      }
       // Double-check with full query to return complete order data
       const existingOrder = await this.orderRepository.findOrderByClientUuid(
         data.client_uuid,
@@ -470,6 +499,11 @@ export class OrdersService {
       }
     }
 
+    // Cache newly created order in Redis for fast idempotency lookups
+    if (this.redisService) {
+      await this.redisService.setIdempotencyKey(data.client_uuid, order.id);
+    }
+
     return order;
   }
 
@@ -602,6 +636,24 @@ export class OrdersService {
     kasirId: string,
     products: ProductWithModifiers[],
   ): Promise<Order | null> {
+    // ENHANCEMENT: Redis cache for fast idempotency check before DB
+    if (this.redisService) {
+      const cachedOrderId = await this.redisService.getIdempotencyKey(
+        data.client_uuid,
+      );
+      if (cachedOrderId) {
+        const cachedOrder = await this.orderRepository.findOrderByClientUuid(
+          data.client_uuid,
+        );
+        if (cachedOrder) {
+          this.logger.log(
+            `Idempotency hit in batch for client_uuid ${data.client_uuid}`,
+          );
+          return cachedOrder;
+        }
+      }
+    }
+
     // F16: Use SELECT FOR UPDATE for idempotency to prevent race conditions
     // If two requests with same client_uuid arrive simultaneously, the FOR UPDATE lock
     // ensures only one passes the existence check. The other gets the existing order.
@@ -610,6 +662,13 @@ export class OrdersService {
     >`SELECT id, "client_uuid" FROM "Order" WHERE "client_uuid" = ${data.client_uuid} FOR UPDATE`;
 
     if (existingOrder.length > 0) {
+      // Cache in Redis for future fast lookups
+      if (this.redisService) {
+        await this.redisService.setIdempotencyKey(
+          data.client_uuid,
+          existingOrder[0].id,
+        );
+      }
       return this.orderRepository.findOrderByClientUuid(data.client_uuid);
     }
 
@@ -710,6 +769,11 @@ export class OrdersService {
         },
       });
     });
+
+    // Cache newly created order in Redis for fast idempotency lookups
+    if (this.redisService && order) {
+      await this.redisService.setIdempotencyKey(data.client_uuid, order.id);
+    }
 
     return order;
   }

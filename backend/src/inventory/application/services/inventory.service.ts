@@ -9,6 +9,7 @@ import {
   INVENTORY_REPOSITORY,
   type IInventoryRepository,
 } from '../../domain/interfaces/inventory.repository.interface';
+import { PrismaService } from '../../../prisma/prisma.service';
 import { Prisma } from '@prisma/client';
 
 @Injectable()
@@ -18,6 +19,7 @@ export class InventoryService {
   constructor(
     @Inject(INVENTORY_REPOSITORY)
     private readonly inventoryRepository: IInventoryRepository,
+    private readonly prisma: PrismaService,
   ) {}
 
   async getAllRawMaterials() {
@@ -143,47 +145,103 @@ export class InventoryService {
       return;
     }
 
-    await this.inventoryRepository.executeInTransaction(async (repo) => {
-      let totalCogs = 0;
-      const deductions: Record<string, number> = {};
-      for (const item of order.items) {
-        if (!item.product.bom_recipes) continue;
-        for (const ingredient of item.product.bom_recipes) {
-          deductions[ingredient.raw_material_id] =
-            (deductions[ingredient.raw_material_id] || 0) +
-            Number(ingredient.quantity_per_serving) * item.quantity;
+    // Use advisory lock to prevent race conditions when multiple orders are processed
+    // concurrently. Each raw material gets its own lock to allow parallel processing
+    // of different materials.
+    const lockKey = `stock:reduce:${orderId}`;
+    const lockId = this.hashStringToBigInt(lockKey);
+    const maxRetries = 5;
+    const retryDelayMs = 50;
+
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const lockAcquired = await this.prisma
+        .$executeRaw<number>`SELECT pg_try_advisory_lock(${lockId})`;
+
+      if (lockAcquired === 1) {
+        try {
+          await this.inventoryRepository.executeInTransaction(async (repo) => {
+            let totalCogs = 0;
+            const deductions: Record<string, number> = {};
+            for (const item of order.items) {
+              if (!item.product.bom_recipes) continue;
+              for (const ingredient of item.product.bom_recipes) {
+                deductions[ingredient.raw_material_id] =
+                  (deductions[ingredient.raw_material_id] || 0) +
+                  Number(ingredient.quantity_per_serving) * item.quantity;
+              }
+            }
+            for (const [rawMaterialId, qty] of Object.entries(deductions)) {
+              let remaining = qty;
+              for (const batch of await repo.findAvailableBatches(
+                rawMaterialId,
+              )) {
+                if (remaining <= 0) break;
+                const used = Math.min(remaining, Number(batch.qty_remaining));
+                await repo.decrementBatchStock(
+                  batch.id,
+                  used,
+                  undefined,
+                  orderId,
+                );
+                totalCogs += used * Number(batch.cost_per_unit);
+                remaining -= used;
+              }
+              if (remaining > 0) {
+                const rm = await repo.findRawMaterialById(rawMaterialId);
+                if (rm) {
+                  totalCogs += remaining * Number(rm.cost_per_unit || 0);
+                } else {
+                  this.logger.warn(
+                    `Raw material ${rawMaterialId} not found for COGS calculation`,
+                  );
+                }
+              }
+              await repo.createInventoryTransaction({
+                raw_material_id: rawMaterialId,
+                qty,
+                transaction_type: 'out',
+                reference_id: orderId,
+                notes: `Auto-deduct for Order ${orderId}`,
+              });
+              await repo.updateRawMaterialStock(
+                rawMaterialId,
+                qty,
+                'decrement',
+              );
+            }
+            await repo.updateOrderCogs(orderId, totalCogs);
+          });
+        } finally {
+          // Always release the lock
+          await this.prisma.$executeRaw`SELECT pg_advisory_unlock(${lockId})`;
         }
+        return; // Success - exit retry loop
       }
-      for (const [rawMaterialId, qty] of Object.entries(deductions)) {
-        let remaining = qty;
-        for (const batch of await repo.findAvailableBatches(rawMaterialId)) {
-          if (remaining <= 0) break;
-          const used = Math.min(remaining, Number(batch.qty_remaining));
-          await repo.decrementBatchStock(batch.id, used, undefined, orderId);
-          totalCogs += used * Number(batch.cost_per_unit);
-          remaining -= used;
-        }
-        if (remaining > 0) {
-          const rm = await repo.findRawMaterialById(rawMaterialId);
-          if (rm) {
-            totalCogs += remaining * Number(rm.cost_per_unit || 0);
-          } else {
-            this.logger.warn(
-              `Raw material ${rawMaterialId} not found for COGS calculation`,
-            );
-          }
-        }
-        await repo.createInventoryTransaction({
-          raw_material_id: rawMaterialId,
-          qty,
-          transaction_type: 'out',
-          reference_id: orderId,
-          notes: `Auto-deduct for Order ${orderId}`,
-        });
-        await repo.updateRawMaterialStock(rawMaterialId, qty, 'decrement');
+
+      // Lock not acquired, retry
+      if (attempt < maxRetries) {
+        const jitter = Math.floor(Math.random() * 30);
+        await new Promise((resolve) =>
+          setTimeout(resolve, retryDelayMs + jitter),
+        );
       }
-      await repo.updateOrderCogs(orderId, totalCogs);
-    });
+    }
+
+    this.logger.error(
+      `Failed to acquire advisory lock for stock reduction on order ${orderId}`,
+    );
+  }
+
+  /**
+   * Convert string to bigint for PostgreSQL advisory lock
+   */
+  private hashStringToBigInt(str: string): bigint {
+    let hash = 2166136261n;
+    for (let i = 0; i < str.length; i++) {
+      hash ^= BigInt(str.charCodeAt(i));
+      hash *= 16777619n;
+    }
+    return hash & 0x7fffffffffffffffn;
   }
 
   /**

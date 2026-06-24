@@ -38,6 +38,7 @@ export default tseslint.config(
       '@typescript-eslint/no-unused-vars': ['error', { argsIgnorePattern: '^_' }],
       '@typescript-eslint/no-require-imports': 'warn',
       '@typescript-eslint/restrict-template-expressions': 'warn',
+      '@typescript-eslint/unbound-method': 'off', // Required for jest matchers
       'no-control-regex': 'warn',
       'no-useless-escape': 'error',
       "prettier/prettier": ["error", { endOfLine: "auto" }],

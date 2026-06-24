@@ -301,10 +301,12 @@ export class AuthController {
     const csrfToken = crypto.randomBytes(32).toString('hex');
 
     // Calculate cookie maxAge based on role
-    const maxAgeMs = currentUser.role === 'kasir' ? 8 * 60 * 60 * 1000 : 12 * 60 * 60 * 1000;
+    const maxAgeMs =
+      currentUser.role === 'kasir' ? 8 * 60 * 60 * 1000 : 12 * 60 * 60 * 1000;
 
     // Set new cookies
-    const cookieName = currentUser.role === 'kasir' ? 'access_token' : 'admin_token';
+    const cookieName =
+      currentUser.role === 'kasir' ? 'access_token' : 'admin_token';
     set_cookie(response, cookieName, accessToken, {
       maxAge: maxAgeMs,
       httpOnly: true,

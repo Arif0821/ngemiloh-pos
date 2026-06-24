@@ -3,8 +3,10 @@ import { InventoryService } from './application/services/inventory.service';
 import { InventoryController } from './presentation/inventory.controller';
 import { PrismaInventoryRepository } from './infrastructure/repositories/prisma-inventory.repository';
 import { INVENTORY_REPOSITORY } from './domain/interfaces/inventory.repository.interface';
+import { PrismaModule } from '../prisma/prisma.module';
 
 @Module({
+  imports: [PrismaModule],
   controllers: [InventoryController],
   providers: [
     InventoryService,

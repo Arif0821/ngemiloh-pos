@@ -7,6 +7,8 @@ import { InventoryService } from '../../../inventory/application/services/invent
 import { EmailService } from '../../../email/email.service';
 import { EventEmitter2 } from '@nestjs/event-emitter';
 import { PrismaService } from '../../../prisma/prisma.service';
+import { MemberService } from '../../../members/application/services/member.service';
+import { PAYMENT_GATEWAY } from '../../../payment/payment-gateway.interface';
 
 // SHA-512 produces 128-character hex string
 const MOCK_SIG = 'a'.repeat(128);
@@ -44,6 +46,8 @@ describe('OrdersService', () => {
   let mockEventEmitter: any;
   let mockMidtransCore: any;
   let mockPrismaService: any;
+  let mockMemberService: any;
+  let mockPaymentGateway: any;
 
   const mockProduct = {
     id: 'prod-001',
@@ -162,6 +166,17 @@ describe('OrdersService', () => {
       },
     };
 
+    mockMemberService = {
+      applyLoyaltyPoints: jest.fn().mockResolvedValue(undefined),
+    };
+
+    mockPaymentGateway = {
+      createQRIS: jest.fn().mockResolvedValue({
+        transaction_id: 'test-txn-id',
+        payment_url: 'https://test.midtrans.com/qris',
+      }),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrdersService,
@@ -170,6 +185,8 @@ describe('OrdersService', () => {
         { provide: EmailService, useValue: mockEmailService },
         { provide: EventEmitter2, useValue: mockEventEmitter },
         { provide: PrismaService, useValue: mockPrismaService },
+        { provide: PAYMENT_GATEWAY, useValue: mockPaymentGateway },
+        { provide: MemberService, useValue: mockMemberService },
       ],
     }).compile();
 
