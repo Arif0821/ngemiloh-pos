@@ -947,7 +947,7 @@ src/orders/
 
 | # | Fitur | Prioritas | Status | Opsi Pilihan | Catatan |
 |---|-------|-----------|--------|--------------|---------|
-| 1 | QRIS Expiry Enforcement | **CRITICAL** | ❌ | OPSI B | Cron job untuk void expired QRIS orders |
+| 1 | QRIS Expiry Enforcement | **CRITICAL** | ✅ | OPSI B | Cron job untuk void expired QRIS orders |
 | 2 | JWT Token Reduction | **HIGH** | ❌ | OPSI B | 365d → 8h atau silent refresh |
 | 3 | Void Refund Audit | **HIGH** | ❌ | OPSI A | 4-eyes approval untuk fraud prevention |
 | 4 | Offline Receipt | **HIGH** | ❌ | OPSI A | Generate receipt saat offline |
@@ -1284,9 +1284,9 @@ npm run test
 
 Berikut adalah 20 critical issues yang harus diperbaiki sebelum go-live:
 
-| # | Kegagalan | Severity | Dampak | Recommended Solution |
-|---|-----------|----------|--------|---------------------|
-| 1 | QRIS Expiry Never Enforced | **CRITICAL** | Ghost orders, cash reconciliation failure | **OPSI B** (Cron job) |
+| # | Kegagalan | Severity | Dampak | Recommended Solution | Status |
+|---|-----------|----------|--------|---------------------|--------|
+| 1 | QRIS Expiry Never Enforced | **CRITICAL** | Ghost orders, cash reconciliation failure | **OPSI B** (Cron job) | ✅ Done |
 | 2 | JWT 365 Days for Kasir | **HIGH** | Compromised PIN = 1 tahun akses | **OPSI B** (Silent refresh) |
 | 3 | Void Refund Hardcoded | **HIGH** | Cash fraud tidak terdeteksi | **OPSI A** (Audit enhancement) |
 | 4 | No Offline Order Receipt | **MEDIUM** | Customer dispute risk | **OPSI A** (Quick fix) |
