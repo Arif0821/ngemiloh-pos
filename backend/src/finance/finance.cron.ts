@@ -340,6 +340,10 @@ export class FinanceCronService {
       return;
     }
 
+    // Calculate expiry minutes from env
+    const expiry_seconds = parseInt(process.env.QRIS_EXPIRY_SECONDS || '900', 10);
+    const expiry_minutes = Math.round(expiry_seconds / 60);
+
     const now = new Date();
 
     // Find expired QRIS orders: payment_method in ['qris', 'split'],
@@ -374,7 +378,7 @@ export class FinanceCronService {
     const order_numbers: (string | null)[] = [];
 
     for (const order of expiredOrders) {
-      const void_reason = `Auto-voided: QRIS payment expired at ${order.qris_expiry_at}`;
+      const void_reason = `QRIS expired: no payment received within ${expiry_minutes} minutes`;
       try {
         await this.voidExpiredQrisOrder(order.id, void_reason);
         success_count++;
