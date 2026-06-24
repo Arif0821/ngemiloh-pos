@@ -154,7 +154,10 @@ class AuthStore {
 		this.retry_count++;
 		console.log(`[AuthStore] Scheduling retry ${this.retry_count}/${this.max_retries} in ${this.retry_delay_ms / 1000}s`);
 
-		setTimeout(() => {
+		// Clear any existing timer before scheduling new one
+		this.clear_refresh_timer();
+
+		this.refresh_timeout = setTimeout(() => {
 			this.refresh_token(role);
 		}, this.retry_delay_ms);
 	}
