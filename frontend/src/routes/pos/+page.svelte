@@ -3,6 +3,7 @@
 	import { goto } from '$app/navigation';
 	import { pos_store } from '$lib/stores/pos.store.svelte';
 	import { pos_service } from '$lib/services/pos.service';
+	import { auth_store } from '$lib/stores/auth.store.svelte';
 	import { api } from '$lib/services/api.client';
 	import { db } from '$lib/db';
 	import { FLAG_REFRESH_INTERVAL_MS } from '$lib/utils/format';
@@ -68,9 +69,28 @@
 		}
 		// Cancel SSE/polling on component destroy
 		pos_service.cancel_qris_waiting();
+		// Clear silent refresh timer
+		auth_store.clear_refresh_timer();
 	});
 
 	onMount(async () => {
+		// Verify auth and init silent refresh
+		api
+			.get('/auth/me')
+			.then((res) => {
+				if (!res.ok) {
+					localStorage.removeItem('user');
+					goto('/login');
+					return;
+				}
+				// Init silent refresh for kasir
+				auth_store.init_silent_refresh('kasir');
+			})
+			.catch(() => {
+				// Jika offline, percayakan localStorage sementara
+				console.warn('Cannot verify session — network offline');
+			});
+
 		// FASE 4: Multi-Outlet - Load selected outlet from localStorage
 		const saved_outlet = localStorage.getItem('selected_outlet');
 		if (saved_outlet) {
