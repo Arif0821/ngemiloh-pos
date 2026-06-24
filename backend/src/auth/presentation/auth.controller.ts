@@ -10,6 +10,7 @@ import {
   UseGuards,
   Req,
   BadRequestException,
+  UnauthorizedException,
 } from '@nestjs/common';
 import {
   ApiTags,
@@ -17,6 +18,7 @@ import {
   ApiResponse,
   ApiBearerAuth,
 } from '@nestjs/swagger';
+import * as crypto from 'crypto';
 import { AuthService } from '../application/services/auth.service';
 import type { Response, Request } from 'express';
 import { JwtAuthGuard } from '../guards/jwt-auth.guard';
@@ -28,6 +30,7 @@ import { ChangePinDto } from '../dto/change-pin.dto';
 import type { AuthenticatedRequest } from '../../types/express';
 import { RedisService } from '../../common/redis/redis.service';
 import { JwtService } from '@nestjs/jwt';
+import { set_cookie } from '../../common/utils/cookie';
 
 @ApiTags('Auth')
 @ApiBearerAuth()
@@ -251,5 +254,80 @@ export class AuthController {
     });
     response.clearCookie('csrf_token', { path: '/' });
     return { success: true, message: 'Logged out' };
+  }
+
+  /**
+   * Silent Refresh - Issue new JWT without requiring re-login
+   * Frontend calls this when token is about to expire (e.g., 1 hour before)
+   * Requires valid current token as authentication
+   */
+  @Post('refresh')
+  @HttpCode(HttpStatus.OK)
+  @UseGuards(JwtAuthGuard)
+  @ApiBearerAuth()
+  @ApiOperation({
+    summary: 'Silent refresh - Issue new JWT token',
+    description:
+      'Issues a new JWT token without requiring re-login. Call this before token expires (e.g., 1 hour before expiry).',
+  })
+  @ApiResponse({ status: 200, description: 'New token issued successfully' })
+  @ApiResponse({ status: 401, description: 'Current token invalid or expired' })
+  async refreshToken(
+    @Req() req: Request,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    // Get current user from validated token
+    const currentUser = (req as AuthenticatedRequest).user;
+    if (!currentUser?.id || !currentUser?.role) {
+      throw new BadRequestException('Invalid token payload');
+    }
+
+    // Verify user still exists and is active
+    const user = await this.authService.getUserById(currentUser.id);
+    if (!user || !user.is_active) {
+      throw new UnauthorizedException('User not found or inactive');
+    }
+
+    // Issue new token with same role
+    const payload = { sub: currentUser.id, role: currentUser.role };
+    const jti = crypto.randomUUID();
+    const expiresIn = currentUser.role === 'kasir' ? '8h' : '12h';
+    const accessToken = this.jwtService.sign(payload, {
+      secret: process.env.JWT_ACCESS_SECRET ?? '',
+      expiresIn,
+      jwtid: jti,
+    });
+
+    const csrfToken = crypto.randomBytes(32).toString('hex');
+
+    // Calculate cookie maxAge based on role
+    const maxAgeMs = currentUser.role === 'kasir' ? 8 * 60 * 60 * 1000 : 12 * 60 * 60 * 1000;
+
+    // Set new cookies
+    const cookieName = currentUser.role === 'kasir' ? 'access_token' : 'admin_token';
+    set_cookie(response, cookieName, accessToken, {
+      maxAge: maxAgeMs,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+    });
+    set_cookie(response, 'csrf_token', csrfToken, {
+      maxAge: maxAgeMs,
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'strict',
+      path: '/',
+    });
+
+    return {
+      success: true,
+      expires_in: expiresIn,
+      user: {
+        id: user.id,
+        name: user.name,
+        role: user.role,
+      },
+    };
   }
 }

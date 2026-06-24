@@ -193,27 +193,31 @@ export class AuthService {
     await this.authRepository.resetUserFailedLogin(user.id);
     await this.authRepository.resetIpLockout(ipLockHash);
 
+    // JWT Token Reduction: Kasir 365d -> 8h (silent refresh handles long sessions)
     const payload = { sub: user.id, role: user.role as string };
     const jti = crypto.randomUUID();
+    const expiresIn = '8h';
     const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET ?? '',
-      expiresIn: '365d',
+      expiresIn,
       jwtid: jti,
     });
 
     const csrfToken = crypto.randomBytes(32).toString('hex');
 
     if (res) {
+      // 8 hours in milliseconds
+      const eightHoursMs = 8 * 60 * 60 * 1000;
       set_cookie(res, 'access_token', accessToken, {
-        maxAge: 365 * 24 * 60 * 60 * 1000, // 365 days in milliseconds
+        maxAge: eightHoursMs,
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
         path: '/',
       });
-      // SECURITY FIX F-01: Set CSRF token as httpOnly cookie (not accessible to JavaScript)
+      // CSRF token matches JWT expiry (8 hours)
       set_cookie(res, 'csrf_token', csrfToken, {
-        maxAge: 365 * 24 * 60 * 60 * 1000, // 365 days in milliseconds
+        maxAge: eightHoursMs,
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
@@ -522,27 +526,31 @@ export class AuthService {
 
     await this.authRepository.updateUserPin(userId, newPinHash);
 
+    // JWT Token Reduction: Kasir 365d -> 8h
     const payload = { sub: user.id, role: user.role as string };
     const jti = crypto.randomUUID();
+    const expiresIn = '8h';
     const accessToken = this.jwtService.sign(payload, {
       secret: process.env.JWT_ACCESS_SECRET ?? '',
-      expiresIn: '365d',
+      expiresIn,
       jwtid: jti,
     });
 
     const csrfToken = crypto.randomBytes(32).toString('hex');
 
     if (res) {
+      // 8 hours in milliseconds
+      const eightHoursMs = 8 * 60 * 60 * 1000;
       set_cookie(res, 'access_token', accessToken, {
-        maxAge: 365 * 24 * 60 * 60 * 1000, // 365 days in milliseconds
+        maxAge: eightHoursMs,
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
         path: '/',
       });
-      // SECURITY FIX F-01: Set CSRF token as httpOnly cookie (not accessible to JavaScript)
+      // CSRF token matches JWT expiry (8 hours)
       set_cookie(res, 'csrf_token', csrfToken, {
-        maxAge: 365 * 24 * 60 * 60 * 1000, // 365 days in milliseconds
+        maxAge: eightHoursMs,
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
