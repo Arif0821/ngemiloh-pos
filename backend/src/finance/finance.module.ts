@@ -5,9 +5,10 @@ import { FinanceCronService } from './finance.cron';
 import { FINANCE_REPOSITORY } from './domain/interfaces/finance.repository.interface';
 import { PrismaFinanceRepository } from './infrastructure/repositories/prisma-finance.repository';
 import { EmailModule } from '../email/email.module';
+import { InventoryModule } from '../inventory/inventory.module';
 
 @Module({
-  imports: [EmailModule],
+  imports: [EmailModule, InventoryModule],
   controllers: [FinanceController],
   providers: [
     FinanceService,
