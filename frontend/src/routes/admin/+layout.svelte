@@ -3,14 +3,51 @@
 	import { goto } from '$app/navigation';
 	import { page } from '$app/stores';
 	import { api } from '$lib/services/api.client';
+	import { auth_store } from '$lib/stores/auth.store.svelte';
 
 	let { children } = $props();
 
 	let is_superadmin = $state(false);
 	let admin_name = $state('');
 	let is_logging_out = $state(false);
+	let is_online = $state(true);
+
+	// Sensitive operations that should be blocked when offline
+	const sensitive_routes = [
+		'/admin/transactions',
+		'/admin/products',
+		'/admin/categories',
+		'/admin/inventory',
+		'/admin/discounts',
+		'/admin/shifts',
+		'/admin/cashiers',
+		'/admin/members',
+		'/admin/settings',
+		'/admin/system-logs'
+	];
+
+	function is_sensitive_page(): boolean {
+		return sensitive_routes.some((route) => $page.url.pathname.startsWith(route));
+	}
 
 	onMount(() => {
+		// Online/offline detection
+		is_online = navigator.onLine;
+
+		const handle_online = () => {
+			is_online = true;
+		};
+
+		const handle_offline = () => {
+			is_online = false;
+		};
+
+		window.addEventListener('online', handle_online);
+		window.addEventListener('offline', handle_offline);
+
+		// Initial online check
+		check_online_status();
+
 		const user_str = localStorage.getItem('user');
 		if (!user_str) {
 			goto('/login-admin');
@@ -40,6 +77,8 @@
 				}
 				is_superadmin = true;
 				admin_name = user.name || 'Admin';
+				// Init silent refresh for superadmin
+				auth_store.init_silent_refresh('superadmin');
 			})
 			.catch(() => {
 				// Jika offline, percayakan localStorage sementara
@@ -47,7 +86,22 @@
 				is_superadmin = true;
 				admin_name = user.name || 'Admin';
 			});
+
+		return () => {
+			window.removeEventListener('online', handle_online);
+			window.removeEventListener('offline', handle_offline);
+			auth_store.clear_refresh_timer();
+		};
 	});
+
+	async function check_online_status() {
+		try {
+			const res = await fetch('/api/v1/health', { method: 'GET' });
+			is_online = res.ok;
+		} catch {
+			is_online = false;
+		}
+	}
 
 	async function handle_logout() {
 		if (is_logging_out) return;
@@ -59,6 +113,11 @@
 		} finally {
 			goto('/login-admin');
 		}
+	}
+
+	// Export for child components to check online status
+	export function check_online(): boolean {
+		return is_online;
 	}
 </script>
 
@@ -128,6 +187,42 @@
 
 		<!-- Main content -->
 		<main class="relative flex flex-1 flex-col overflow-hidden bg-slate-50 p-8">
+			<!-- Offline warning banner for sensitive operations -->
+			{#if !is_online && is_sensitive_page()}
+				<div
+					class="mb-4 flex items-center justify-between rounded-lg border border-amber-200 bg-amber-50 px-4 py-3"
+				>
+					<div class="flex items-center">
+						<svg
+							class="mr-2 h-5 w-5 text-amber-600"
+							fill="none"
+							stroke="currentColor"
+							viewBox="0 0 24 24"
+						>
+							<path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"
+							/>
+						</svg>
+						<div>
+							<p class="text-sm font-medium text-amber-800">
+								Mode Offline - Perubahan tidak akan disimpan
+							</p>
+							<p class="text-xs text-amber-600">
+								Operasi sensitif (tambah, edit, hapus) dinonaktifkan saat offline
+							</p>
+						</div>
+					</div>
+					<button
+						onclick={() => check_online_status()}
+						class="rounded-md bg-amber-100 px-3 py-1.5 text-xs font-medium text-amber-800 hover:bg-amber-200"
+					>
+						Coba lagi
+					</button>
+				</div>
+			{/if}
 			{@render children()}
 		</main>
 	</div>
