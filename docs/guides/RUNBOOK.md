@@ -390,15 +390,194 @@ ls -lh /backups/*.sql.gz
 
 ## Environment Variables Reference
 
-| Variable | Description | Where to Check |
-|----------|-------------|----------------|
-| `DATABASE_URL` | PostgreSQL connection string | `docker compose config` |
-| `REDIS_URL` | Redis connection string | `docker compose config` |
-| `JWT_SECRET` | JWT signing secret | Docker secret / env file |
-| `CSRF_SECRET` | CSRF token secret | Docker secret / env file |
-| `MIDTRANS_SERVER_KEY` | Midtrans API key | Docker secret / env file |
-| `MIDTRANS_CLIENT_KEY` | Midtrans client key | Docker secret / env file |
-| `FRONTEND_URL` | Allowed frontend origin | `docker compose config` |
+> All variables set in `.env` or docker-compose environment section.
+
+### Authentication
+
+| Variable | Default | Required | Description |
+|----------|---------|----------|-------------|
+| `JWT_ACCESS_SECRET` | — | Yes | JWT signing secret (min 32 chars) |
+| `JWT_ACCESS_EXPIRES` | `8h` | No | JWT expiry for kasir (e.g., `8h`, `4h`) |
+| `JWT_REFRESH_EXPIRES` | `7d` | No | Refresh token expiry |
+| `CSRF_SECRET` | — | Yes | CSRF token signing secret |
+| `CSRF_COOKIE_MAX_AGE` | `28800` | No | CSRF cookie max-age in seconds (8h) |
+| `PIN_PEPPER_SECRET` | — | Yes | Pepper added to PIN before bcrypt hash |
+| `OTP_EXPIRES_IN` | `600` | No | OTP TTL in seconds (10 min) |
+| `LOCKOUT_THRESHOLD` | `10` | No | Failed attempts before IP lockout |
+
+### Database & Cache
+
+| Variable | Default | Required | Description |
+|----------|---------|----------|-------------|
+| `DATABASE_URL` | — | Yes | PostgreSQL connection string |
+| `DATABASE_HOST` | `postgres` | No | Override DB host |
+| `DATABASE_USER` | `ngemiloh` | No | DB username |
+| `DATABASE_PASSWORD` | — | Yes | DB password |
+| `REDIS_URL` | `redis://redis:6379` | No | Redis connection URL |
+| `REDIS_PASSWORD` | — | Yes (prod) | Redis auth password |
+
+### Payment
+
+| Variable | Default | Required | Description |
+|----------|---------|----------|-------------|
+| `MIDTRANS_SERVER_KEY` | — | Yes | Midtrans server key |
+| `MIDTRANS_CLIENT_KEY` | — | Yes | Midtrans client key |
+| `MIDTRANS_ENV` | `sandbox` | No | `sandbox` or `production` |
+| `QRIS_EXPIRY_SECONDS` | `900` | No | QRIS payment expiry (15 min) |
+
+### Finance & Operations
+
+| Variable | Default | Required | Description |
+|----------|---------|----------|-------------|
+| `DISCREPANCY_THRESHOLD` | `5000` | No | Cash discrepancy alert threshold (Rp) |
+| `PRICE_DELTA_THRESHOLD_PCT` | `10` | No | Max price variance before sync rejection (%) |
+| `FRONTEND_URL` | `https://localhost:5173` | No | Allowed CORS origin |
+| `TZ` | `Asia/Jakarta` | No | Timezone for all timestamps |
+
+### Backup
+
+| Variable | Default | Required | Description |
+|----------|---------|----------|-------------|
+| `BACKUP_ENCRYPTION_KEY` | — | Yes (prod) | AES-256-CBC encryption key |
+| `BACKUP_RETENTION_DAYS` | `30` | No | Backup retention period |
+| `BACKUP_RCLONE_REMOTE` | — | No | rclone remote for cloud upload |
+
+### Monitoring & Alerts
+
+| Variable | Default | Required | Description |
+|----------|---------|----------|-------------|
+| `TELEGRAM_BOT_TOKEN` | — | No | Telegram bot token for alerts |
+| `TELEGRAM_CHAT_ID` | — | No | Telegram chat ID for alerts |
+| `EMAIL_HOST` | — | No | SMTP host for email alerts |
+| `EMAIL_PORT` | `587` | No | SMTP port |
+| `EMAIL_USER` | — | No | SMTP username |
+| `EMAIL_PASSWORD` | — | No | SMTP password |
+| `EMAIL_FROM` | — | No | Sender email address |
+
+### Caddy Reverse Proxy
+
+| Variable | Default | Required | Description |
+|----------|---------|----------|-------------|
+| `RATE_LIMIT_RPM` | `100` | No | Rate limit requests per minute |
+| `RATE_LIMIT_BURST` | `20` | No | Burst allowance |
+| `CADDY_ALLOWED_IPS` | — | No | Comma-separated allowed IPs |
+
+---
+
+## Developer Onboarding
+
+### Prerequisites
+
+- **Docker Desktop** (Windows) or **Docker Engine** (Linux/macOS)
+- **Node.js 20 LTS** (for local development outside containers)
+- **Git** for version control
+- **WSL2** (Windows only — for native Docker performance)
+
+### First-Time Setup
+
+```bash
+# 1. Clone repository
+git clone <repo-url>
+cd POS_Nabil
+
+# 2. Copy environment template
+cp .env.example .env
+
+# 3. Edit .env — fill in required secrets
+# Minimum required:
+#   - JWT_ACCESS_SECRET (min 32 chars)
+#   - CSRF_SECRET (min 32 chars)
+#   - PIN_PEPPER_SECRET
+#   - DATABASE_PASSWORD
+#   - MIDTRANS_SERVER_KEY (sandbox for dev)
+#   - MIDTRANS_CLIENT_KEY (sandbox for dev)
+
+# 4. Start all containers
+docker compose up -d
+
+# 5. Run database migrations
+docker compose exec nestjs-api npx prisma migrate deploy
+
+# 6. Seed initial data (optional)
+docker compose exec nestjs-api npx prisma db seed
+
+# 7. Verify health
+curl http://localhost:3000/_health
+
+# 8. Access the app
+#   Frontend: http://localhost:5173
+#   Backend:  http://localhost:3000/api/v1
+```
+
+### Local Development (Backend)
+
+```bash
+# Terminal 1: Run backend outside container
+cd backend
+npm install
+npx prisma generate
+npm run start:dev
+
+# Terminal 2: Run frontend in container (for DB/Redis)
+docker compose up -d postgres redis
+```
+
+### Local Development (Frontend)
+
+```bash
+cd frontend
+npm install
+npm run dev
+```
+
+### Environment Variables Checklist
+
+- [ ] `DATABASE_URL` — points to postgres container
+- [ ] `REDIS_URL` — points to redis container
+- [ ] `JWT_ACCESS_SECRET` — generate with `openssl rand -hex 32`
+- [ ] `CSRF_SECRET` — generate with `openssl rand -hex 32`
+- [ ] `PIN_PEPPER_SECRET` — generate with `openssl rand -hex 32`
+- [ ] `MIDTRANS_SERVER_KEY` — sandbox key from Midtrans dashboard
+- [ ] `MIDTRANS_CLIENT_KEY` — sandbox key from Midtrans dashboard
+- [ ] `BACKUP_ENCRYPTION_KEY` — generate with `openssl rand -hex 32` (production)
+
+### Common Setup Issues
+
+**Docker Desktop won't start (Windows):**
+```powershell
+# Enable WSL2 and restart
+wsl --set-default-version 2
+wsl --install
+# Restart Docker Desktop
+```
+
+**Port already in use:**
+```bash
+docker compose down
+netstat -ano | findstr :3000  # kill process if needed
+docker compose up -d
+```
+
+**Database migration fails:**
+```bash
+# Check if postgres is ready
+docker compose exec postgres pg_isready -U ngemiloh
+
+# Force reset (dev only — deletes data!)
+docker compose exec postgres psql -U ngemiloh -c "DROP DATABASE IF EXISTS ngemiloh_db;"
+docker compose exec postgres psql -U ngemiloh -c "CREATE DATABASE ngemiloh_db;"
+docker compose exec nestjs-api npx prisma migrate deploy
+```
+
+### Stopping the Stack
+
+```bash
+# Stop containers (data persists)
+docker compose stop
+
+# Stop and remove containers + volumes (deletes all data!)
+docker compose down -v
+```
 
 ---
 

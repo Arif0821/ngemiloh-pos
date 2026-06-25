@@ -6,6 +6,9 @@ Accepted
 ## Date
 2024-01-15
 
+## Last Updated
+2026-06-25
+
 ## Context
 We needed an ORM that:
 - Works well with TypeScript
@@ -15,7 +18,31 @@ We needed an ORM that:
 - Has good DX (developer experience)
 
 ## Decision
-Use Prisma ORM with PostgreSQL.
+Use Prisma ORM v5.22+ with PostgreSQL 17.
+
+## Implementation Details
+
+### Core Stack
+- **ORM:** Prisma v5.22+ (@prisma/client + prisma CLI)
+- **Database:** PostgreSQL 17 (Scram-SHA-256 auth)
+- **Schema:** Single `schema.prisma` with migrations tracked in `prisma/migrations/`
+- **Client:** Generated type-safe client via `prisma generate`
+
+### Schema Design
+```
+30+ models including:
+- Core: User, Shift, Order, OrderItem
+- Inventory: Product, Category, RawMaterial, StockMovement, BOM
+- Finance: ProfitShareLog, CashReconciliation, Opname
+- Members: Member, PointTransaction, TierHistory
+- Payment: PaymentTransaction
+- System: AuditLog, FeatureFlag, SysFlag
+```
+
+### Transaction Patterns
+- `prisma.$transaction()` for multi-table writes (e.g., order + stock deduction)
+- `SELECT ... FOR UPDATE` (via `$queryRaw`) for idempotent state transitions
+- Isolation level `READ COMMITTED` default; `REPEATABLE READ` for financial reports
 
 ## Alternatives Considered
 
@@ -33,7 +60,8 @@ Use Prisma ORM with PostgreSQL.
 
 ## Consequences
 - Excellent type safety with generated types
-- Easy migrations with Prisma Migrate
+- Easy migrations with `prisma migrate deploy`
 - Prisma Studio for database visualization
 - Good performance for our use case
 - Generated client provides full autocomplete
+- Transaction support for financial data integrity
