@@ -77,8 +77,8 @@
 				}
 				is_superadmin = true;
 				admin_name = user.name || 'Admin';
-				// Init silent refresh for superadmin
-				auth_store.init_silent_refresh('superadmin');
+				// Get actual role from verified user
+				auth_store.init_silent_refresh(user.role);
 			})
 			.catch(() => {
 				// Jika offline, percayakan localStorage sementara

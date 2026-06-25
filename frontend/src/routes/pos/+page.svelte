@@ -77,14 +77,15 @@
 		// Verify auth and init silent refresh
 		api
 			.get('/auth/me')
-			.then((res) => {
+			.then(async (res) => {
 				if (!res.ok) {
 					localStorage.removeItem('user');
 					goto('/login');
 					return;
 				}
-				// Init silent refresh for kasir
-				auth_store.init_silent_refresh('kasir');
+				// Get actual role from verified user
+				const user = JSON.parse(localStorage.getItem('user') || '{}');
+				auth_store.init_silent_refresh(user.role || 'kasir');
 			})
 			.catch(() => {
 				// Jika offline, percayakan localStorage sementara

@@ -36,6 +36,27 @@ function get_token_from_cookie(name: string): string | null {
 // ============================================
 // AUTH STORE - Centralized Silent Refresh
 // ============================================
+/**
+ * AuthStore - Manages JWT token lifecycle with silent refresh.
+ *
+ * Provides automatic token refresh before expiry to maintain continuous
+ * authentication without user intervention. Supports both kasir (cashier)
+ * and superadmin roles with role-specific token cookie handling.
+ *
+ * Usage:
+ *   auth_store.init_silent_refresh('kasir');  // After login verification
+ *   auth_store.clear_refresh_timer();         // On logout or component unmount
+ *
+ * @example
+ * ```typescript
+ * // After successful auth verification
+ * const user = JSON.parse(localStorage.getItem('user') || '{}');
+ * auth_store.init_silent_refresh(user.role);
+ *
+ * // On logout
+ * auth_store.clear_refresh_timer();
+ * ```
+ */
 class AuthStore {
 	// State
 	private token_expiry: Date | null = $state(null);
