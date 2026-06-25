@@ -423,7 +423,11 @@ describe('auth_store', () => {
 				configurable: true
 			});
 
-			mock_fetch.mockResolvedValueOnce(new Response('{}', { status: 200 }));
+			// First mock: initial refresh call
+			// Second mock: recursive init_silent_refresh call after successful refresh
+			mock_fetch
+				.mockResolvedValueOnce(new Response('{}', { status: 200 }))
+				.mockResolvedValueOnce(new Response('{}', { status: 200 }));
 
 			store.init_silent_refresh('kasir');
 
@@ -613,6 +617,12 @@ describe('auth_store', () => {
 				value: `access_token=${token}`,
 				configurable: true
 			});
+
+			// Token triggers immediate refresh (30 min < 60 min refresh window)
+			// First mock: initial refresh, Second mock: recursive init_silent_refresh
+			mock_fetch
+				.mockResolvedValueOnce(new Response('{}', { status: 200 }))
+				.mockResolvedValueOnce(new Response('{}', { status: 200 }));
 
 			store.init_silent_refresh('kasir');
 
