@@ -14,28 +14,30 @@ metadata:
 
 ## Summary Table
 
-| # | Issue | Severity | Opsi | Deskripsi Opsi |
-|---|-------|----------|------|----------------|
-| 1 | QRIS Expiry Never Enforced | **CRITICAL** | OPSI B | Cron job untuk void expired QRIS orders |
-| 2 | JWT 365 Days for Kasir | HIGH | OPSI B | 365d → 8h atau silent refresh |
-| 3 | Void Refund Hardcoded | HIGH | OPSI A | 4-eyes approval untuk fraud prevention |
-| 4 | No Offline Order Receipt | MEDIUM | OPSI A | Generate receipt saat offline |
-| 5 | Double-Charge Possible | HIGH | OPSI A | Prevent double-charge |
-| 6 | Member Registration Unrate-Limited | HIGH | OPSI A | Prevent scraping |
-| 7 | Redis SPOF | MEDIUM | OPSI B | Fallback saat Redis down |
-| 8 | BOM Cost Per Unit = 0 | **CRITICAL** | OPSI A | Manual input cost per bahan baku |
-| 9 | Profit Share Uses Created_At | MEDIUM | OPSI A | Filter by shift_start/shift_end |
-| 10 | No Backup Configured | **CRITICAL** | OPSI B | Cron backup setiap jam 2 pagi |
-| 11 | Docker Desktop Bind Mount Trap | HIGH | OPSI C | Named volume (data safety) |
-| 12 | Stock Double-Deduction Race | MEDIUM | OPSI A | Advisory lock untuk race condition |
-| 13 | Multi-Instance Shift Auto-Close Race | MEDIUM | OPSI A | Lock check sebelum auto-close |
-| 14 | Shift Modal Cannot Be Dismissed | LOW | OPSI A | Escape hatch |
-| 15 | CSRF Protection Broken | HIGH | OPSI A | Double-submit cookie |
-| 16 | Admin Layout Grants Access When Offline | MEDIUM | OPSI A | Guard check saat offline |
-| 17 | Tier Downgrade Dead Code | LOW | OPSI A | Enable existing code |
-| 18 | Redis Starts Without Password | HIGH | OPSI B | Env check untuk password |
-| 19 | 512MB NestJS Limit + OOM Crash Loop | MEDIUM | OPSI B | Graceful restart |
-| 20 | Webhook Errors Swallowed Silently | MEDIUM | OPSI A | Dead letter queue |
+| # | Issue | Severity | Opsi | Status |
+|---|-------|----------|------|--------|
+| 1 | QRIS Expiry Never Enforced | **CRITICAL** | OPSI B | ✅ Done |
+| 2 | JWT 365 Days for Kasir | HIGH | OPSI B | ❌ |
+| 3 | Void Refund Hardcoded | HIGH | OPSI A | ❌ |
+| 4 | No Offline Order Receipt | MEDIUM | OPSI A | ❌ |
+| 5 | Double-Charge Possible | HIGH | OPSI A | ❌ |
+| 6 | Member Registration Unrate-Limited | HIGH | OPSI A | ❌ |
+| 7 | Redis SPOF | MEDIUM | OPSI B | ❌ |
+| 8 | BOM Cost Per Unit = 0 | **CRITICAL** | OPSI A | ❌ |
+| 9 | Profit Share Uses Created_At | MEDIUM | OPSI A | ❌ |
+| 10 | No Backup Configured | **CRITICAL** | OPSI B | ❌ |
+| 11 | Docker Desktop Bind Mount Trap | HIGH | OPSI C | ❌ |
+| 12 | Stock Double-Deduction Race | MEDIUM | OPSI A | ❌ |
+| 13 | Multi-Instance Shift Auto-Close Race | MEDIUM | OPSI A | ❌ |
+| 14 | Shift Modal Cannot Be Dismissed | LOW | OPSI A | ❌ |
+| 15 | CSRF Protection Broken | HIGH | OPSI A | ❌ |
+| 16 | Admin Layout Grants Access When Offline | MEDIUM | OPSI A | ❌ |
+| 17 | Tier Downgrade Dead Code | LOW | OPSI A | ❌ |
+| 18 | Redis Starts Without Password | HIGH | OPSI B | ❌ |
+| 19 | 512MB NestJS Limit + OOM Crash Loop | MEDIUM | OPSI B | ❌ |
+| 20 | Webhook Errors Swallowed Silently | MEDIUM | OPSI A | ❌ |
+
+**Progress: 1/20 completed**
 
 ## Total Effort
 - OPSI A: 12 items (~1-2 hari masing-masing)
@@ -49,7 +51,7 @@ metadata:
 ```
 DAY 1-2: MUST-DO (Critical Business Impact)
 ├── #10 Backup System           → OPSI B (4 jam)
-├── #1 QRIS Expiry Fix         → OPSI B (2-3 hari)
+├── #1 QRIS Expiry Fix         → OPSI B (2-3 hari) ✅ DONE
 ├── #6 Member Rate Limit       → OPSI A (1 jam)
 └── #8 BOM Cost Input          → OPSI A (Manual input)
 
