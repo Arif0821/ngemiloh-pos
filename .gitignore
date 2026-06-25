@@ -33,10 +33,7 @@ ngemiloh-key.pem
 *.log
 *.tmp
 
-# ── Agent Skills (keep as regular directory, not submodule) ──
-agent-skills/
-
-# ── Review & Documentation (local reference only) ──
+# ── Review & Documentation
 full_review_ngemiloh_pos.md
 
 # ── Development/Utility Files (tidak perlu di repo) ──

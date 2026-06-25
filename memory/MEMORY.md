@@ -20,7 +20,3 @@
 ## Session Notes
 - [backend-debugging-findings](backend-debugging-findings.md) — Warning & debug results
 - [claude-code-roles-and-workflow](claude-code-roles-and-workflow.md) — 8 role + workflow
-
-## Skills
-- [always-use-agent-skills](always-use-agent-skills.md) — Gunakan skills untuk setiap tugas
-- [reference-skill-mapping-comprehensive](reference-skill-mapping-comprehensive.md) — Skills reference
