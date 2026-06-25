@@ -28,15 +28,22 @@ PRD v2/
 ├── archive/                 ← Archived content from v8.0
 │   └── ARCHIVE_INDEX.md
 └── docs/
-    └── decisions/           ← Architectural Decision Records (5 ADRs)
-        ├── 0001-use-nestjs.md
-        ├── 0002-use-prisma-orm.md
-        ├── 0003-authentication-strategy.md
-        ├── 0004-offline-first-architecture.md
-        └── 0005-use-sveltekit.md
+    ├── api/                   ← API documentation by domain
+    │   ├── auth.md
+    │   ├── orders.md
+    │   ├── products.md        ← Product management API
+    │   ├── members.md         ← Member loyalty API
+    │   ├── inventory.md       ← Inventory & BOM API
+    │   └── finance.md         ← Finance & reporting API
     └── guides/
         ├── RUNBOOK.md           ← Operations guide
-        └── BACKUP.md           ← Backup & restore guide
+        ├── BACKUP.md           ← Backup & restore guide
+        ├── GO_LIVE.md          ← Launch procedures
+        ├── FEATURE_FLAGS.md    ← Flag configuration
+        ├── INCIDENT_RESPONSE.md ← Incident playbook
+        ├── TESTING_FRONTEND.md  ← Frontend testing guide
+        ├── PAYMENT_TESTING.md   ← Payment verification
+        └── SECRETS_MANAGEMENT.md ← Secrets handling
 ```
 
 ---
@@ -91,6 +98,32 @@ PRD v2/
 | Security issues | [PRD_STATUS.md](./PRD_STATUS.md) | Section 2 |
 | Authentication | [PRD_API_CONTRACT.md](./PRD_API_CONTRACT.md) | Section 3 |
 | Rate limits | [PRD_API_CONTRACT.md](./PRD_API_CONTRACT.md) | Section 15 |
+
+---
+
+## 📖 Additional Documentation
+
+### API Documentation (by domain)
+
+| Domain | Documentation |
+|--------|---------------|
+| Authentication | [docs/api/auth.md](../docs/api/auth.md) |
+| Orders | [docs/api/orders.md](../docs/api/orders.md) |
+| Products | [docs/api/products.md](../docs/api/products.md) |
+| Members | [docs/api/members.md](../docs/api/members.md) |
+| Inventory | [docs/api/inventory.md](../docs/api/inventory.md) |
+| Finance | [docs/api/finance.md](../docs/api/finance.md) |
+
+### Operations Guides
+
+| Guide | Description |
+|-------|-------------|
+| [Go-Live](../docs/guides/GO_LIVE.md) | Launch procedures & pre-flight checklist |
+| [Feature Flags](../docs/guides/FEATURE_FLAGS.md) | Feature flag configuration & management |
+| [Incident Response](../docs/guides/INCIDENT_RESPONSE.md) | Incident playbook & escalation |
+| [Testing Frontend](../docs/guides/TESTING_FRONTEND.md) | Frontend testing strategy |
+| [Payment Testing](../docs/guides/PAYMENT_TESTING.md) | Payment verification procedures |
+| [Secrets Management](../docs/guides/SECRETS_MANAGEMENT.md) | Secrets handling in Docker |
 
 ---
 
@@ -207,11 +240,16 @@ If you're updating references from old PRD:
 
 | Document | Lines | Focus |
 |----------|-------|-------|
-| `PRD_MASTER_INDEX.md` | ~150 | This file - Navigation |
+| `PRD_MASTER_INDEX.md` | ~220 | This file - Navigation |
 | `PRD_SPEC.md` | ~400 | What to build |
 | `PRD_STATUS.md` | ~300 | Progress tracking |
 | `PRD_API_CONTRACT.md` | ~600 | How to integrate |
-| **Total Modular** | **~1,450** | Compared to 1,500+ monolithic |
+| `PRD_RED_TEAM.md` | ~200 | Security findings |
+| **Total Modular PRD** | **~1,720** | Compared to 1,500+ monolithic |
+| **API Docs** | ~400 | 6 domain files |
+| **Guides** | ~500 | 8 operational guides |
+| **ADRs** | ~300 | 5 decision records |
+| **Total All Docs** | **~2,920** | Full documentation suite |
 
 **Benefits:**
 - Each doc fits in one review session
@@ -222,4 +260,4 @@ If you're updating references from old PRD:
 ---
 
 *This is the master index for NGEMILOH POS v8.1 modular documentation*
-*Last Updated: 2026-06-25*
+*Last Updated: 2026-06-26*
