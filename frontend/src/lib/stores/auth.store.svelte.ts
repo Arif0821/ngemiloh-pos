@@ -27,7 +27,9 @@ function decode_jwt(token: string): { exp: number; sub?: string; role?: string }
 // ============================================
 function get_token_from_cookie(name: string): string | null {
 	if (typeof document === 'undefined') return null;
-	const match = document.cookie.match(new RegExp('(?:^|; )' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)'));
+	const match = document.cookie.match(
+		new RegExp('(?:^|; )' + name.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + '=([^;]*)')
+	);
 	return match ? decodeURIComponent(match[1]) : null;
 }
 
@@ -110,9 +112,9 @@ class AuthStore {
 			const response = await fetch('/api/v1/auth/refresh', {
 				method: 'POST',
 				headers: {
-					'Content-Type': 'application/json',
+					'Content-Type': 'application/json'
 				},
-				credentials: 'include', // Include cookies
+				credentials: 'include' // Include cookies
 			});
 
 			if (response.ok) {
@@ -145,18 +147,26 @@ class AuthStore {
 	// Retry logic: max 3 attempts, 60s interval
 	// ============================================
 	private schedule_retry(role: string): void {
+		// Preserve retry_count across retries - only clear the timer
+		if (this.refresh_timeout) {
+			clearTimeout(this.refresh_timeout);
+			this.refresh_timeout = null;
+		}
+
+		// Increment attempt counter
+		this.retry_count++;
+
+		// Check if max retries exceeded (>= so 3rd failure triggers logout)
 		if (this.retry_count >= this.max_retries) {
 			console.error('[AuthStore] Max retries reached, forcing logout');
+			this.retry_count = 0; // Reset for next session
 			this.force_logout(role);
 			return;
 		}
 
-		// Clear any existing timer BEFORE incrementing retry count
-		this.clear_refresh_timer();
-
-		// Increment AFTER clearing so retry_count persists across retries
-		this.retry_count++;
-		console.log(`[AuthStore] Scheduling retry ${this.retry_count}/${this.max_retries} in ${this.retry_delay_ms / 1000}s`);
+		console.log(
+			`[AuthStore] Scheduling retry ${this.retry_count}/${this.max_retries} in ${this.retry_delay_ms / 1000}s`
+		);
 
 		this.refresh_timeout = setTimeout(() => {
 			this.refresh_token(role);
@@ -181,7 +191,7 @@ class AuthStore {
 		try {
 			await fetch('/api/v1/auth/logout', {
 				method: 'POST',
-				credentials: 'include',
+				credentials: 'include'
 			});
 		} catch {
 			// Ignore errors, we're logging out anyway
