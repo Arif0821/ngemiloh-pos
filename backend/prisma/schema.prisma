@@ -91,6 +91,8 @@ model User {
 
   profit_share_details ProfitShareDetail[]
   user_outlets         UserOutlet[]
+  void_approval_requests VoidApprovalRequest[] @relation("VoidApprovalRequester")
+  void_approval_approved VoidApprovalRequest[] @relation("VoidApprovalApprover")
 
   @@index([role])
 }
@@ -111,6 +113,7 @@ model Product {
   name            String   @db.VarChar(100)
   category_id     String   @db.Uuid
   base_price      Decimal  @db.Decimal(12, 2)
+  cost_per_unit   Decimal  @default(0) @db.Decimal(12, 2)  // #8: Manual cost input for BOM reporting
   image_url       String?  @db.VarChar(255)
   is_active       Boolean  @default(true)
   is_out_of_stock Boolean  @default(false)
@@ -220,6 +223,7 @@ model Order {
   refunds         OrderRefund[]
   stock_movements StockMovement[]
   member_transactions MemberTransaction[]
+  void_approval_request VoidApprovalRequest?
 
   // PERFORMANCE: Composite index for shift summary queries (cashier + status + date)
   @@index([cashier_id, status, created_at(sort: Desc)])
@@ -571,6 +575,17 @@ model IpLockout {
   @@index([updated_at])
 }
 
+// FIX #7: JWT Blocklist Fallback - Database fallback for when Redis is unavailable
+model RevokedToken {
+  id          String   @id @db.VarChar(64) // JTI (JWT ID)
+  expires_at  DateTime @db.Timestamptz       // Token expiry time for auto-cleanup
+  revoked_at  DateTime @default(now()) @db.Timestamptz
+  reason     String   @default("logout") @db.VarChar(50)
+
+  @@index([expires_at]) // For TTL cleanup
+  @@index([id])        // For fast lookups
+}
+
 model SystemLog {
   id         BigInt   @id @default(autoincrement())
   level      String   @db.VarChar(10)
@@ -649,5 +664,49 @@ model MemberTransaction {
   @@index([member_id])
   @@index([order_id])
   @@index([type])
+  @@index([created_at(sort: Desc)])
+}
+
+// --- PHASE 2b: FRAUD PREVENTION ---
+
+// #3: Void 4-Eyes Approval - Pending void requests before execution
+model VoidApprovalRequest {
+  id          String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  order_id    String    @unique @db.Uuid  // One approval request per order
+  requested_by String   @db.Uuid  // Kasir who requested the void
+  reason      String    @db.Text
+  status      String    @default("pending") @db.VarChar(20)  // pending, approved, rejected
+  approved_by String?   @db.Uuid  // Admin who approved/rejected
+  resolved_at DateTime? @db.Timestamptz
+  notes       String?   @db.Text
+  created_at  DateTime  @default(now()) @db.Timestamptz
+
+  order   Order @relation(fields: [order_id], references: [id])
+  requester User @relation("VoidApprovalRequester", fields: [requested_by], references: [id])
+  approver User? @relation("VoidApprovalApprover", fields: [approved_by], references: [id])
+
+  @@index([status])
+  @@index([requested_by])
+  @@index([created_at(sort: Desc)])
+}
+
+// #20: Webhook Dead Letter Queue - Failed webhook payloads for manual retry
+model WebhookDLQ {
+  id              String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  provider       String    @db.VarChar(50)  // e.g., 'midtrans'
+  event_type     String    @db.VarChar(50)  // e.g., 'payment.settlement'
+  payload        Json     @db.JsonB
+  error_message  String?   @db.Text
+  attempt_count  Int       @default(0)
+  max_attempts   Int       @default(3)
+  status         String    @default("pending") @db.VarChar(20)  // pending, retrying, failed, resolved
+  resolved_by    String?   @db.Uuid
+  resolved_at    DateTime? @db.Timestamptz
+  resolution     String?   @db.VarChar(50)  // manual_retry, acknowledged, escalated
+  created_at     DateTime  @default(now()) @db.Timestamptz
+  last_attempt_at DateTime? @db.Timestamptz
+
+  @@index([status])
+  @@index([provider, event_type])
   @@index([created_at(sort: Desc)])
 }

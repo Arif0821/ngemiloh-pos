@@ -25,4 +25,9 @@ export interface AuthRepositoryInterface {
   ): Promise<AuditLog>;
 
   updateUserPin(userId: string, pinHash: string): Promise<void>;
+
+  // FIX #7: JWT Blocklist Fallback - Database methods for revoked tokens
+  isTokenRevoked(jti: string): Promise<boolean>;
+  revokeToken(jti: string, expiresAt: Date, reason?: string): Promise<void>;
+  cleanupExpiredTokens(): Promise<number>;
 }

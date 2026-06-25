@@ -6,6 +6,7 @@
   },
   "hooks": {},
   "enabledPlugins": {
-    "chrome-devtools-mcp@chrome-devtools-plugins": true
+    "chrome-devtools-mcp@chrome-devtools-plugins": true,
+    "agent-skills@addy-agent-skills": true
   }
 }

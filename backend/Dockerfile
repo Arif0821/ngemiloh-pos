@@ -43,6 +43,10 @@ RUN apk add --no-cache \
     openssl \
     && rm -rf /var/cache/apk/*
 
+# Memory limit untuk OOM prevention
+# Set below container limit (512MB) to allow headroom for non-heap memory
+ENV NODE_OPTIONS="--max-old-space-size=400"
+
 # Health check using node built-in (no external dependencies needed)
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD node -e "const http=require('http');http.get('http://localhost:3000/health',(r)=>process.exit(r.statusCode===200?0:1)).on('error',()=>process.exit(1))"

@@ -961,15 +961,36 @@ export class OrdersService {
 
       return { status: 'success' };
     } catch (e) {
-      this.logger.error('Error processing midtrans webhook', e);
+      const errorMessage = e instanceof Error ? e.message : 'Unknown error';
+      this.logger.error('Error processing midtrans webhook', errorMessage);
+
       // Re-throw NotFoundException so tests can catch it
       if (e instanceof NotFoundException) {
         throw e;
       }
+
+      // #20: Add failed webhook to DLQ for manual processing
+      try {
+        await this.prisma.webhookDLQ.create({
+          data: {
+            provider: 'midtrans',
+            event_type:
+              (notification.transaction_status as string) || 'unknown',
+            payload: JSON.parse(JSON.stringify(notification)),
+            error_message: errorMessage,
+            max_attempts: 3,
+            status: 'pending',
+          },
+        });
+        this.logger.warn(`Webhook added to DLQ for manual processing`);
+      } catch (dlqError) {
+        this.logger.error('Failed to add webhook to DLQ:', dlqError);
+      }
+
       // Return IGNORED for other errors to prevent Midtrans retries
       return {
         status: 'IGNORED',
-        error: e instanceof Error ? e.message : 'Unknown error',
+        error: errorMessage,
       };
     }
   }
@@ -1079,14 +1100,26 @@ export class OrdersService {
     });
   }
 
-  async voidOrder(orderId: string, reason: string, adminId: string) {
-    // SECURITY: Prevent type confusion attack - ensure reason is a string, not an array
+  /**
+   * #3 VOID 4-EYES: Request void approval (kasir)
+   * When FEATURE_VOID_APPROVAL is enabled, kasir requests void instead of direct void
+   */
+  async requestVoidApproval(orderId: string, reason: string, kasirId: string) {
+    // Validate reason
     if (
       typeof reason !== 'string' ||
       !reason ||
       reason.length < VOID_REASON_MIN_LENGTH
     ) {
       throw new BadRequestException('Alasan void wajib minimal 10 karakter');
+    }
+
+    // Check feature flag
+    const featureFlag = await this.prisma.featureFlag.findUnique({
+      where: { name: 'FEATURE_VOID_APPROVAL' },
+    });
+    if (!featureFlag?.is_enabled) {
+      throw new BadRequestException('Fitur persetujuan void belum diaktifkan');
     }
 
     const order = await this.orderRepository.findOrderById(orderId);
@@ -1096,19 +1129,203 @@ export class OrdersService {
       throw new BadRequestException('Order sudah di-void');
     }
 
-    // FIX: Restore inventory stock BEFORE voiding the order
-    // This ensures stock is returned to inventory when order is voided
+    // Check if there's already a pending request for this order
+    const existingRequest = await this.prisma.voidApprovalRequest.findUnique({
+      where: { order_id: orderId },
+    });
+    if (existingRequest && existingRequest.status === 'pending') {
+      throw new BadRequestException(
+        'Request void untuk pesanan ini masih menunggu persetujuan',
+      );
+    }
+
+    // Create approval request
+    const approvalRequest = await this.prisma.voidApprovalRequest.create({
+      data: {
+        order_id: orderId,
+        requested_by: kasirId,
+        reason,
+        status: 'pending',
+      },
+    });
+
+    // Audit log
+    await this.orderRepository.createAuditLog({
+      actor_id: kasirId,
+      action: 'VOID_APPROVAL_REQUEST',
+      entity_type: 'Order',
+      entity_id: orderId,
+      new_value: {
+        approval_request_id: approvalRequest.id,
+        reason,
+      },
+    });
+
+    return {
+      success: true,
+      approval_request_id: approvalRequest.id,
+      status: 'pending',
+      message: 'Request void berhasil diajukan, menunggu persetujuan admin',
+    };
+  }
+
+  /**
+   * #3 VOID 4-EYES: Get pending void requests (admin)
+   */
+  async getPendingVoidRequests(page: number = 1, limit: number = 20) {
+    const skip = (page - 1) * limit;
+
+    const [requests, total] = await Promise.all([
+      this.prisma.voidApprovalRequest.findMany({
+        where: { status: 'pending' },
+        include: {
+          order: {
+            select: {
+              id: true,
+              order_number: true,
+              total_amount: true,
+              payment_method: true,
+              status: true,
+              created_at: true,
+              cashier: { select: { name: true, username: true } },
+            },
+          },
+          requester: { select: { name: true, username: true } },
+        },
+        orderBy: { created_at: 'desc' },
+        skip,
+        take: limit,
+      }),
+      this.prisma.voidApprovalRequest.count({ where: { status: 'pending' } }),
+    ]);
+
+    return {
+      requests,
+      total,
+      page,
+      limit,
+      total_pages: Math.ceil(total / limit),
+    };
+  }
+
+  /**
+   * #3 VOID 4-EYES: Approve void request (admin)
+   * After approval, execute the actual void
+   */
+  async approveVoidRequest(requestId: string, adminId: string, notes?: string) {
+    const request = await this.prisma.voidApprovalRequest.findUnique({
+      where: { id: requestId },
+      include: { order: true },
+    });
+
+    if (!request) {
+      throw new NotFoundException('Request tidak ditemukan');
+    }
+
+    if (request.status !== 'pending') {
+      throw new BadRequestException(`Request sudah ${request.status}`);
+    }
+
+    // Update request status
+    await this.prisma.voidApprovalRequest.update({
+      where: { id: requestId },
+      data: {
+        status: 'approved',
+        approved_by: adminId,
+        resolved_at: new Date(),
+        notes,
+      },
+    });
+
+    // Execute the actual void (reuse existing logic)
+    await this.executeVoid(request.order_id, request.reason, adminId);
+
+    // Audit log for approval
+    await this.orderRepository.createAuditLog({
+      actor_id: adminId,
+      action: 'VOID_APPROVED',
+      entity_type: 'VoidApprovalRequest',
+      entity_id: requestId,
+      old_value: { status: 'pending' },
+      new_value: {
+        status: 'approved',
+        order_id: request.order_id,
+        reason: request.reason,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Request void disetujui dan pesanan berhasil di-void',
+    };
+  }
+
+  /**
+   * #3 VOID 4-EYES: Reject void request (admin)
+   */
+  async rejectVoidRequest(requestId: string, adminId: string, reason: string) {
+    const request = await this.prisma.voidApprovalRequest.findUnique({
+      where: { id: requestId },
+    });
+
+    if (!request) {
+      throw new NotFoundException('Request tidak ditemukan');
+    }
+
+    if (request.status !== 'pending') {
+      throw new BadRequestException(`Request sudah ${request.status}`);
+    }
+
+    await this.prisma.voidApprovalRequest.update({
+      where: { id: requestId },
+      data: {
+        status: 'rejected',
+        approved_by: adminId,
+        resolved_at: new Date(),
+        notes: reason,
+      },
+    });
+
+    // Audit log
+    await this.orderRepository.createAuditLog({
+      actor_id: adminId,
+      action: 'VOID_REJECTED',
+      entity_type: 'VoidApprovalRequest',
+      entity_id: requestId,
+      old_value: { status: 'pending' },
+      new_value: {
+        status: 'rejected',
+        reason,
+      },
+    });
+
+    return {
+      success: true,
+      message: 'Request void ditolak',
+    };
+  }
+
+  /**
+   * Execute the actual void operation (internal)
+   */
+  private async executeVoid(orderId: string, reason: string, actorId: string) {
+    const order = await this.orderRepository.findOrderById(orderId);
+    if (!order) throw new NotFoundException('Order not found');
+
+    if (order.status === OrderStatus.voided) {
+      throw new BadRequestException('Order sudah di-void');
+    }
+
+    // Restore inventory stock BEFORE voiding
     await this.inventoryService.restoreStockForOrder(orderId).catch((err) => {
       this.logger.error(
         `Failed to restore stock for voided order ${orderId}: ${err instanceof Error ? err.message : 'Unknown error'}`,
       );
-      // Continue with void operation even if stock restoration fails
-      // The error is logged for manual review
     });
 
     await this.orderRepository.updateOrder(orderId, {
       status: OrderStatus.voided,
-      voided_by: adminId,
+      voided_by: actorId,
       voided_at: new Date(),
       void_reason: reason,
       payment_status: 'failed',
@@ -1118,19 +1335,11 @@ export class OrdersService {
       order_id: orderId,
       amount: order.total_amount,
       refund_method: 'manual_cash',
-      refunded_by: adminId,
+      refunded_by: actorId,
       notes: `Refund for voided order. Reason: ${reason}`,
     });
 
-    await this.orderRepository.createAuditLog({
-      actor_id: adminId,
-      action: 'ORDER_VOID',
-      entity_type: 'Order',
-      entity_id: orderId,
-      old_value: { status: order.status },
-      new_value: { status: 'voided', reason },
-    });
-
+    // Fraud detection - check recent voids
     const fraudWindowStart = new Date(Date.now() - VOID_FRAUD_WINDOW_MS);
     const recentVoids =
       await this.orderRepository.countRecentVoids(fraudWindowStart);
@@ -1146,8 +1355,33 @@ export class OrdersService {
           this.logger.error('Failed to send fraud alert:', msg);
         });
     }
+  }
 
-    return { success: true, message: 'Order voided successfully' };
+  async voidOrder(orderId: string, reason: string, adminId: string) {
+    // SECURITY: Prevent type confusion attack - ensure reason is a string, not an array
+    if (
+      typeof reason !== 'string' ||
+      !reason ||
+      reason.length < VOID_REASON_MIN_LENGTH
+    ) {
+      throw new BadRequestException('Alasan void wajib minimal 10 karakter');
+    }
+
+    // Check feature flag for 4-eyes approval
+    const featureFlag = await this.prisma.featureFlag.findUnique({
+      where: { name: 'FEATURE_VOID_APPROVAL' },
+    });
+
+    if (featureFlag?.is_enabled) {
+      // 4-eyes mode: create approval request instead of direct void
+      return this.requestVoidApproval(orderId, reason, adminId);
+    }
+
+    // Legacy mode: direct void (for backward compatibility when flag is off)
+    return this.executeVoid(orderId, reason, adminId).then(() => ({
+      success: true,
+      message: 'Order voided successfully',
+    }));
   }
 
   async flagTransaction(orderId: string, status: string, adminId: string) {

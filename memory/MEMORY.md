@@ -17,6 +17,7 @@
 - [qris-expiry-implementation](qris-expiry-implementation.md) — QRIS Expiry Enforcement details
 - [project-understanding-comprehensive](project-understanding-comprehensive.md) — Arsitektur lengkap
 
-## Session Notes
+## Project Updates
+- [claude-md-improved](claude-md-improved.md) — CLAUDE.md improved to 165 lines, merged patterns
 - [backend-debugging-findings](backend-debugging-findings.md) — Warning & debug results
 - [claude-code-roles-and-workflow](claude-code-roles-and-workflow.md) — 8 role + workflow

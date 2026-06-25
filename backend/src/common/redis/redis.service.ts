@@ -1,5 +1,6 @@
 import { Injectable, OnModuleDestroy, Logger } from '@nestjs/common';
 import Redis from 'ioredis';
+import { PrismaService } from '../../prisma/prisma.service';
 
 /**
  * In-memory fallback cache for when Redis is unavailable.
@@ -97,29 +98,85 @@ export class RedisService implements OnModuleDestroy {
   private reconnectAttempts = 0;
   private readonly maxReconnectAttempts = 5;
 
-  constructor() {
+  constructor(private readonly prisma: PrismaService) {
+    const redisPassword = process.env.REDIS_PASSWORD;
     const redisUrl = process.env.REDIS_URL;
-    if (redisUrl) {
+
+    // FIX #18: Require password if REDIS_PASSWORD is configured
+    if (redisPassword && redisPassword.trim() !== '') {
+      // Extract password from REDIS_URL if present, otherwise use REDIS_PASSWORD
+      if (redisUrl) {
+        try {
+          const url = new URL(redisUrl);
+          if (!url.password) {
+            // REDIS_PASSWORD set but REDIS_URL has no password - inject it
+            url.password = redisPassword;
+            const urlWithPassword = url.toString();
+            this.client = new Redis(urlWithPassword);
+          } else {
+            // REDIS_URL already has password - use as-is
+            this.client = new Redis(redisUrl);
+          }
+        } catch {
+          // Invalid URL format, construct manually with password
+          this.client = new Redis({
+            host: process.env.REDIS_HOST || 'localhost',
+            port: Number(process.env.REDIS_PORT) || 6379,
+            password: redisPassword,
+            retryStrategy: this.getRetryStrategy(),
+          });
+        }
+      } else {
+        // No REDIS_URL, use individual config with password
+        this.client = new Redis({
+          host: process.env.REDIS_HOST || 'localhost',
+          port: Number(process.env.REDIS_PORT) || 6379,
+          password: redisPassword,
+          retryStrategy: this.getRetryStrategy(),
+        });
+      }
+    } else if (redisUrl) {
+      // No password configured, use REDIS_URL as-is
       this.client = new Redis(redisUrl);
     } else {
+      // No URL, no password - use defaults (WARNING: insecure for production!)
+      if (process.env.NODE_ENV === 'production') {
+        this.logger.warn(
+          '⚠️ SECURITY WARNING: Redis connection without password in production! Set REDIS_PASSWORD env variable.',
+        );
+      }
       this.client = new Redis({
         host: process.env.REDIS_HOST || 'localhost',
         port: Number(process.env.REDIS_PORT) || 6379,
-        retryStrategy: (times) => {
-          if (times > this.maxReconnectAttempts) {
-            this.logger.warn(
-              `Redis reconnection failed after ${times} attempts, using in-memory fallback`,
-            );
-            this.isRedisAvailable = false;
-            return null; // Stop retrying
-          }
-          this.reconnectAttempts = times;
-          return Math.min(times * 100, 3000);
-        },
+        retryStrategy: this.getRetryStrategy(),
       });
     }
 
+    this.setupEventHandlers();
+  }
+
+  private getRetryStrategy(): (times: number) => number | null {
+    return (times: number) => {
+      if (times > this.maxReconnectAttempts) {
+        this.logger.warn(
+          `Redis reconnection failed after ${times} attempts, using in-memory fallback`,
+        );
+        this.isRedisAvailable = false;
+        return null; // Stop retrying
+      }
+      this.reconnectAttempts = times;
+      return Math.min(times * 100, 3000);
+    };
+  }
+
+  private setupEventHandlers(): void {
     this.client.on('error', (err) => {
+      // Check for authentication errors
+      if (err.message.includes('NOAUTH') || err.message.includes('AUTH')) {
+        this.logger.error(
+          '🔒 Redis AUTH FAILED: Invalid or missing password. Set REDIS_PASSWORD environment variable.',
+        );
+      }
       if (this.isRedisAvailable) {
         this.logger.error('Redis connection error:', err.message);
         this.isRedisAvailable = false;
@@ -218,32 +275,89 @@ export class RedisService implements OnModuleDestroy {
   }
 
   /**
+   * FIX #7: JWT Blocklist with Database Fallback
+   *
    * Check if a JWT token JTI is in the blocklist.
-   * Returns true if the token has been revoked/logged out.
+   * 1. First checks Redis (fast path)
+   * 2. Falls back to PostgreSQL if Redis unavailable
+   *
+   * This ensures revoked tokens remain blocked even when Redis is down.
    */
   async isJwtBlocked(jti: string): Promise<boolean> {
-    return this.useFallback(
-      async () => {
+    // Fast path: check Redis first if available
+    if (this.isAvailable()) {
+      try {
         const key = `jwt:blocklist:${jti}`;
         const result = await this.client.exists(key);
-        return result === 1;
-      },
-      false,
-      'isJwtBlocked',
-    );
+        if (result === 1) return true;
+        // Also check database as source of truth (for tokens revoked while Redis was down)
+        const dbBlocked = await this.prisma.revokedToken.findUnique({
+          where: { id: jti },
+        });
+        return dbBlocked !== null;
+      } catch (err) {
+        this.logger.error('Redis isJwtBlocked error:', err);
+        // Fall through to database fallback
+      }
+    }
+
+    // Database fallback: check PostgreSQL for revoked token
+    try {
+      const dbBlocked = await this.prisma.revokedToken.findUnique({
+        where: { id: jti },
+      });
+      return dbBlocked !== null;
+    } catch (err) {
+      this.logger.error('Database isJwtBlocked error:', err);
+      // Last resort: assume not blocked (fail-open for availability)
+      return false;
+    }
   }
 
   /**
+   * FIX #7: JWT Blocklist with Database Fallback
+   *
    * Add a JWT token JTI to the blocklist.
+   * 1. Stores in Redis if available (fast path)
+   * 2. Always stores in PostgreSQL (source of truth)
+   *
+   * This ensures tokens remain blocked even when Redis fails.
    */
   async blockJwt(jti: string, ttlSeconds: number): Promise<void> {
-    return this.useFallback(
-      async () => {
+    const expiresAt = new Date(Date.now() + ttlSeconds * 1000);
+
+    // Always store in database as source of truth (for durability)
+    try {
+      await this.prisma.revokedToken.upsert({
+        where: { id: jti },
+        update: { reason: 'logout' },
+        create: {
+          id: jti,
+          expires_at: expiresAt,
+          reason: 'logout',
+        },
+      });
+    } catch (err) {
+      this.logger.error('Database blockJwt error:', err);
+      // Continue to Redis attempt
+    }
+
+    // Also store in Redis if available (for speed)
+    if (this.isAvailable()) {
+      try {
         const key = `jwt:blocklist:${jti}`;
         await this.client.setex(key, ttlSeconds, '1');
-      },
-      undefined,
-      'blockJwt',
+        return;
+      } catch (err) {
+        this.logger.error('Redis blockJwt error:', err);
+        // Database already has it, so it's safe
+        return;
+      }
+    }
+
+    // Redis unavailable but database has the blocklist entry
+    this.logger.warn(
+      `Redis unavailable, JWT blocklist stored in database only for JTI: ${jti}`,
     );
   }
 
@@ -346,6 +460,24 @@ export class RedisService implements OnModuleDestroy {
     } catch (err) {
       this.logger.error('Redis recordRateLimit error:', err);
       this.memoryCache.incrementRateLimit(key, ttlSeconds);
+    }
+  }
+
+  /**
+   * FIX #7: Cleanup expired tokens from database
+   * Should be called periodically (e.g., via cron job)
+   */
+  async cleanupExpiredTokens(): Promise<number> {
+    try {
+      const result = await this.prisma.revokedToken.deleteMany({
+        where: {
+          expires_at: { lt: new Date() },
+        },
+      });
+      return result.count;
+    } catch (err) {
+      this.logger.error('Database cleanupExpiredTokens error:', err);
+      return 0;
     }
   }
 

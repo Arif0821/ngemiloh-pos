@@ -317,6 +317,86 @@ export class OrdersController {
     return { success: true, data: order };
   }
 
+  // #3 VOID 4-EYES: Endpoints for void approval workflow
+  @Get('admin/void-requests')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.superadmin)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Get pending void approval requests' })
+  @ApiQuery({
+    name: 'page',
+    required: false,
+    type: String,
+    description: 'Page number',
+  })
+  @ApiQuery({
+    name: 'limit',
+    required: false,
+    type: String,
+    description: 'Items per page',
+  })
+  @ApiResponse({ status: 200, description: 'Pending requests retrieved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - superadmin only' })
+  async getVoidRequests(
+    @Query('page') page: string = '1',
+    @Query('limit') limit: string = '20',
+  ) {
+    const pageNum = Math.max(1, parseInt(page, 10) || 1);
+    const limitNum = Math.min(100, Math.max(1, parseInt(limit, 10) || 20));
+    const result = await this.ordersService.getPendingVoidRequests(
+      pageNum,
+      limitNum,
+    );
+    return { success: true, data: result };
+  }
+
+  @Post('admin/void-requests/:id/approve')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.superadmin)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Approve a void request' })
+  @ApiParam({ name: 'id', description: 'Request UUID' })
+  @ApiResponse({ status: 200, description: 'Request approved' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - superadmin only' })
+  @ApiResponse({ status: 404, description: 'Request not found' })
+  async approveVoidRequest(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body('notes') notes: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const result = await this.ordersService.approveVoidRequest(
+      id,
+      req.user.id,
+      notes,
+    );
+    return { success: true, data: result };
+  }
+
+  @Post('admin/void-requests/:id/reject')
+  @UseGuards(JwtAuthGuard, RolesGuard)
+  @Roles(Role.superadmin)
+  @ApiBearerAuth()
+  @ApiOperation({ summary: 'Reject a void request' })
+  @ApiParam({ name: 'id', description: 'Request UUID' })
+  @ApiResponse({ status: 200, description: 'Request rejected' })
+  @ApiResponse({ status: 401, description: 'Unauthorized' })
+  @ApiResponse({ status: 403, description: 'Forbidden - superadmin only' })
+  @ApiResponse({ status: 404, description: 'Request not found' })
+  async rejectVoidRequest(
+    @Param('id', new ParseUUIDPipe()) id: string,
+    @Body('reason') reason: string,
+    @Req() req: AuthenticatedRequest,
+  ) {
+    const result = await this.ordersService.rejectVoidRequest(
+      id,
+      req.user.id,
+      reason,
+    );
+    return { success: true, data: result };
+  }
+
   @Patch('admin/transactions/:id/flag')
   @UseGuards(JwtAuthGuard)
   @ApiBearerAuth()

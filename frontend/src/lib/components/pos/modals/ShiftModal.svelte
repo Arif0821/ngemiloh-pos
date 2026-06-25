@@ -8,6 +8,9 @@
 
 	let { mode }: Props = $props();
 
+	// Track if user dismissed the open shift modal
+	let dismissed = $state(false);
+
 	// Focus trap action for modals
 	function focus_trap(node: HTMLElement) {
 		const focusable_elements = node.querySelectorAll<HTMLElement>(
@@ -27,8 +30,14 @@
 				}
 			}
 			if (e.key === 'Escape') {
-				const close_button = node.querySelector<HTMLElement>('[data-modal-close]');
-				close_button?.click();
+				if (mode === 'close') {
+					// Close mode: ESC closes the modal
+					const close_button = node.querySelector<HTMLElement>('[data-modal-close]');
+					close_button?.click();
+				} else {
+					// Open mode: ESC toggles dismiss state
+					dismissed = !dismissed;
+				}
 			}
 		}
 
@@ -40,6 +49,13 @@
 				node.removeEventListener('keydown', handle_keydown);
 			}
 		};
+	}
+
+	// Handle backdrop click - only for open mode
+	function handle_backdrop_click(e: MouseEvent) {
+		if (mode === 'open' && e.target === e.currentTarget) {
+			dismissed = !dismissed;
+		}
 	}
 
 	// Handle form submission based on mode
@@ -60,15 +76,45 @@
 			pos_store.show_close_shift_modal = false;
 		}
 	}
+
+	// Re-open the modal from dismissed state
+	function re_open_modal() {
+		dismissed = false;
+	}
 </script>
 
-{#if mode === 'open'}
+{#if mode === 'open' && dismissed}
+	<!-- Dismissed state: Show read-only POS with banner -->
+	<div class="fixed inset-0 z-40 flex items-center justify-center bg-linear-to-b from-slate-900 to-slate-800 p-4">
+		<div class="text-center">
+			<div class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/20">
+				<svg class="h-8 w-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+				</svg>
+			</div>
+			<h2 class="mb-2 text-xl font-bold text-white">Shift Belum Dibuka</h2>
+			<p class="mb-6 text-slate-400">
+				Anda bisa melanjutkan browsing produk, tapi transaksi tidak tersedia
+			</p>
+			<button
+				type="button"
+				onclick={re_open_modal}
+				class="rounded-xl bg-amber-500 px-8 py-3 font-bold text-white shadow-lg shadow-amber-500/30 hover:bg-amber-600"
+			>
+				Buka Shift Sekarang
+			</button>
+		</div>
+	</div>
+{:else if mode === 'open'}
 	<!-- Open Shift Modal -->
 	<div
 		class="fixed inset-0 z-40 flex items-center justify-center bg-slate-900/50 p-4 backdrop-blur-sm"
 		role="dialog"
 		aria-modal="true"
 		aria-labelledby="open-shift-title"
+		onclick={handle_backdrop_click}
+		onkeydown={(e) => e.key === 'Escape' && (dismissed = !dismissed)}
+		tabindex="-1"
 	>
 		<div
 			class="dark:bg-surface-800 animate-in fade-in zoom-in w-full max-w-md overflow-hidden rounded-2xl bg-white shadow-xl duration-200"
@@ -104,12 +150,21 @@
 						/>
 					</div>
 				</div>
-				<button
-					type="submit"
-					class="mt-6 w-full rounded-xl bg-amber-500 py-3 font-bold text-white shadow-lg shadow-amber-500/30 hover:bg-amber-600"
-				>
-					Buka Laci & Mulai Shift
-				</button>
+				<div class="mt-6 flex flex-col gap-3 sm:flex-row">
+					<button
+						type="button"
+						onclick={() => dismissed = true}
+						class="flex-1 rounded-xl border border-slate-200 py-3 font-bold text-slate-600 hover:bg-slate-50 dark:border-surface-600 dark:text-slate-400 dark:hover:bg-surface-800 sm:flex-none"
+					>
+						Nanti Saja
+					</button>
+					<button
+						type="submit"
+						class="flex-1 rounded-xl bg-amber-500 py-3 font-bold text-white shadow-lg shadow-amber-500/30 hover:bg-amber-600 sm:flex-2"
+					>
+						Buka Laci & Mulai Shift
+					</button>
+				</div>
 			</form>
 		</div>
 	</div>

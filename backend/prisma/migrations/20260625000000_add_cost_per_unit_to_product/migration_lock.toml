@@ -1,0 +1,4 @@
+# Please don't edit this file manually
+# it should be added in alphabetical order by your migration system
+
+provider = "postgresql"

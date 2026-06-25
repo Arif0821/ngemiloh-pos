@@ -175,9 +175,39 @@ export class FinanceService {
     const start = new Date(year, month - 1, 1);
     const end = new Date(year, month, 0, 23, 59, 59, 999);
 
-    const orders = await this.financeRepository.findOrders({
-      created_at: { gte: start, lte: end },
-      status: { not: 'voided' },
+    // #9 FIX: Filter by SHIFT DATES instead of created_at
+    // Find all shifts that started during the period
+    const shifts = await this.prisma.cashRegister.findMany({
+      where: {
+        shift_start: { gte: start, lte: end },
+      },
+      select: {
+        id: true,
+        cashier_id: true,
+        shift_start: true,
+        actual_close_at: true,
+      },
+    });
+
+    if (shifts.length === 0) {
+      throw new NotFoundException('No shifts found for the specified period.');
+    }
+
+    // Build OR conditions for each shift's time range
+    const shiftConditions = shifts.map((shift) => ({
+      cashier_id: shift.cashier_id,
+      created_at: {
+        gte: shift.shift_start,
+        lt: shift.actual_close_at || new Date(),
+      },
+    }));
+
+    // Query orders based on shift ranges, not just created_at
+    const orders = await this.prisma.order.findMany({
+      where: {
+        OR: shiftConditions,
+        status: { not: 'voided' },
+      },
     });
 
     if (!orders || orders.length === 0) {
@@ -220,6 +250,8 @@ export class FinanceService {
       netProfit,
       ownerShare,
       cashierShare,
+      shifts_count: shifts.length,
+      orders_count: orders.length,
     };
   }
 

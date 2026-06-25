@@ -6,6 +6,7 @@ import { InventoryService } from '../inventory/application/services/inventory.se
 import {
   AUTO_CLOSE_GRACE_MS,
   AUTO_CLOSE_WARNING_MS,
+  LOYALTY_GRACE_DAYS,
 } from '../common/utils/constants';
 
 @Injectable()
@@ -17,6 +18,26 @@ export class FinanceCronService {
     private emailService: EmailService,
     private inventoryService: InventoryService,
   ) {}
+
+  // Run daily at 03:00 to cleanup expired JWT tokens from database
+  // FIX #7: Database fallback for JWT blocklist - cleanup expired entries
+  @Cron('0 3 * * *', { timeZone: process.env.TZ || 'Asia/Jakarta' })
+  async cleanupExpiredTokens() {
+    this.logger.log('Cleaning up expired JWT tokens from database...');
+
+    try {
+      const result = await this.prisma.revokedToken.deleteMany({
+        where: {
+          expires_at: { lt: new Date() },
+        },
+      });
+      this.logger.log(`Cleaned up ${result.count} expired JWT tokens`);
+    } catch (err) {
+      this.logger.error(
+        `Failed to cleanup expired tokens: ${(err as Error).message}`,
+      );
+    }
+  }
 
   // Run every 15 minutes to check for shifts needing auto-close
   @Cron('*/15 * * * *', { timeZone: process.env.TZ || 'Asia/Jakarta' })
@@ -515,5 +536,156 @@ export class FinanceCronService {
           `Failed to send QRIS expiry alert: ${err instanceof Error ? err.message : String(err)}`,
         ),
       );
+  }
+
+  // #17 TIER DOWNGRADE: Run daily at 04:00 to check and downgrade expired tiers
+  // Members with grace period exceeded will be downgraded to appropriate tier
+  @Cron('0 4 * * *', { timeZone: process.env.TZ || 'Asia/Jakarta' })
+  async checkTierDowngrades() {
+    this.logger.log('Checking for tier downgrades...');
+
+    // Get all members whose grace period has expired
+    // tier_downgrade_at is set when member drops below tier threshold
+    const expiredGracePeriodMembers = await this.prisma.member.findMany({
+      where: {
+        is_active: true,
+        tier_downgrade_at: {
+          not: null,
+          lt: new Date(),
+        },
+      },
+      include: {
+        tier: true,
+      },
+    });
+
+    if (expiredGracePeriodMembers.length === 0) {
+      this.logger.log('No tier downgrades needed.');
+      return;
+    }
+
+    this.logger.log(
+      `Found ${expiredGracePeriodMembers.length} members with expired grace periods`,
+    );
+
+    // Get all active tiers ordered by min_points
+    const tiers = await this.prisma.loyaltyTier.findMany({
+      where: { is_active: true },
+      orderBy: { min_points: 'asc' },
+    });
+
+    let downgradedCount = 0;
+    let skippedCount = 0;
+
+    for (const member of expiredGracePeriodMembers) {
+      // Find the appropriate tier based on current points
+      const newTier =
+        tiers.find((t) => member.loyalty_points >= t.min_points) || tiers[0]; // Default to lowest tier
+
+      // Skip if already at correct tier
+      if (newTier.id === member.current_tier_id) {
+        skippedCount++;
+        continue;
+      }
+
+      const oldTierName = member.tier?.name || 'Unknown';
+
+      // Update member tier
+      await this.prisma.member.update({
+        where: { id: member.id },
+        data: {
+          current_tier_id: newTier.id,
+          tier_downgrade_at: null, // Clear grace period
+        },
+      });
+
+      // Create audit log
+      await this.prisma.auditLog.create({
+        data: {
+          actor_id: 'system',
+          action: 'TIER_DOWNGRADE',
+          entity_type: 'Member',
+          entity_id: member.id,
+          old_value: {
+            tier: oldTierName,
+            points: member.loyalty_points,
+          },
+          new_value: {
+            tier: newTier.name,
+            points: member.loyalty_points,
+          },
+        },
+      });
+
+      downgradedCount++;
+      this.logger.log(
+        `Downgraded member ${member.id}: ${oldTierName} -> ${newTier.name}`,
+      );
+    }
+
+    // System log
+    await this.prisma.systemLog.create({
+      data: {
+        level: downgradedCount > 0 ? 'info' : 'debug',
+        source: 'finance.cron',
+        message: `Tier downgrade check: ${downgradedCount} downgraded, ${skippedCount} skipped`,
+        metadata: JSON.stringify({
+          downgraded_count: downgradedCount,
+          skipped_count: skippedCount,
+        }),
+      },
+    });
+
+    this.logger.log(
+      `Tier downgrade completed: ${downgradedCount} downgraded, ${skippedCount} skipped`,
+    );
+  }
+
+  /**
+   * Helper: Process tier downgrade for a single member
+   * Called when member points drop below tier threshold
+   */
+  async processTierDowngradeGrace(memberId: string, newPoints: number) {
+    // Get all active tiers ordered by min_points
+    const tiers = await this.prisma.loyaltyTier.findMany({
+      where: { is_active: true },
+      orderBy: { min_points: 'asc' },
+    });
+
+    // Find appropriate tier for new points
+    const newTier = tiers.find((t) => newPoints >= t.min_points) || tiers[0];
+
+    // Get current member
+    const member = await this.prisma.member.findUnique({
+      where: { id: memberId },
+      include: { tier: true },
+    });
+
+    if (!member) return;
+
+    // If already at correct tier, clear any grace period
+    if (newTier.id === member.current_tier_id) {
+      if (member.tier_downgrade_at) {
+        await this.prisma.member.update({
+          where: { id: memberId },
+          data: { tier_downgrade_at: null },
+        });
+      }
+      return;
+    }
+
+    // If downgrading, set grace period using constant (30 days)
+    // Note: The actual downgrade happens in checkTierDowngrades() after grace expires
+    const graceExpiry = new Date();
+    graceExpiry.setDate(graceExpiry.getDate() + LOYALTY_GRACE_DAYS);
+
+    await this.prisma.member.update({
+      where: { id: memberId },
+      data: { tier_downgrade_at: graceExpiry },
+    });
+
+    this.logger.log(
+      `Member ${memberId} grace period started until ${graceExpiry.toISOString()}`,
+    );
   }
 }

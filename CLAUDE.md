@@ -1,6 +1,6 @@
 # POS Nabil - Claude Code Instructions
 
-> Ngemiloh franchise POS: offline-first, QRIS payment, shift management, member loyalty.
+> NGEMILOH franchise POS: offline-first, QRIS payment, shift management, member loyalty.
 
 ---
 
@@ -8,40 +8,11 @@
 
 | Rule | Description |
 |------|-------------|
-| **snake_case ONLY** | All code variables/functions use snake_case. No camelCase. |
-| **VERIFY Before Claim** | Show evidence: `npm run lint → build → test` |
-| **Evidence > Assertion** | "Seems right" is NEVER sufficient |
-| **Stop on Confusion** | Ask, don't guess |
+| **snake_case ONLY** | Code identifiers use snake_case (variables, functions). File naming uses kebab-case (`user-service.ts`) |
+| **VERIFY Before Claim** | Show evidence: lint → build → test |
 | **Shift = Business Date** | Reports filter by `shift_start..shift_end`, NOT `created_at::date` |
 | **DB Safety** | Use `SELECT ... FOR UPDATE` for idempotent state transitions |
-
----
-
-## 🧠 Prinsip Dasar
-
-1. **Analisa mendalam** — baca file relevan sebelum coding
-2. **Minimal 3 opsi** — pro/cons untuk setiap solusi beserta rekomendasi terbaik
-3. **Banyak tanya** — jangan asumsikan kebutuhan
-4. **Multi-file impact** — identifikasi semua file yang terpengaruh
-5. **Kode sederhana** — hindari over-engineering
-6. **Sesuaikan versi** — check runtime version sebelum coding
-
----
-
-## 👤 Claude Code Roles
-
-Claude Code assume 8 roles based on task context. **BUKAN role aplikasi** (Kasir/Admin), tapi peran AI saat bekerja.
-
-| Role | Kapan Aktif | Fokus Utama |
-|------|-------------|-------------|
-| **Solution Architect** | Desain sistem, arsitektur, ERD, API contract | Clean architecture, dependency injection |
-| **Backend Developer** | Kode di `backend/` | NestJS, Prisma, JWT, Redis, BullMQ |
-| **Frontend Developer** | Kode di `frontend/` | SvelteKit, Svelte 5 Runes ($state, $derived, $effect) |
-| **DBA** | Schema, migrasi, query | Prisma, index, constraint, N+1 prevention |
-| **DevOps Engineer** | Docker, CI/CD, Coolify | Multi-stage build, healthcheck, secrets |
-| **Security Engineer** | Auth, environment, endpoint | JWT hardening, rate limiting, CORS whitelist |
-| **QA Engineer** | Fitur baru, bugfix, deploy | Jest unit test, Supertest, Playwright E2E |
-| **Product Owner** | Klarifikasi fitur, prioritas | Kriteria selesai, scope management |
+| **Stop on Confusion** | STOP → Name it → Present tradeoff → Wait |
 
 ---
 
@@ -56,81 +27,65 @@ Claude Code assume 8 roles based on task context. **BUKAN role aplikasi** (Kasir
 
 ---
 
-## ✅ Checklist Sebelum Commit
+## 🎯 Claude Code Roles
 
-- [ ] Sudah baca file relevan?
-- [ ] Sudah identifikasi file yang terpengaruh?
-- [ ] Tidak ada duplikasi?
-- [ ] Tidak ada typo?
-- [ ] Build + lint passing?
-- [ ] Test sudah diperbarui?
-- [ ] Env variable didokumentasikan di `.env.example`?
-- [ ] Prisma migration ada?
+Claude Code assumes 8 roles based on task context. **BUKAN role aplikasi** (Kasir/Admin), tapi peran AI saat bekerja.
 
----
-
----
-
-## 🛠️ Tech Stack
-
-| Layer | Technology |
-|-------|------------|
-| Backend | NestJS 11 + PostgreSQL 16 + Prisma 6 + Redis 7 + BullMQ |
-| Frontend | SvelteKit 2 + Svelte 5 (Runes) + Tailwind CSS 4 |
-| Infra | Docker + Caddy reverse proxy |
-
-### Project Structure
-```
-backend/src/       # NestJS modules: auth, orders, products, inventory, finance, members, payment
-backend/prisma/    # Schema + migrations
-frontend/src/      # SvelteKit: routes/admin, routes/pos, routes/member
-```
+| Role | Kapan Aktif | Fokus Utama |
+|------|-------------|-------------|
+| **Solution Architect** | Desain sistem, arsitektur, ERD | Clean architecture, dependency injection |
+| **Backend Developer** | Kode di `backend/` | NestJS, Prisma, JWT, Redis, BullMQ |
+| **Frontend Developer** | Kode di `frontend/` | SvelteKit, Svelte 5 Runes |
+| **DBA** | Schema, migrasi, query | Prisma, index, N+1 prevention |
+| **DevOps Engineer** | Docker, CI/CD, Coolify | Multi-stage build, secrets |
+| **Security Engineer** | Auth, environment, endpoint | JWT hardening, rate limiting |
+| **QA Engineer** | Fitur baru, bugfix, deploy | Jest, Supertest, Playwright |
+| **Product Owner** | Klarifikasi fitur, prioritas | Kriteria selesai, scope |
 
 ---
 
-## 📋 Commands
+## 🔄 Task → Skill Workflow
 
-```bash
-# Backend
-npm run build     # Build
-npm run start:dev # Dev server
-npm run lint      # Lint
-npm run test      # Test
+| Task Type | Primary Skill | Secondary Skill |
+|-----------|---------------|----------------|
+| Task unclear | `interview-me` | - |
+| New feature | `spec-driven-development` | `planning-and-task-breakdown` |
+| Fixing bugs | `debugging-and-error-recovery` | `test-driven-development` |
+| Building UI | `frontend-ui-engineering` | `test-driven-development` |
+| API design | `api-and-interface-design` | `source-driven-development` |
+| Code review | `code-review-and-quality` | `security-and-hardening` |
+| Performance | `performance-optimization` | `debugging-and-error-recovery` |
+| Deploy | `shipping-and-launch` | `ci-cd-and-automation` |
 
-# Frontend
-npm run dev       # Dev server
-npm run build     # Build
-npm run check     # Type check
-npm run lint      # Lint
-npm run test      # Test
-
-# Docker
-docker compose up -d    # Start
-docker compose logs -f  # Logs
-```
+> **Note:** Full skill list and auto-activation rules available in Global CLAUDE.md.
 
 ---
 
-## 📊 Business Rules (PRD v8.1)
+## 📊 Business Rules
 
 ### Profit Share Formula
 ```
 Gross Revenue = Total Penjualan (termasuk PPN)
 PPN = Gross Revenue × 11%
-Net Profit = Net Revenue - HPP - Opex - Depreciation
+Net Revenue = Gross Revenue - PPN
 
+HPP = Total Biaya Pokok (from BOM)
+Opex = Biaya Operasional
+Depreciation = Total Depresiasi Aset
+
+Net Profit = Net Revenue - HPP - Opex - Depreciation
 Owner Share = Net Profit × 60%
 Kasir Pool = Net Profit × 40%
 Per Kasir = Kasir Pool × (Kasir Sales / Total Sales)
 ```
 
 ### Loyalty Tiers
-| Tier | Min Points | Discount |
-|------|------------|----------|
-| Bronze | 0 | 0% |
-| Silver | 500 | 5% |
-| Gold | 1,500 | 10% |
-| Platinum | 5,000 | 15% |
+| Tier | Min Points | Discount | Grace |
+|------|------------|----------|-------|
+| Bronze | 0 | 0% | - |
+| Silver | 500 | 5% | 1 bulan |
+| Gold | 1,500 | 10% | 1 bulan |
+| Platinum | 5,000 | 15% | 1 bulan |
 
 ### Key Constants
 | Constant | Value |
@@ -153,14 +108,31 @@ Per Kasir = Kasir Pool × (Kasir Sales / Total Sales)
 
 ---
 
-## 🔐 Security (JWT Auth)
+## 🔐 Security
 
 | Role | Token | Method |
 |------|-------|--------|
-| Kasir | 365-day access token | PIN |
+| Kasir | 8-hour access token | PIN |
 | Admin | 12-hour access token | Email + 6-digit OTP |
 
 **No logout/revoke** - tokens expire automatically.
+
+---
+
+## 🛠️ Tech Stack
+
+| Layer | Technology |
+|-------|------------|
+| Backend | NestJS 11 + PostgreSQL 16 + Prisma **v5.22+** + Redis 7 + BullMQ |
+| Frontend | SvelteKit 2 + Svelte 5 (Runes) + Tailwind CSS 4 |
+| Infra | Docker + Caddy reverse proxy |
+
+### Project Structure
+```
+backend/src/       # NestJS modules: auth, orders, products, inventory, finance, members, payment
+backend/prisma/    # Schema + migrations
+frontend/src/      # SvelteKit: routes/admin, routes/pos, routes/member
+```
 
 ---
 
@@ -180,20 +152,40 @@ Per Kasir = Kasir Pool × (Kasir Sales / Total Sales)
 
 | Document | Location |
 |----------|----------|
+| PRD Specs | `PRD v2/PRD_SPEC.md` |
+| PRD Status | `PRD v2/PRD_STATUS.md` (20 issues: 5/20 done) |
+| API Docs | `PRD v2/PRD_API_CONTRACT.md` |
 | Architecture | `SPEC.md` |
-| Red Team Findings | `docs/red-team-findings.md` |
-| API Docs | `docs/api/` |
 | ADRs | `docs/decisions/` |
 | Guides | `docs/guides/` |
 | Memory | `memory/` |
 
 ---
 
-## 🎯 Missing Features
+## ✅ Checklist Sebelum Commit
 
-| Feature | Priority | Status |
-|---------|----------|--------|
-| Waste Tracking | MEDIUM | ❌ Not Built |
-| BOM Recipes | MEDIUM | ⚠️ Partial |
-| Outlet Management | HIGH | ⚠️ Partial |
-| Check-in System | MEDIUM | ⚠️ Partial |
+- [ ] Sudah baca file relevan?
+- [ ] Sudah identifikasi file yang terpengaruh?
+- [ ] Tidak ada duplikasi?
+- [ ] Tidak ada typo?
+- [ ] Build + lint passing?
+- [ ] Test sudah diperbarui?
+- [ ] Env variable didokumentasikan di `.env.example`?
+- [ ] Prisma migration ada?
+
+---
+
+## 📋 Verification Commands
+
+```bash
+# Backend (NestJS)
+cd backend && npm run lint && npm run build && npm run test
+
+# Frontend (SvelteKit)
+cd frontend && npm run lint && npm run check && npm run test && npm run build
+```
+
+---
+
+*Last Updated: 2026-06-25*
+*Source: PRD v2 (Modular Documentation)*

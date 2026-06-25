@@ -40,23 +40,33 @@ const skipThrottleForHealth = (context: {
   imports: [
     BullModule.forRoot({
       connection: (() => {
+        const redisPassword = process.env.REDIS_PASSWORD;
         const redisUrl = process.env.REDIS_URL;
         if (redisUrl) {
           try {
             const url = new URL(redisUrl);
             const host = url.hostname;
             const port = Number(url.port) || 6379;
-            const password = url.password || undefined;
+            const urlPassword = url.password || undefined;
             if (!host) throw new Error('Invalid hostname in REDIS_URL');
-            return { host, port, password }; // Include password for auth
+            // Use REDIS_PASSWORD env var if set, otherwise use URL password
+            const password = redisPassword || urlPassword;
+            return { host, port, password: password || undefined };
           } catch {
             console.warn(`Invalid REDIS_URL: ${redisUrl}, using fallback`);
           }
         }
+        // FIX #18: Use REDIS_PASSWORD for BullMQ connection
+        const password = redisPassword || undefined;
+        if (!password && process.env.NODE_ENV === 'production') {
+          console.warn(
+            '⚠️ SECURITY WARNING: BullMQ Redis connection without password in production!',
+          );
+        }
         return {
           host: process.env.REDIS_HOST || 'localhost',
           port: Number(process.env.REDIS_PORT) || 6379,
-          password: process.env.REDIS_PASSWORD || undefined,
+          password,
         };
       })(),
     }),

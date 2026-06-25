@@ -81,10 +81,10 @@
 				auth_store.init_silent_refresh(user.role);
 			})
 			.catch(() => {
-				// Jika offline, percayakan localStorage sementara
-				console.warn('Cannot verify session — network offline');
-				is_superadmin = true;
-				admin_name = user.name || 'Admin';
+				// FIX #16: Security fix - redirect to offline page instead of granting access
+				// Previously this granted access (is_superadmin = true) which was a security bug
+				console.warn('Cannot verify session — network offline, redirecting to offline page');
+				goto('/offline');
 			});
 
 		return () => {

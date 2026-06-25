@@ -9,9 +9,10 @@ set -e
 echo "[DEV] Starting Redis without password (DEVELOPMENT ONLY!)"
 
 # Start Redis without password authentication
+# TEMPORARY: Disabled appendonly due to volume permission issues on Windows Docker Desktop
 # Note: EVAL command is allowed because Bull queue needs it for job processing
 exec redis-server \
-    --appendonly yes \
+    --appendonly no \
     --loglevel warning \
     --maxmemory 200mb \
     --maxmemory-policy noeviction \

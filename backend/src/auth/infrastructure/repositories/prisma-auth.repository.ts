@@ -105,4 +105,38 @@ export class PrismaAuthRepository implements AuthRepositoryInterface {
       data: { pin_hash: pinHash, must_change_pin: false },
     });
   }
+
+  // FIX #7: JWT Blocklist Fallback - Database fallback for revoked tokens
+  async isTokenRevoked(jti: string): Promise<boolean> {
+    const token = await this.prisma.revokedToken.findUnique({
+      where: { id: jti },
+    });
+    return token !== null;
+  }
+
+  async revokeToken(
+    jti: string,
+    expiresAt: Date,
+    reason: string = 'logout',
+  ): Promise<void> {
+    // Use upsert to handle duplicate revocation gracefully
+    await this.prisma.revokedToken.upsert({
+      where: { id: jti },
+      update: { reason }, // Update reason if already exists
+      create: {
+        id: jti,
+        expires_at: expiresAt,
+        reason,
+      },
+    });
+  }
+
+  async cleanupExpiredTokens(): Promise<number> {
+    const result = await this.prisma.revokedToken.deleteMany({
+      where: {
+        expires_at: { lt: new Date() },
+      },
+    });
+    return result.count;
+  }
 }
