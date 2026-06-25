@@ -24,17 +24,19 @@ PRD v2/
 ├── PRD_SPEC.md              ← Feature specifications
 ├── PRD_STATUS.md            ← Issue tracker & progress
 ├── PRD_API_CONTRACT.md      ← API specifications
-├── PRD_RED_TEAM.md          ← Security findings (TBD)
+├── PRD_RED_TEAM.md          ← Security findings
 ├── archive/                 ← Archived content from v8.0
 │   └── ARCHIVE_INDEX.md
-├── PRD_NGEMILOH_POS_v8.0_MASTER_INDONESIAN.md  ← OLD (to be deleted)
 └── docs/
-    └── decisions/           ← Architectural Decision Records
+    └── decisions/           ← Architectural Decision Records (5 ADRs)
         ├── 0001-use-nestjs.md
         ├── 0002-use-prisma-orm.md
         ├── 0003-authentication-strategy.md
         ├── 0004-offline-first-architecture.md
         └── 0005-use-sveltekit.md
+    └── guides/
+        ├── RUNBOOK.md           ← Operations guide
+        └── BACKUP.md           ← Backup & restore guide
 ```
 
 ---
@@ -78,8 +80,8 @@ PRD v2/
 
 | Need | Go To | Section |
 |------|-------|---------|
-| Deployment | `docs/guides/RUNBOOK.md` | - |
-| Backup | `docs/guides/BACKUP.md` | - |
+| Deployment | [docs/guides/RUNBOOK.md](../docs/guides/RUNBOOK.md) | - |
+| Backup | [docs/guides/BACKUP.md](../docs/guides/BACKUP.md) | - |
 | Security fixes | [PRD_STATUS.md](./PRD_STATUS.md) | Section 2 |
 
 ### For Security/Audit
@@ -99,18 +101,18 @@ PRD v2/
 | Metric | Value |
 |--------|-------|
 | Overall Issues | 20 |
-| Implemented | 5 (25%) |
+| Implemented | 19 (95%) |
 | In Progress | 0 |
-| Pending | 15 |
+| Pending | 1 (#8 BOM Cost - Owner) |
 
 ### Issues by Severity
 
 | Severity | Total | Done | Pending |
 |----------|-------|------|---------|
-| CRITICAL | 5 | 2 | 3 |
-| HIGH | 8 | 2 | 6 |
-| MEDIUM | 5 | 1 | 4 |
-| LOW | 2 | 0 | 2 |
+| **CRITICAL** | 5 | 4 | 1 |
+| **HIGH** | 8 | 8 | 0 |
+| **MEDIUM** | 5 | 5 | 0 |
+| **LOW** | 2 | 2 | 0 |
 
 **For detailed status:** See [PRD_STATUS.md](./PRD_STATUS.md)
 
