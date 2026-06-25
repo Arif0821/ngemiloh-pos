@@ -1287,7 +1287,7 @@ Berikut adalah 20 critical issues yang harus diperbaiki sebelum go-live:
 | # | Kegagalan | Severity | Dampak | Recommended Solution | Status |
 |---|-----------|----------|--------|---------------------|--------|
 | 1 | QRIS Expiry Never Enforced | **CRITICAL** | Ghost orders, cash reconciliation failure | **OPSI B** (Cron job) | ✅ Done |
-| 2 | JWT 365 Days for Kasir | **HIGH** | Compromised PIN = 1 tahun akses | **OPSI B** (Silent refresh) |
+| 2 | JWT 365 Days for Kasir | **HIGH** | Compromised PIN = 1 tahun akses | **OPSI B** (Silent refresh) | ✅ IMPLEMENTED |
 | 3 | Void Refund Hardcoded | **HIGH** | Cash fraud tidak terdeteksi | **OPSI A** (Audit enhancement) |
 | 4 | No Offline Order Receipt | **MEDIUM** | Customer dispute risk | **OPSI A** (Quick fix) |
 | 5 | Double-Charge Possible | **HIGH** | Revenue loss | **OPSI A** (Idempotency key) |
@@ -1350,6 +1350,12 @@ Berikut adalah 20 critical issues yang harus diperbaiki sebelum go-live:
 | Waste tracking fraud | MEDIUM | Supplier verification |
 | Opening balance manipulation | MEDIUM | Supervisor verification |
 | Loyalty points fraud | MEDIUM | Void reason validation, periodic audit |
+
+### 18.6 Implementation Status
+
+| # | Issue | Status | Notes |
+|---|-------|--------|-------|
+| 2 | JWT 365 Days for Kasir | ✅ IMPLEMENTED | Backend: 8h token + /refresh endpoint. Frontend: auth.store.svelte.ts with silent refresh. |
 
 ---
 
