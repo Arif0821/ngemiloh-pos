@@ -17,15 +17,15 @@ metadata:
 | # | Issue | Severity | Opsi | Status |
 |---|-------|----------|------|--------|
 | 1 | QRIS Expiry Never Enforced | **CRITICAL** | OPSI B | ✅ Done |
-| 2 | JWT 365 Days for Kasir | HIGH | OPSI B | ❌ |
+| 2 | JWT 365 Days for Kasir | HIGH | OPSI B | ✅ Done |
 | 3 | Void Refund Hardcoded | HIGH | OPSI A | ❌ |
 | 4 | No Offline Order Receipt | MEDIUM | OPSI A | ❌ |
 | 5 | Double-Charge Possible | HIGH | OPSI A | ❌ |
-| 6 | Member Registration Unrate-Limited | HIGH | OPSI A | ❌ |
+| 6 | Member Registration Unrate-Limited | HIGH | OPSI A | ✅ Done |
 | 7 | Redis SPOF | MEDIUM | OPSI B | ❌ |
 | 8 | BOM Cost Per Unit = 0 | **CRITICAL** | OPSI A | ❌ |
 | 9 | Profit Share Uses Created_At | MEDIUM | OPSI A | ❌ |
-| 10 | No Backup Configured | **CRITICAL** | OPSI B | ❌ |
+| 10 | No Backup Configured | **CRITICAL** | OPSI B | ✅ Done |
 | 11 | Docker Desktop Bind Mount Trap | HIGH | OPSI C | ❌ |
 | 12 | Stock Double-Deduction Race | MEDIUM | OPSI A | ❌ |
 | 13 | Multi-Instance Shift Auto-Close Race | MEDIUM | OPSI A | ❌ |
@@ -37,7 +37,7 @@ metadata:
 | 19 | 512MB NestJS Limit + OOM Crash Loop | MEDIUM | OPSI B | ❌ |
 | 20 | Webhook Errors Swallowed Silently | MEDIUM | OPSI A | ❌ |
 
-**Progress: 1/20 completed**
+**Progress: 4/20 completed** (+ 1 additional fix: Void Reason Format)
 
 ## Total Effort
 - OPSI A: 12 items (~1-2 hari masing-masing)
@@ -50,9 +50,9 @@ metadata:
 ### PHASE 1: STOP THE BLEEDING (Week 1)
 ```
 DAY 1-2: MUST-DO (Critical Business Impact)
-├── #10 Backup System           → OPSI B (4 jam)
-├── #1 QRIS Expiry Fix         → OPSI B (2-3 hari) ✅ DONE
-├── #6 Member Rate Limit       → OPSI A (1 jam)
+├── ~~#10 Backup System~~           → OPSI B (4 jam) ✅ DONE
+├── ~~#1 QRIS Expiry Fix~~         → OPSI B (2-3 hari) ✅ DONE
+├── ~~#6 Member Rate Limit~~       → OPSI A (1 jam) ✅ DONE
 └── #8 BOM Cost Input          → OPSI A (Manual input)
 
 DAY 3-4: QUICK WINS (High Impact, Low Effort)
@@ -70,7 +70,7 @@ DAY 5-7: TESTING & VALIDATION
 ### PHASE 2: STRUCTURAL FIXES (Week 2-3)
 ```
 DAY 8-10: SECURITY HARDENING
-├── #2 JWT Reduction           → OPSI B (2 hari)
+├── ~~#2 JWT Reduction~~           → OPSI B (2 hari) ✅ DONE
 ├── #15 CSRF Fix              → OPSI A (1 jam)
 ├── #18 Redis Password Guard   → OPSI B (1 jam)
 ├── #7 Redis Fallback          → OPSI B (4 jam)

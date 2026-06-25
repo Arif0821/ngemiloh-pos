@@ -61,12 +61,14 @@ metadata:
 - Remaining: 19 issues
 
 ### Feature Flags Required
-| Flag | Purpose | Default |
-|------|---------|---------|
+| Flag | Purpose | Default | Status |
+|------|---------|---------|--------|
 | `FEATURE_QRIS_EXPIRY_ENFORCEMENT` | Enable QRIS void cron | `false` | ✅ Done |
-| `FEATURE_JWT_REFRESH` | Enable silent token refresh | `false` | ❌ |
+| `FEATURE_JWT_REFRESH` | Enable silent token refresh | `false` | ✅ Done (2026-06-25) |
 | `FEATURE_VOID_APPROVAL` | Require approval for void | `false` | ❌ |
 | `FEATURE_OFFLINE_RECEIPT` | Generate receipt offline | `true` | ❌ |
+
+**Progress: 5/20 issues IMPLEMENTED**
 
 ## Source
 - PRD: `PRD v2/PRD_NGEMILOH_POS_v8.0_MASTER_INDONESIAN.md`
