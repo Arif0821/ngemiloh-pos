@@ -25,7 +25,7 @@ export class WebhookDLQService {
       data: {
         provider: data.provider,
         event_type: data.event_type,
-        payload: data.payload as object,
+        payload: data.payload,
         error_message: data.error_message,
         max_attempts: data.max_attempts || 3,
         status: 'pending',

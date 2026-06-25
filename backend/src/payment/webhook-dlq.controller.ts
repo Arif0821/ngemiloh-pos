@@ -40,8 +40,18 @@ export class WebhookDLQController {
 
   @Get()
   @ApiOperation({ summary: 'Get webhook DLQ entries' })
-  @ApiQuery({ name: 'status', required: false, type: String, description: 'Filter by status' })
-  @ApiQuery({ name: 'provider', required: false, type: String, description: 'Filter by provider' })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    type: String,
+    description: 'Filter by status',
+  })
+  @ApiQuery({
+    name: 'provider',
+    required: false,
+    type: String,
+    description: 'Filter by provider',
+  })
   @ApiQuery({ name: 'page', required: false, type: String })
   @ApiQuery({ name: 'limit', required: false, type: String })
   @ApiResponse({ status: 200, description: 'DLQ entries retrieved' })

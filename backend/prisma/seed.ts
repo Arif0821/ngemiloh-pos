@@ -146,49 +146,56 @@ async function main() {
   });
   console.log('Assigned users to default outlet');
 
-  // 5. Seed 26 Raw Materials
+  // 5. Seed 26 Raw Materials with realistic costs for BOM testing
+  // NOTE: cost_per_unit is per usage_unit (e.g., per Gram, per Liter, per Pcs)
   const rawMaterialsData = [
-    { name: 'Makaroni Mentah', unit: 'Gram', min_stock: 1000 },
-    { name: 'Mie Lidi Mentah', unit: 'Gram', min_stock: 1000 },
-    { name: 'Basreng Mentah', unit: 'Gram', min_stock: 1000 },
-    { name: 'Minyak Goreng', unit: 'Liter', min_stock: 5 },
-    { name: 'Bumbu Asin', unit: 'Gram', min_stock: 500 },
-    { name: 'Bumbu Pedas', unit: 'Gram', min_stock: 500 },
-    { name: 'Bumbu Balado', unit: 'Gram', min_stock: 500 },
-    { name: 'Bumbu Keju', unit: 'Gram', min_stock: 500 },
-    { name: 'Bumbu BBQ', unit: 'Gram', min_stock: 500 },
-    { name: 'Bumbu Jagung Bakar', unit: 'Gram', min_stock: 500 },
-    { name: 'Bumbu Sapi Panggang', unit: 'Gram', min_stock: 500 },
-    { name: 'Bumbu Pizza', unit: 'Gram', min_stock: 500 },
-    { name: 'Plastik Kemasan Kecil', unit: 'Pcs', min_stock: 100 },
-    { name: 'Plastik Kemasan Besar', unit: 'Pcs', min_stock: 100 },
-    { name: 'Plastik Kresek', unit: 'Pcs', min_stock: 100 },
-    { name: 'Karet Gelang', unit: 'Gram', min_stock: 100 },
-    { name: 'Gas Elpiji 3kg', unit: 'Tabung', min_stock: 1 },
-    { name: 'Saus Sambal', unit: 'Sachet', min_stock: 50 },
-    { name: 'Saus Tomat', unit: 'Sachet', min_stock: 50 },
-    { name: 'Kertas Struk', unit: 'Roll', min_stock: 2 },
-    { name: 'Sarung Tangan Plastik', unit: 'Pcs', min_stock: 50 },
-    { name: 'Masker', unit: 'Pcs', min_stock: 20 },
-    { name: 'Sabun Cuci Tangan', unit: 'Botol', min_stock: 1 },
-    { name: 'Sabun Cuci Piring', unit: 'Botol', min_stock: 1 },
-    { name: 'Spons Cuci', unit: 'Pcs', min_stock: 2 },
-    { name: 'Lap Kain', unit: 'Pcs', min_stock: 5 }
+    // Snack Base Materials
+    { name: 'Makaroni Mentah', unit: 'Gram', min_stock: 1000, current_stock: 5000, cost_per_unit: 25 },        // Rp 25/gram
+    { name: 'Mie Lidi Mentah', unit: 'Gram', min_stock: 1000, current_stock: 5000, cost_per_unit: 20 },        // Rp 20/gram
+    { name: 'Basreng Mentah', unit: 'Gram', min_stock: 1000, current_stock: 3000, cost_per_unit: 35 },         // Rp 35/gram
+    // Cooking Materials
+    { name: 'Minyak Goreng', unit: 'Liter', min_stock: 5, current_stock: 20, cost_per_unit: 18000 },          // Rp 18.000/liter
+    // Seasonings (per gram)
+    { name: 'Bumbu Asin', unit: 'Gram', min_stock: 500, current_stock: 2000, cost_per_unit: 8 },               // Rp 8/gram
+    { name: 'Bumbu Pedas', unit: 'Gram', min_stock: 500, current_stock: 2000, cost_per_unit: 10 },             // Rp 10/gram
+    { name: 'Bumbu Balado', unit: 'Gram', min_stock: 500, current_stock: 2000, cost_per_unit: 12 },             // Rp 12/gram
+    { name: 'Bumbu Keju', unit: 'Gram', min_stock: 500, current_stock: 1500, cost_per_unit: 15 },              // Rp 15/gram
+    { name: 'Bumbu BBQ', unit: 'Gram', min_stock: 500, current_stock: 1500, cost_per_unit: 14 },                // Rp 14/gram
+    { name: 'Bumbu Jagung Bakar', unit: 'Gram', min_stock: 500, current_stock: 1500, cost_per_unit: 13 },       // Rp 13/gram
+    { name: 'Bumbu Sapi Panggang', unit: 'Gram', min_stock: 500, current_stock: 1500, cost_per_unit: 18 },      // Rp 18/gram
+    { name: 'Bumbu Pizza', unit: 'Gram', min_stock: 500, current_stock: 1000, cost_per_unit: 16 },             // Rp 16/gram
+    // Packaging
+    { name: 'Plastik Kemasan Kecil', unit: 'Pcs', min_stock: 100, current_stock: 500, cost_per_unit: 200 },    // Rp 200/pcs
+    { name: 'Plastik Kemasan Besar', unit: 'Pcs', min_stock: 100, current_stock: 300, cost_per_unit: 400 },     // Rp 400/pcs
+    { name: 'Plastik Kresek', unit: 'Pcs', min_stock: 100, current_stock: 200, cost_per_unit: 150 },            // Rp 150/pcs
+    { name: 'Karet Gelang', unit: 'Gram', min_stock: 100, current_stock: 500, cost_per_unit: 5 },               // Rp 5/gram
+    // Utilities
+    { name: 'Gas Elpiji 3kg', unit: 'Tabung', min_stock: 1, current_stock: 3, cost_per_unit: 27000 },         // Rp 27.000/tabung
+    { name: 'Saus Sambal', unit: 'Sachet', min_stock: 50, current_stock: 200, cost_per_unit: 500 },             // Rp 500/sachet
+    { name: 'Saus Tomat', unit: 'Sachet', min_stock: 50, current_stock: 150, cost_per_unit: 450 },              // Rp 450/sachet
+    { name: 'Kertas Struk', unit: 'Roll', min_stock: 2, current_stock: 10, cost_per_unit: 8000 },               // Rp 8.000/roll
+    // Cleaning Supplies (non-BOM, for completeness)
+    { name: 'Sarung Tangan Plastik', unit: 'Pcs', min_stock: 50, current_stock: 200, cost_per_unit: 300 },      // Rp 300/pcs
+    { name: 'Masker', unit: 'Pcs', min_stock: 20, current_stock: 100, cost_per_unit: 500 },                     // Rp 500/pcs
+    { name: 'Sabun Cuci Tangan', unit: 'Botol', min_stock: 1, current_stock: 5, cost_per_unit: 12000 },         // Rp 12.000/botol
+    { name: 'Sabun Cuci Piring', unit: 'Botol', min_stock: 1, current_stock: 5, cost_per_unit: 15000 },        // Rp 15.000/botol
+    { name: 'Spons Cuci', unit: 'Pcs', min_stock: 2, current_stock: 10, cost_per_unit: 2500 },                 // Rp 2.500/pcs
+    { name: 'Lap Kain', unit: 'Pcs', min_stock: 5, current_stock: 20, cost_per_unit: 5000 },                   // Rp 5.000/pcs
   ];
 
   for (const rm of rawMaterialsData) {
     const rawMaterial = await prisma.rawMaterial.upsert({
       where: { name: rm.name },
-      update: {},
+      update: { cost_per_unit: rm.cost_per_unit, current_stock: rm.current_stock },
       create: {
         name: rm.name,
         purchase_unit: rm.unit,
         purchase_qty: 1,
         usage_unit: rm.unit,
         conversion_factor: 1,
-        current_stock: 5000, // Initial stock for testing
+        current_stock: rm.current_stock,
         min_stock: rm.min_stock,
-        cost_per_unit: 100
+        cost_per_unit: rm.cost_per_unit,
       }
     });
     

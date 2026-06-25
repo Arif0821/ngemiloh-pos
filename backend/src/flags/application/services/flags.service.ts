@@ -39,6 +39,27 @@ export class FlagsService implements OnModuleInit {
       { name: 'PRINT_RECEIPT', description: 'Enable thermal receipt printing' },
       { name: 'EMAIL_RECEIPT', description: 'Enable email receipt sending' },
       { name: 'PROFIT_SHARE', description: 'Enable profit sharing module' },
+      // Issue #1: QRIS expiry enforcement cron job
+      {
+        name: 'FEATURE_QRIS_EXPIRY_ENFORCEMENT',
+        description: 'Enable automatic void of expired unpaid QRIS orders',
+      },
+      // Issue #3: 4-eyes void approval workflow
+      {
+        name: 'FEATURE_VOID_APPROVAL',
+        description: 'Require admin approval for void requests (4-eyes)',
+      },
+      // Issue #2: Silent JWT refresh
+      {
+        name: 'FEATURE_JWT_REFRESH',
+        description: 'Enable silent refresh of expired access tokens',
+      },
+      // Issue #4: Offline receipt generation
+      {
+        name: 'FEATURE_OFFLINE_RECEIPT',
+        description:
+          'Enable offline receipt generation and auto-print on reconnect',
+      },
     ];
 
     for (const flag of defaultFlags) {
