@@ -165,11 +165,9 @@ describe('ApiClient', () => {
 			mock_fetch.mockResolvedValueOnce(new Response('{}', { status: 200 }));
 			// Mock auth token from cookie (httpOnly cookie set by backend)
 			Object.defineProperty(document, 'cookie', {
-				value: 'admin_token=admin-secret-456',
+				value: 'admin_token=admin-secret-456; csrf_token=test-csrf-token',
 				configurable: true
 			});
-			// Mock CSRF token from localStorage
-			localStorage.setItem('csrf_token', 'test-csrf-token');
 
 			const client = ApiClient.getInstance();
 			await client.post('/auth/admin/verify-otp', { email: 'admin@test.com', otp: '123456' });
@@ -208,8 +206,11 @@ describe('ApiClient', () => {
 
 	describe('CSRF token', () => {
 		beforeEach(() => {
-			// Mock CSRF token from localStorage (stored there on login)
-			localStorage.setItem('csrf_token', 'test-csrf-abc123');
+			// Mock CSRF token from httpOnly cookie (set by backend on login)
+			Object.defineProperty(document, 'cookie', {
+				value: 'csrf_token=test-csrf-abc123',
+				configurable: true
+			});
 		});
 
 		it('adds X-CSRF-Token for POST requests', async () => {
@@ -280,8 +281,11 @@ describe('ApiClient', () => {
 		});
 
 		it('throws and redirects to login when CSRF token is missing on mutating request', async () => {
-			// Remove CSRF token from localStorage
-			localStorage.removeItem('csrf_token');
+			// Remove CSRF token from cookie
+			Object.defineProperty(document, 'cookie', {
+				value: '',
+				configurable: true
+			});
 
 			const client = ApiClient.getInstance();
 
@@ -315,8 +319,11 @@ describe('ApiClient', () => {
 
 		it('does not redirect on 401 for /auth/login endpoints', async () => {
 			mock_fetch.mockResolvedValueOnce(new Response('{}', { status: 401 }));
-			// CSRF token required for mutating requests
-			localStorage.setItem('csrf_token', 'test-csrf-token');
+			// CSRF token from cookie for mutating requests
+			Object.defineProperty(document, 'cookie', {
+				value: 'csrf_token=test-csrf-token',
+				configurable: true
+			});
 
 			const client = ApiClient.getInstance();
 			await client.post('/auth/login', { pin: '1234' });
@@ -424,8 +431,11 @@ describe('ApiClient', () => {
 
 		it('sets Content-Type to application/json for POST with body', async () => {
 			mock_fetch.mockResolvedValueOnce(new Response('{}', { status: 200 }));
-			// CSRF token required for mutating requests
-			localStorage.setItem('csrf_token', 'test-csrf-token');
+			// CSRF token from cookie for mutating requests
+			Object.defineProperty(document, 'cookie', {
+				value: 'csrf_token=test-csrf-token',
+				configurable: true
+			});
 
 			const client = ApiClient.getInstance();
 			await client.post('/orders', { items: [] });
@@ -440,8 +450,11 @@ describe('ApiClient', () => {
 
 		it('stringifies body as JSON', async () => {
 			mock_fetch.mockResolvedValueOnce(new Response('{}', { status: 200 }));
-			// CSRF token required for mutating requests
-			localStorage.setItem('csrf_token', 'test-csrf-token');
+			// CSRF token from cookie for mutating requests
+			Object.defineProperty(document, 'cookie', {
+				value: 'csrf_token=test-csrf-token',
+				configurable: true
+			});
 
 			const body = { items: [{ product_id: 'p1', quantity: 2 }] };
 			const client = ApiClient.getInstance();
@@ -471,8 +484,11 @@ describe('ApiClient', () => {
 
 		it('post() uses POST method', async () => {
 			mock_fetch.mockResolvedValueOnce(new Response('{}', { status: 200 }));
-			// CSRF token required for mutating requests
-			localStorage.setItem('csrf_token', 'test-csrf-token');
+			// CSRF token from cookie for mutating requests
+			Object.defineProperty(document, 'cookie', {
+				value: 'csrf_token=test-csrf-token',
+				configurable: true
+			});
 
 			const client = ApiClient.getInstance();
 			await client.post('/orders', {});
@@ -485,8 +501,11 @@ describe('ApiClient', () => {
 
 		it('put() uses PUT method', async () => {
 			mock_fetch.mockResolvedValueOnce(new Response('{}', { status: 200 }));
-			// CSRF token required for mutating requests
-			localStorage.setItem('csrf_token', 'test-csrf-token');
+			// CSRF token from cookie for mutating requests
+			Object.defineProperty(document, 'cookie', {
+				value: 'csrf_token=test-csrf-token',
+				configurable: true
+			});
 
 			const client = ApiClient.getInstance();
 			await client.put('/products/p1', {});
@@ -499,8 +518,11 @@ describe('ApiClient', () => {
 
 		it('patch() uses PATCH method', async () => {
 			mock_fetch.mockResolvedValueOnce(new Response('{}', { status: 200 }));
-			// CSRF token required for mutating requests
-			localStorage.setItem('csrf_token', 'test-csrf-token');
+			// CSRF token from cookie for mutating requests
+			Object.defineProperty(document, 'cookie', {
+				value: 'csrf_token=test-csrf-token',
+				configurable: true
+			});
 
 			const client = ApiClient.getInstance();
 			await client.patch('/products/p1', {});
@@ -513,8 +535,11 @@ describe('ApiClient', () => {
 
 		it('delete() uses DELETE method', async () => {
 			mock_fetch.mockResolvedValueOnce(new Response('{}', { status: 200 }));
-			// CSRF token required for mutating requests
-			localStorage.setItem('csrf_token', 'test-csrf-token');
+			// CSRF token from cookie for mutating requests
+			Object.defineProperty(document, 'cookie', {
+				value: 'csrf_token=test-csrf-token',
+				configurable: true
+			});
 
 			const client = ApiClient.getInstance();
 			await client.delete('/products/p1');

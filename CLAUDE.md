@@ -20,7 +20,7 @@
 ## 🧠 Prinsip Dasar
 
 1. **Analisa mendalam** — baca file relevan sebelum coding
-2. **Minimal 3 opsi** — pro/cons untuk setiap solusi
+2. **Minimal 3 opsi** — pro/cons untuk setiap solusi beserta rekomendasi terbaik
 3. **Banyak tanya** — jangan asumsikan kebutuhan
 4. **Multi-file impact** — identifikasi semua file yang terpengaruh
 5. **Kode sederhana** — hindari over-engineering
@@ -32,18 +32,16 @@
 
 Claude Code assume 8 roles based on task context. **BUKAN role aplikasi** (Kasir/Admin), tapi peran AI saat bekerja.
 
-| Role | Kapan Aktif | Fokus |
-|------|-------------|-------|
-| **Solution Architect** | Desain sistem, arsitektur, ERD | Clean architecture, API contract |
-| **Backend Developer** | Semua kode di `backend/` | NestJS, Prisma, JWT, Redis, BullMQ |
-| **Frontend Developer** | Semua kode di `frontend/` | SvelteKit, Svelte 5 Runes |
-| **DBA** | Schema, migrasi, query | Prisma schema, indexes, constraints |
-| **DevOps Engineer** | Docker, CI/CD, Coolify | Multi-stage build, secrets, healthcheck |
-| **Security Engineer** | Auth, konfigurasi, API | JWT hardening, rate limiting, CORS |
-| **QA Engineer** | Fitur baru, sebelum deploy | Jest, Supertest, Playwright |
-| **Product Owner** | Klarifikasi fitur, prioritas | Kebutuhan bisnis, acceptance criteria |
-
-Detail di `memory/claude-code-roles-and-workflow.md`
+| Role | Kapan Aktif | Fokus Utama |
+|------|-------------|-------------|
+| **Solution Architect** | Desain sistem, arsitektur, ERD, API contract | Clean architecture, dependency injection |
+| **Backend Developer** | Kode di `backend/` | NestJS, Prisma, JWT, Redis, BullMQ |
+| **Frontend Developer** | Kode di `frontend/` | SvelteKit, Svelte 5 Runes ($state, $derived, $effect) |
+| **DBA** | Schema, migrasi, query | Prisma, index, constraint, N+1 prevention |
+| **DevOps Engineer** | Docker, CI/CD, Coolify | Multi-stage build, healthcheck, secrets |
+| **Security Engineer** | Auth, environment, endpoint | JWT hardening, rate limiting, CORS whitelist |
+| **QA Engineer** | Fitur baru, bugfix, deploy | Jest unit test, Supertest, Playwright E2E |
+| **Product Owner** | Klarifikasi fitur, prioritas | Kriteria selesai, scope management |
 
 ---
 
@@ -71,14 +69,61 @@ Detail di `memory/claude-code-roles-and-workflow.md`
 
 ---
 
-## 🔧 Skills Reference
+## 🔧 Skills & Commands
 
-| Task | Command/Skill |
-|------|---------------|
-| New feature | `/spec` → `/plan` → `/build` → `/test` → `/review` |
-| Bug fix | `/test` → fix → verify |
-| UI work | `frontend-ui-engineering` skill + Puppeteer MCP |
-| Security | `security-and-hardening` skill |
+### Slash Commands
+
+| Command | Skill Orchestrated | Purpose |
+|---------|-------------------|---------|
+| `/spec` | `spec-driven-development` | Buat spec PRD sebelum coding |
+| `/plan` | `planning-and-task-breakdown` | Breakdown jadi atomic tasks |
+| `/build` | `incremental-implementation` + domain skills | Implementasi incremental |
+| `/test` | `test-driven-development` | Prove it works dengan tests |
+| `/review` | `code-review-and-quality` | Quality gate sebelum merge |
+| `/code-simplify` | `code-simplification` | Clarity over cleverness |
+| `/ship` | Parallel fan-out: code-reviewer + security-auditor + test-engineer | Pre-launch checklist |
+
+### 24 Skills by Phase
+
+| Phase | Skill | When to Use |
+|-------|-------|-------------|
+| Define | `interview-me` | Request underspecified |
+| Define | `idea-refine` | Rough concept |
+| Define | `spec-driven-development` | New feature/project |
+| Plan | `planning-and-task-breakdown` | Breakdown tasks |
+| Build | `incremental-implementation` | Multi-file change |
+| Build | `test-driven-development` | Logic, bugs (Prove-It) |
+| Build | `frontend-ui-engineering` | UI components, WCAG 2.1 AA |
+| Build | `api-and-interface-design` | APIs, module boundaries |
+| Build | `source-driven-development` | Need official docs |
+| Build | `doubt-driven-development` | High-stakes decisions |
+| Build | `context-engineering` | Session/task switch |
+| Verify | `browser-testing-with-devtools` | Browser debugging |
+| Verify | `debugging-and-error-recovery` | Tests fail, errors |
+| Review | `code-review-and-quality` | Five-axis review |
+| Review | `code-simplification` | Complex code |
+| Review | `security-and-hardening` | Auth, OWASP Top 10 |
+| Review | `performance-optimization` | Core Web Vitals |
+| Ship | `git-workflow-and-versioning` | Every commit |
+| Ship | `ci-cd-and-automation` | CI/CD setup |
+| Ship | `shipping-and-launch` | Production deploy |
+| Ship | `deprecation-and-migration` | Removing features |
+| Ship | `documentation-and-adrs` | Architectural decisions |
+| Ship | `observability-and-instrumentation` | Telemetry, logging |
+
+### Decision Matrix
+
+| Task | Primary Skill | Secondary |
+|------|--------------|-----------|
+| Writing tests | `test-driven-development` | - |
+| Building UI | `frontend-ui-engineering` | `test-driven-development` |
+| Auth changes | `security-and-hardening` | `test-driven-development` |
+| API changes | `api-and-interface-design` | `security-and-hardening` |
+| Database queries | `performance-optimization` | `test-driven-development` |
+| Multi-agent work | `git-workflow-and-versioning` | - |
+| Refactoring | `code-simplification` | `test-driven-development` |
+| New feature | `spec-driven-development` | `planning-and-task-breakdown` |
+| Bug fix | `debugging-and-error-recovery` | `test-driven-development` |
 
 ### Skills Auto-Activation
 
@@ -88,6 +133,16 @@ Detail di `memory/claude-code-roles-and-workflow.md`
 | "UI", "component" | `frontend-ui-engineering` |
 | "API", "endpoint" | `api-and-interface-design` |
 | "review", "quality" | `code-review-and-quality` |
+
+### How to Invoke
+
+```
+Task arrives
+    │
+    ├── Automatic: Skills activate based on context
+    │
+    └── Manual: Skill{skill: "skill-name"}
+```
 
 ---
 
@@ -196,28 +251,6 @@ Per Kasir = Kasir Pool × (Kasir Sales / Total Sales)
 
 ---
 
-## 🧪 Testing (Puppeteer MCP)
-
-```bash
-# 1. Start dev server
-npm run dev
-
-# 2. Navigate to page
-puppeteer_navigate → url: "http://localhost:5173"
-
-# 3. Take screenshot
-puppeteer_screenshot → name: "homepage"
-
-# 4. Interact
-puppeteer_click → selector: "button.submit"
-puppeteer_fill → selector: "input#email", value: "test@example.com"
-
-# 5. Verify
-puppeteer_screenshot → name: "result"
-```
-
----
-
 ## 📚 Documentation
 
 | Document | Location |
@@ -228,6 +261,56 @@ puppeteer_screenshot → name: "result"
 | ADRs | `docs/decisions/` |
 | Guides | `docs/guides/` |
 | Memory | `memory/` |
+
+---
+
+## 📋 Quick Reference Card
+
+### Reference by Task Type (MANDATORY LOAD)
+
+| Task Type | Load This Reference |
+|-----------|---------------------|
+| Writing tests | `agent-skills/references/testing-patterns.md` |
+| Building UI components | `agent-skills/references/accessibility-checklist.md` |
+| Security/auth changes | `agent-skills/references/security-checklist.md` |
+| Performance work | `agent-skills/references/performance-checklist.md` |
+| Pre-launch/deploy | `agent-skills/references/security-checklist.md` + `agent-skills/references/performance-checklist.md` |
+| Code review | `agent-skills/references/security-checklist.md` |
+| Multi-agent work | `agent-skills/references/orchestration-patterns.md` |
+
+### 5 References & Key Items
+
+| # | File | Skill | Key Items |
+|---|------|-------|-----------|
+| 1 | `agent-skills/references/testing-patterns.md` | `test-driven-development` | AAA, naming, mocking |
+| 2 | `agent-skills/references/security-checklist.md` | `security-and-hardening` | OWASP Top 10, auth |
+| 3 | `agent-skills/references/performance-checklist.md` | `performance-optimization` | CWV, TTFB, bundle |
+| 4 | `agent-skills/references/accessibility-checklist.md` | `frontend-ui-engineering` | WCAG 2.1 AA, ARIA |
+| 5 | `agent-skills/references/orchestration-patterns.md` | `git-workflow-and-versioning` | Multi-agent patterns |
+
+### Orchestration Patterns (Multi-Agent)
+
+**Endorsed:**
+- Direct invocation (single persona)
+- Single-persona slash command
+- Parallel fan-out with merge (`/ship`)
+- Sequential as user-driven
+
+**Anti-Patterns (AVOID):**
+- Router persona
+- Persona calling persona
+- Deep persona trees
+
+### Checklist Before Complete
+Before any task is complete:
+
+- [ ] Skill identified correctly based on task type
+- [ ] Reference loaded and applied (testing/security/performance/accessibility)
+- [ ] Checklist items from reference verified in code
+- [ ] Tests written using testing patterns (AAA, DAMP naming)
+- [ ] Accessibility features implemented (WCAG 2.1 AA)
+- [ ] Security controls in place (OWASP Top 10)
+- [ ] Performance optimized where applicable (Core Web Vitals)
 
 ---
 

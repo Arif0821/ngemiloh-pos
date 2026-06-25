@@ -410,8 +410,12 @@ describe('auth_store', () => {
 			expect(second_timeout).not.toBeNull();
 		});
 
-		it('triggers immediate refresh if token already past refresh window', () => {
-			const exp_time = Math.floor(Date.now() / 1000) + 30 * 60; // 30 minutes from now (less than 60)
+		it('triggers immediate refresh if token already past refresh window', async () => {
+			// Token with 30-min expiry triggers immediate refresh (delay_ms <= 0)
+			// Use spy on refresh_token to verify it's called, avoiding recursion issues
+			const refresh_spy = vi.spyOn(store, 'refresh_token').mockResolvedValue(true);
+
+			const exp_time = Math.floor(Date.now() / 1000) + 30 * 60;
 			const token = create_jwt_token({
 				sub: 'user-123',
 				role: 'kasir',
@@ -423,16 +427,12 @@ describe('auth_store', () => {
 				configurable: true
 			});
 
-			// First mock: initial refresh call
-			// Second mock: recursive init_silent_refresh call after successful refresh
-			mock_fetch
-				.mockResolvedValueOnce(new Response('{}', { status: 200 }))
-				.mockResolvedValueOnce(new Response('{}', { status: 200 }));
-
 			store.init_silent_refresh('kasir');
 
-			// Should trigger immediate refresh since refresh time has passed
-			expect(mock_fetch).toHaveBeenCalledWith('/api/v1/auth/refresh', expect.any(Object));
+			// Should have called refresh_token immediately
+			expect(refresh_spy).toHaveBeenCalledWith('kasir');
+
+			refresh_spy.mockRestore();
 		});
 	});
 
@@ -605,8 +605,12 @@ describe('auth_store', () => {
 			expect(store.is_token_expiring_soon).toBe(false);
 		});
 
-		it('returns true when token expires within 60 minutes', () => {
-			const exp_time = Math.floor(Date.now() / 1000) + 30 * 60; // 30 minutes from now
+		it('returns true when token expires within 60 minutes', async () => {
+			// We need to test is_token_expiring_soon, which depends on token_expiry being set
+			// Mock refresh_token to avoid recursion, but token_expiry is set BEFORE refresh is called
+			const refresh_spy = vi.spyOn(store, 'refresh_token').mockResolvedValue(true);
+
+			const exp_time = Math.floor(Date.now() / 1000) + 30 * 60;
 			const token = create_jwt_token({
 				sub: 'user-123',
 				role: 'kasir',
@@ -618,15 +622,12 @@ describe('auth_store', () => {
 				configurable: true
 			});
 
-			// Token triggers immediate refresh (30 min < 60 min refresh window)
-			// First mock: initial refresh, Second mock: recursive init_silent_refresh
-			mock_fetch
-				.mockResolvedValueOnce(new Response('{}', { status: 200 }))
-				.mockResolvedValueOnce(new Response('{}', { status: 200 }));
-
 			store.init_silent_refresh('kasir');
 
+			// token_expiry was set before the recursive call, so is_token_expiring_soon should be true
 			expect(store.is_token_expiring_soon).toBe(true);
+
+			refresh_spy.mockRestore();
 		});
 
 		it('returns false when token expires after 60 minutes', () => {

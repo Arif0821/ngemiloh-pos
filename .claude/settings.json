@@ -1,8 +1,11 @@
 {
+  "env": {},
   "permissions": {
     "allow": [],
     "deny": []
   },
-  "env": {},
-  "hooks": {}
+  "hooks": {},
+  "enabledPlugins": {
+    "chrome-devtools-mcp@chrome-devtools-plugins": true
+  }
 }
