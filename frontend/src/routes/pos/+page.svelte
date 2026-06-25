@@ -7,6 +7,7 @@
 	import { api } from '$lib/services/api.client';
 	import { db } from '$lib/db';
 	import { FLAG_REFRESH_INTERVAL_MS } from '$lib/utils/format';
+	import { printer_service } from '$lib/services/printer.service';
 
 	import ProductList from '$lib/components/pos/ProductList.svelte';
 	import CartSidebar from '$lib/components/pos/CartSidebar.svelte';
@@ -36,6 +37,21 @@
 	// Cart persistence: reactive tracking of cart changes
 	// Use a separate state to track when cart has been populated from Dexie
 	let cart_initialized = $state(false);
+
+	// FIX #4: Track pending offline receipts for badge display
+	let pending_receipts_count = $state(0);
+
+	// Load pending receipts count on mount and periodically
+	async function load_pending_receipts_count() {
+		pending_receipts_count = await printer_service.get_pending_receipts_count();
+	}
+
+	// Reactive effect to load pending count when coming online
+	$effect(() => {
+		if (!pos_store.is_offline) {
+			load_pending_receipts_count();
+		}
+	});
 
 	// Save cart to Dexie whenever cart changes (after initial load)
 	$effect(() => {
@@ -117,6 +133,14 @@
 		handle_online = async () => {
 			pos_store.is_offline = false; // BUG-06 FIX: Update state on online event
 			await pos_service.sync_pending_orders();
+			// FIX #4: Auto-print pending offline receipts when back online
+			const pending_count = await printer_service.get_pending_receipts_count();
+			if (pending_count > 0) {
+				const printed = await printer_service.print_pending_receipts();
+				if (printed > 0) {
+					console.log(`[POS] Printed ${printed} pending offline receipts`);
+				}
+			}
 		};
 		handle_offline = () => {
 			pos_store.is_offline = true; // BUG-06 FIX: Update state on offline event
@@ -209,7 +233,7 @@
 						pos_service.fetch_history();
 						pos_store.show_history_modal = true;
 					}}
-					class="flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-600 shadow-sm transition-colors hover:bg-indigo-100"
+					class="relative flex items-center gap-2 rounded-full border border-indigo-100 bg-indigo-50 px-4 py-2 text-sm font-medium text-indigo-600 shadow-sm transition-colors hover:bg-indigo-100"
 				>
 					<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
 						><path
@@ -220,7 +244,39 @@
 						></path></svg
 					>
 					<span class="hidden sm:inline">Riwayat</span>
+					<!-- FIX #4: Badge for pending offline receipts -->
+					{#if pending_receipts_count > 0}
+						<span
+							class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white"
+						>
+							{pending_receipts_count}
+						</span>
+					{/if}
 				</button>
+				<!-- FIX #4: Manual print pending receipts button -->
+				{#if pending_receipts_count > 0}
+					<button
+						onclick={async () => {
+							const printed = await printer_service.print_pending_receipts();
+							if (printed > 0) {
+								await load_pending_receipts_count();
+							}
+						}}
+						class="flex items-center gap-2 rounded-full border border-orange-100 bg-orange-50 px-4 py-2 text-sm font-medium text-orange-600 shadow-sm transition-colors hover:bg-orange-100"
+						title="Cetak struk tertunda ({pending_receipts_count})"
+					>
+						<svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"
+							><path
+								stroke-linecap="round"
+								stroke-linejoin="round"
+								stroke-width="2"
+								d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"
+							></path></svg
+						>
+						<span class="hidden font-bold sm:inline">PRINT</span>
+						<span class="hidden sm:inline">({pending_receipts_count})</span>
+					</button>
+				{/if}
 				<button
 					onclick={handle_logout}
 					class="flex items-center gap-2 rounded-full border border-red-100 bg-red-50 px-4 py-2 text-sm font-medium text-red-600 shadow-sm transition-colors hover:bg-red-100 dark:border-red-900/50 dark:bg-red-900/20 dark:hover:bg-red-900/40"
