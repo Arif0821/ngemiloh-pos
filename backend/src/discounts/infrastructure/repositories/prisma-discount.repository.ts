@@ -49,6 +49,16 @@ export class PrismaDiscountRepository implements IDiscountRepository {
   ): Promise<Discount> {
     const old = await this.prisma.discount.findUnique({ where: { id } });
 
+    // Parse dates only if they are strings
+    const validFromDate =
+      typeof data.valid_from === 'string'
+        ? new Date(data.valid_from)
+        : data.valid_from;
+    const validUntilDate =
+      typeof data.valid_until === 'string'
+        ? new Date(data.valid_until)
+        : data.valid_until;
+
     const updated = await this.prisma.discount.update({
       where: { id },
       data: {
@@ -57,15 +67,8 @@ export class PrismaDiscountRepository implements IDiscountRepository {
         value: data.value,
         scope: data.scope,
         target_id: data.target_id || null,
-        valid_from: data.valid_from
-          ? new Date(String(data.valid_from))
-          : undefined,
-        valid_until:
-          data.valid_until !== undefined
-            ? data.valid_until
-              ? new Date(String(String(data.valid_until)))
-              : null
-            : undefined,
+        valid_from: validFromDate,
+        valid_until: validUntilDate,
         applicable_days: data.applicable_days,
         is_active: data.is_active,
         manually_disabled: data.manually_disabled,

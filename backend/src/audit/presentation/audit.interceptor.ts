@@ -7,6 +7,7 @@ import {
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
 import { tap } from 'rxjs/operators';
+import { Prisma } from '@prisma/client';
 import {
   AUDIT_REPOSITORY,
   type IAuditRepository,
@@ -88,8 +89,8 @@ export class AuditInterceptor implements NestInterceptor {
             action: action,
             entity_type: 'API_REQUEST',
             entity_id: requestUrl,
-            old_value: null,
-            new_value: newValue,
+            old_value: Prisma.JsonNull,
+            new_value: newValue as Prisma.InputJsonValue,
             ip_address: ipAddress,
           })
           .catch((err: Error) => {

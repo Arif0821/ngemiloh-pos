@@ -2,6 +2,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, BadRequestException } from '@nestjs/common';
 import { InventoryService } from './inventory.service';
 import { INVENTORY_REPOSITORY } from '../../domain/interfaces/inventory.repository.interface';
+import { PrismaService } from '../../../prisma/prisma.service';
 
 const mockRepository = {
   findAllRawMaterials: jest.fn(),
@@ -27,10 +28,17 @@ describe('InventoryService', () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+
+    // Mock PrismaService with required methods for advisory locks
+    const mockPrismaService = {
+      $executeRaw: jest.fn().mockResolvedValue(1),
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InventoryService,
         { provide: INVENTORY_REPOSITORY, useValue: mockRepository },
+        { provide: PrismaService, useValue: mockPrismaService },
       ],
     }).compile();
 
@@ -166,9 +174,9 @@ describe('InventoryService', () => {
       const mockMaterial = { id: 'rm-1', name: 'Flour', current_stock: 100 };
       const mockUpdated = { ...mockMaterial, current_stock: 110 };
       mockRepository.findRawMaterialById.mockResolvedValue(mockMaterial);
-      mockRepository.executeInTransaction.mockImplementation(async (fn) => {
-        return fn(mockRepository);
-      });
+      mockRepository.executeInTransaction.mockImplementation((fn) =>
+        fn(mockRepository),
+      );
       mockRepository.createInventoryTransaction.mockResolvedValue({
         id: 'tx-1',
       });
@@ -201,9 +209,9 @@ describe('InventoryService', () => {
       const mockMaterial = { id: 'rm-1', name: 'Flour', current_stock: 100 };
       const mockUpdated = { ...mockMaterial, current_stock: 90 };
       mockRepository.findRawMaterialById.mockResolvedValue(mockMaterial);
-      mockRepository.executeInTransaction.mockImplementation(async (fn) => {
-        return fn(mockRepository);
-      });
+      mockRepository.executeInTransaction.mockImplementation((fn) =>
+        fn(mockRepository),
+      );
       mockRepository.createInventoryTransaction.mockResolvedValue({
         id: 'tx-1',
       });
@@ -229,9 +237,9 @@ describe('InventoryService', () => {
       const mockMaterial = { id: 'rm-1', name: 'Flour', current_stock: 100 };
       const mockUpdated = { ...mockMaterial, current_stock: 95 };
       mockRepository.findRawMaterialById.mockResolvedValue(mockMaterial);
-      mockRepository.executeInTransaction.mockImplementation(async (fn) => {
-        return fn(mockRepository);
-      });
+      mockRepository.executeInTransaction.mockImplementation((fn) =>
+        fn(mockRepository),
+      );
       mockRepository.createInventoryTransaction.mockResolvedValue({
         id: 'tx-1',
       });
@@ -250,9 +258,9 @@ describe('InventoryService', () => {
       const mockMaterial = { id: 'rm-1', name: 'Flour', current_stock: 100 };
       const mockUpdated = { ...mockMaterial, current_stock: 90 };
       mockRepository.findRawMaterialById.mockResolvedValue(mockMaterial);
-      mockRepository.executeInTransaction.mockImplementation(async (fn) => {
-        return fn(mockRepository);
-      });
+      mockRepository.executeInTransaction.mockImplementation((fn) =>
+        fn(mockRepository),
+      );
       mockRepository.createInventoryTransaction.mockResolvedValue({
         id: 'tx-1',
       });
@@ -286,9 +294,9 @@ describe('InventoryService', () => {
       ];
       const mockUpdated = { id: 'rm-1', current_stock: 95 };
 
-      mockRepository.executeInTransaction.mockImplementation(async (fn) => {
-        return fn(mockRepository);
-      });
+      mockRepository.executeInTransaction.mockImplementation((fn) =>
+        fn(mockRepository),
+      );
       mockRepository.findManyRawMaterialsByIds.mockResolvedValue(mockMaterials);
       mockRepository.createInventoryTransaction.mockResolvedValue({
         id: 'tx-1',
@@ -318,9 +326,9 @@ describe('InventoryService', () => {
       const items = [{ id: 'rm-1', physical_stock: 110 }];
       const mockUpdated = { id: 'rm-1', current_stock: 110 };
 
-      mockRepository.executeInTransaction.mockImplementation(async (fn) => {
-        return fn(mockRepository);
-      });
+      mockRepository.executeInTransaction.mockImplementation((fn) =>
+        fn(mockRepository),
+      );
       mockRepository.findManyRawMaterialsByIds.mockResolvedValue(mockMaterials);
       mockRepository.createInventoryTransaction.mockResolvedValue({
         id: 'tx-1',
@@ -346,9 +354,9 @@ describe('InventoryService', () => {
         { id: 'rm-invalid', physical_stock: 50 },
       ];
 
-      mockRepository.executeInTransaction.mockImplementation(async (fn) => {
-        return fn(mockRepository);
-      });
+      mockRepository.executeInTransaction.mockImplementation((fn) =>
+        fn(mockRepository),
+      );
       mockRepository.findManyRawMaterialsByIds.mockResolvedValue(mockMaterials);
 
       const result = await service.submitOpname(items, 'user-1');
@@ -367,9 +375,9 @@ describe('InventoryService', () => {
         { id: 'rm-2', physical_stock: 50 },
       ];
 
-      mockRepository.executeInTransaction.mockImplementation(async (fn) => {
-        return fn(mockRepository);
-      });
+      mockRepository.executeInTransaction.mockImplementation((fn) =>
+        fn(mockRepository),
+      );
       mockRepository.findManyRawMaterialsByIds.mockResolvedValue(mockMaterials);
 
       const result = await service.submitOpname(items, 'user-1');
@@ -420,9 +428,9 @@ describe('InventoryService', () => {
       ];
 
       mockRepository.findOrderWithIngredients.mockResolvedValue(mockOrder);
-      mockRepository.executeInTransaction.mockImplementation(async (fn) => {
-        return fn(mockRepository);
-      });
+      mockRepository.executeInTransaction.mockImplementation((fn) =>
+        fn(mockRepository),
+      );
       mockRepository.findAvailableBatches.mockResolvedValue(mockBatches);
       mockRepository.decrementBatchStock.mockResolvedValue({ id: 'mv-1' });
       mockRepository.createInventoryTransaction.mockResolvedValue({
@@ -461,9 +469,9 @@ describe('InventoryService', () => {
       };
 
       mockRepository.findOrderWithIngredients.mockResolvedValue(mockOrder);
-      mockRepository.executeInTransaction.mockImplementation(async (fn) => {
-        return fn(mockRepository);
-      });
+      mockRepository.executeInTransaction.mockImplementation((fn) =>
+        fn(mockRepository),
+      );
       mockRepository.createInventoryTransaction.mockResolvedValue({
         id: 'tx-1',
       });
@@ -501,9 +509,9 @@ describe('InventoryService', () => {
       ];
 
       mockRepository.findOrderWithIngredients.mockResolvedValue(mockOrder);
-      mockRepository.executeInTransaction.mockImplementation(async (fn) => {
-        return fn(mockRepository);
-      });
+      mockRepository.executeInTransaction.mockImplementation((fn) =>
+        fn(mockRepository),
+      );
       mockRepository.findAvailableBatches.mockResolvedValue(mockBatches);
       mockRepository.decrementBatchStock.mockResolvedValue({ id: 'mv-1' });
       mockRepository.createInventoryTransaction.mockResolvedValue({
@@ -549,9 +557,9 @@ describe('InventoryService', () => {
       ];
 
       mockRepository.findOrderWithIngredients.mockResolvedValue(mockOrder);
-      mockRepository.executeInTransaction.mockImplementation(async (fn) => {
-        return fn(mockRepository);
-      });
+      mockRepository.executeInTransaction.mockImplementation((fn) =>
+        fn(mockRepository),
+      );
       mockRepository.findAvailableBatches.mockResolvedValue(mockBatches);
       mockRepository.decrementBatchStock.mockResolvedValue({ id: 'mv-1' });
       mockRepository.findRawMaterialById.mockResolvedValue({
@@ -602,9 +610,9 @@ describe('InventoryService', () => {
       };
 
       mockRepository.findOrderWithIngredients.mockResolvedValue(mockOrder);
-      mockRepository.executeInTransaction.mockImplementation(async (fn) => {
-        return fn(mockRepository);
-      });
+      mockRepository.executeInTransaction.mockImplementation((fn) =>
+        fn(mockRepository),
+      );
       mockRepository.findStockMovementByOrderId.mockResolvedValue({
         id: 'mv-1',
       });
@@ -649,9 +657,9 @@ describe('InventoryService', () => {
       };
 
       mockRepository.findOrderWithIngredients.mockResolvedValue(mockOrder);
-      mockRepository.executeInTransaction.mockImplementation(async (fn) => {
-        return fn(mockRepository);
-      });
+      mockRepository.executeInTransaction.mockImplementation((fn) =>
+        fn(mockRepository),
+      );
       mockRepository.findStockMovementByOrderId.mockResolvedValue(null);
       mockRepository.createInventoryTransaction.mockResolvedValue({
         id: 'tx-1',
@@ -687,9 +695,9 @@ describe('InventoryService', () => {
       };
 
       mockRepository.findOrderWithIngredients.mockResolvedValue(mockOrder);
-      mockRepository.executeInTransaction.mockImplementation(async (fn) => {
-        return fn(mockRepository);
-      });
+      mockRepository.executeInTransaction.mockImplementation((fn) =>
+        fn(mockRepository),
+      );
       mockRepository.createInventoryTransaction.mockResolvedValue({
         id: 'tx-1',
       });
@@ -726,9 +734,9 @@ describe('InventoryService', () => {
       };
 
       mockRepository.findOrderWithIngredients.mockResolvedValue(mockOrder);
-      mockRepository.executeInTransaction.mockImplementation(async (fn) => {
-        return fn(mockRepository);
-      });
+      mockRepository.executeInTransaction.mockImplementation((fn) =>
+        fn(mockRepository),
+      );
       mockRepository.findStockMovementByOrderId.mockResolvedValue({
         id: 'mv-1',
       });

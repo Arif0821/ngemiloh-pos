@@ -85,11 +85,20 @@
 
 {#if mode === 'open' && dismissed}
 	<!-- Dismissed state: Show read-only POS with banner -->
-	<div class="fixed inset-0 z-40 flex items-center justify-center bg-linear-to-b from-slate-900 to-slate-800 p-4">
+	<div
+		class="fixed inset-0 z-40 flex items-center justify-center bg-linear-to-b from-slate-900 to-slate-800 p-4"
+	>
 		<div class="text-center">
-			<div class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/20">
+			<div
+				class="mb-4 inline-flex h-16 w-16 items-center justify-center rounded-full bg-amber-500/20"
+			>
 				<svg class="h-8 w-8 text-amber-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-					<path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+					<path
+						stroke-linecap="round"
+						stroke-linejoin="round"
+						stroke-width="2"
+						d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"
+					></path>
 				</svg>
 			</div>
 			<h2 class="mb-2 text-xl font-bold text-white">Shift Belum Dibuka</h2>
@@ -153,8 +162,8 @@
 				<div class="mt-6 flex flex-col gap-3 sm:flex-row">
 					<button
 						type="button"
-						onclick={() => dismissed = true}
-						class="flex-1 rounded-xl border border-slate-200 py-3 font-bold text-slate-600 hover:bg-slate-50 dark:border-surface-600 dark:text-slate-400 dark:hover:bg-surface-800 sm:flex-none"
+						onclick={() => (dismissed = true)}
+						class="dark:border-surface-600 dark:hover:bg-surface-800 flex-1 rounded-xl border border-slate-200 py-3 font-bold text-slate-600 hover:bg-slate-50 sm:flex-none dark:text-slate-400"
 					>
 						Nanti Saja
 					</button>

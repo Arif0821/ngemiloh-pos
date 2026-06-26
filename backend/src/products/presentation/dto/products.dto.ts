@@ -11,14 +11,14 @@ import { Transform, Type } from 'class-transformer';
 export class CreateProductDto {
   @IsString()
   @MaxLength(100)
-  name: string;
+  name: string = '';
 
   @IsUUID()
-  category_id: string;
+  category_id: string = '';
 
   @Type(() => Number)
   @IsNumber()
-  base_price: number;
+  base_price: number = 0;
 
   @IsOptional()
   @IsString()
@@ -68,7 +68,7 @@ export class UpdateProductDto {
 export class CreateModifierGroupDto {
   @IsString()
   @MaxLength(50)
-  name: string;
+  name: string = '';
 
   @IsOptional()
   @IsBoolean()
@@ -97,11 +97,11 @@ export class UpdateModifierGroupDto {
 export class CreateModifierOptionDto {
   @IsString()
   @MaxLength(100)
-  name: string;
+  name: string = '';
 
   @Type(() => Number)
   @IsNumber()
-  additional_price: number;
+  additional_price: number = 0;
 }
 
 export class UpdateModifierOptionDto {

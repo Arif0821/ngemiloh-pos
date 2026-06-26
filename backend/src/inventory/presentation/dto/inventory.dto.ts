@@ -32,15 +32,15 @@ export class AtLeastOneRequiredConstraint implements ValidatorConstraintInterfac
 
 export class AdjustStockDto {
   @IsUUID()
-  id: string;
+  id: string = '';
 
   @IsNumber()
   @Min(0.01)
-  qty: number;
+  qty: number = 0;
 
   @IsString()
   @IsIn(['in', 'out', 'adjustment', 'waste'])
-  type: string;
+  type: string = 'adjustment';
 
   @IsOptional()
   @IsString()
@@ -50,44 +50,44 @@ export class AdjustStockDto {
 
 export class OpnameItemDto {
   @IsUUID()
-  id: string;
+  id: string = '';
 
   @IsNumber()
   @Min(0)
-  physical_stock: number;
+  physical_stock: number = 0;
 }
 
 export class SubmitOpnameDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => OpnameItemDto)
-  items: OpnameItemDto[];
+  items: OpnameItemDto[] = [];
 }
 
 export class CreateRawMaterialDto {
   @IsString()
   @MaxLength(100)
-  name: string;
+  name: string = '';
 
   @IsString()
   @MaxLength(20)
-  purchase_unit: string;
+  purchase_unit: string = '';
 
   @IsNumber()
   @Min(0.01)
-  purchase_qty: number;
+  purchase_qty: number = 1;
 
   @IsString()
   @MaxLength(20)
-  usage_unit: string;
+  usage_unit: string = '';
 
   @IsNumber()
   @Min(0.0001)
-  conversion_factor: number;
+  conversion_factor: number = 1;
 
   @IsNumber()
   @Min(0)
-  cost_per_unit: number;
+  cost_per_unit: number = 0;
 
   @IsOptional()
   @IsNumber()
@@ -152,27 +152,32 @@ export class CreateBomRecipeDto {
   modifier_option_id?: string;
 
   @Validate(AtLeastOneRequiredConstraint, ['product_id', 'modifier_option_id'])
-  _atLeastOne: undefined;
+  _atLeastOne: undefined = undefined;
 
   @IsUUID()
-  raw_material_id: string;
+  raw_material_id: string = '';
 
   @IsNumber()
   @Min(0.0001)
-  quantity_per_serving: number;
+  quantity_per_serving: number = 0;
+
+  @IsOptional()
+  @IsString()
+  @MaxLength(255)
+  notes?: string;
 }
 
 export class RecordWasteDto {
   @IsUUID()
-  raw_material_id: string;
+  raw_material_id: string = '';
 
   @IsNumber()
   @Min(0.0001)
-  quantity: number;
+  quantity: number = 0;
 
   @IsString()
   @MaxLength(50)
-  reason: string;
+  reason: string = '';
 
   @IsOptional()
   @IsString()

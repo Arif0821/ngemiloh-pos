@@ -4,15 +4,15 @@ import { Type } from 'class-transformer';
 export class SettingItemDto {
   @IsString()
   @MaxLength(100)
-  key: string;
+  key: string = '';
 
   @IsString()
-  value: string;
+  value: string = '';
 }
 
 export class UpdateSettingsDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => SettingItemDto)
-  settings: SettingItemDto[];
+  settings: SettingItemDto[] = [];
 }

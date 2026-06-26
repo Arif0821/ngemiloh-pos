@@ -8,10 +8,12 @@ export function parsePagination(query: { page?: string; limit?: string }): {
   limit: number;
   offset: number;
 } {
-  const page = Math.max(1, parseInt(query.page, 10) || DEFAULT_PAGE);
+  const pageStr = query.page ?? String(DEFAULT_PAGE);
+  const limitStr = query.limit ?? String(DEFAULT_PAGE_SIZE);
+  const page = Math.max(1, parseInt(pageStr, 10) || DEFAULT_PAGE);
   const limit = Math.min(
     MAX_PAGE_SIZE,
-    Math.max(1, parseInt(query.limit, 10) || DEFAULT_PAGE_SIZE),
+    Math.max(1, parseInt(limitStr, 10) || DEFAULT_PAGE_SIZE),
   );
   const offset = (page - 1) * limit;
   return { page, limit, offset };
@@ -21,5 +23,6 @@ export function parsePagination(query: { page?: string; limit?: string }): {
  * Parse simple single-value pagination (for list endpoints)
  */
 export function parsePageParam(value?: string): number {
-  return Math.max(1, parseInt(value, 10) || DEFAULT_PAGE);
+  const valStr = value ?? String(DEFAULT_PAGE);
+  return Math.max(1, parseInt(valStr, 10) || DEFAULT_PAGE);
 }

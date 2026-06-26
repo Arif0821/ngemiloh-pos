@@ -61,8 +61,10 @@ export class EmailProcessor extends WorkerHost {
 
       this.logger.log(`Email job ${job.id} completed successfully`);
     } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
       this.logger.error(
-        `Email job ${job.id} failed (attempt ${job.attemptsMade + 1}/${job.opts.attempts}): ${error.message}`,
+        `Email job ${job.id} failed (attempt ${job.attemptsMade + 1}/${job.opts.attempts}): ${errorMessage}`,
       );
       throw error; // Re-throw to trigger BullMQ retry mechanism
     }

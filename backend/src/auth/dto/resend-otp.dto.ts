@@ -1,5 +1,7 @@
-import { IsEmail } from 'class-validator';
+import { IsEmail, IsOptional } from 'class-validator';
 
 export class ResendOtpDto {
-  @IsEmail() email: string;
+  @IsOptional()
+  @IsEmail({}, { message: 'Email tidak valid' })
+  email?: string = undefined;
 }

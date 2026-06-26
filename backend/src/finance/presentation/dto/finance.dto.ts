@@ -13,7 +13,7 @@ import { Type } from 'class-transformer';
 export class CreateOpexDto {
   @IsString()
   @MaxLength(50)
-  category: string;
+  category: string = '';
 
   @IsOptional()
   @IsString()
@@ -23,29 +23,29 @@ export class CreateOpexDto {
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  amount: number;
+  amount: number = 0;
 
   @IsDateString()
-  expense_date: string;
+  expense_date: string = new Date().toISOString();
 }
 
 export class CreateAssetDto {
   @IsString()
   @MaxLength(100)
-  name: string;
+  name: string = '';
 
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  purchase_price: number;
+  purchase_price: number = 0;
 
   @Type(() => Number)
   @IsNumber()
   @Min(1)
-  useful_life_months: number;
+  useful_life_months: number = 12;
 
   @IsDateString()
-  purchase_date: string;
+  purchase_date: string = new Date().toISOString();
 }
 
 export class UpdateAssetDto {
@@ -77,21 +77,21 @@ export class UpdateAssetDto {
 
 export class ClosePeriodDto {
   @IsString()
-  month: string;
+  month: string = '';
 
   @IsString()
-  year: string;
+  year: string = '';
 }
 
 export class CompleteProfitShareDto {
   @IsString()
-  month: string;
+  month: string = '';
 
   @IsString()
-  year: string;
+  year: string = '';
 
   @IsString()
-  proof: string;
+  proof: string = '';
 
   @IsOptional()
   @IsString()
@@ -102,11 +102,11 @@ export class OpenShiftDto {
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  opening_balance: number;
+  opening_balance: number = 0;
 
   // FASE 4: Multi-Outlet - outlet_id is required
   @IsUUID()
-  outlet_id: string;
+  outlet_id: string = '';
 
   @IsOptional()
   @IsDateString()
@@ -121,7 +121,7 @@ export class CloseShiftDto {
   @Type(() => Number)
   @IsNumber()
   @Min(0)
-  actual_cash: number;
+  actual_cash: number = 0;
 
   @IsOptional()
   @IsString()

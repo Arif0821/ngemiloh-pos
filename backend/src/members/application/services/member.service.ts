@@ -57,6 +57,11 @@ export class MemberService {
 
     // Get Bronze tier (default)
     const bronzeTier = await this.get_bronze_tier();
+    if (!bronzeTier) {
+      throw new BadRequestException(
+        'Bronze tier not found. Please run database seed.',
+      );
+    }
 
     // Create member
     const member = await this.memberRepository.create({
@@ -81,7 +86,13 @@ export class MemberService {
   }
 
   async lookup(identifier: { phone?: string; code?: string; qr?: string }) {
-    let member;
+    let member: {
+      id: string;
+      member_code: string;
+      name: string;
+      loyalty_points: number;
+      tier?: { name: string } | null;
+    } | null = null;
 
     if (identifier.phone) {
       member = await this.memberRepository.findByPhone(identifier.phone);
@@ -279,7 +290,10 @@ export class MemberService {
       memberId,
       1000,
     );
-    const currentBalance = allTxs.reduce((sum, tx) => sum + tx.points, 0);
+    const currentBalance: number = allTxs.reduce(
+      (sum: number, tx: { points: number }) => sum + tx.points,
+      0,
+    );
     await this.memberRepository.updatePoints(
       memberId,
       Math.max(0, currentBalance),

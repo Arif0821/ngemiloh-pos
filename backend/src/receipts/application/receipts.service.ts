@@ -102,15 +102,16 @@ export class ReceiptsService {
     // Get current shift info
     let shift: CashRegister | undefined;
     if (order.cashier_id) {
-      shift = await this.prisma.cashRegister.findFirst({
-        where: {
-          cashier_id: order.cashier_id,
-          status: 'open',
-        },
-        orderBy: {
-          shift_start: 'desc',
-        },
-      });
+      shift =
+        (await this.prisma.cashRegister.findFirst({
+          where: {
+            cashier_id: order.cashier_id,
+            status: 'open',
+          },
+          orderBy: {
+            shift_start: 'desc',
+          },
+        })) ?? undefined;
     }
 
     return {

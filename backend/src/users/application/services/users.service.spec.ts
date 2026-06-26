@@ -175,7 +175,7 @@ describe('UsersService', () => {
       const dto = { ...createCashierDto, pin: plainPin };
 
       mockUserRepo.findByUsername.mockResolvedValue(null);
-      mockUserRepo.create.mockImplementation(async (data: any) => ({
+      mockUserRepo.create.mockImplementation((data: any) => ({
         id: 'user-uuid-1',
         name: data.name,
         username: data.username,
@@ -253,7 +253,7 @@ describe('UsersService', () => {
 
     it('should hash new PIN with pepper', async () => {
       mockUserRepo.findById.mockResolvedValue(mockCashierUser);
-      mockUserRepo.update.mockImplementation(async (id: string, data: any) => ({
+      mockUserRepo.update.mockImplementation((id: string, data: any) => ({
         ...mockCashierUser,
         ...data,
       }));

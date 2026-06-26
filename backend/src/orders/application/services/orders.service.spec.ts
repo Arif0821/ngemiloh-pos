@@ -13,24 +13,13 @@ import { PAYMENT_GATEWAY } from '../../../payment/payment-gateway.interface';
 // SHA-512 produces 128-character hex string
 const MOCK_SIG = 'a'.repeat(128);
 
-// Mock midtrans-client
-jest.mock('midtrans-client', () => ({
-  CoreApi: jest.fn().mockImplementation(() => ({
-    charge: jest.fn(),
-    transaction: {
-      notification: jest.fn(),
-    },
-  })),
-}));
-
-// Mock crypto module - define key inline in factory to avoid hoisting issues
+// Mock crypto module
 jest.mock('crypto', () => {
   const SIG = 'a'.repeat(128); // 128 hex chars = 64 bytes when decoded
   return {
     ...jest.requireActual('crypto'),
     createHash: jest.fn().mockReturnValue({
       update: jest.fn().mockReturnValue({
-        // SHA-512 produces 128 hex chars = 64 bytes
         digest: jest.fn().mockReturnValue(Buffer.from(SIG, 'hex')),
       }),
     }),
@@ -44,7 +33,6 @@ describe('OrdersService', () => {
   let mockInventoryService: any;
   let mockEmailService: any;
   let mockEventEmitter: any;
-  let mockMidtransCore: any;
   let mockPrismaService: any;
   let mockMemberService: any;
   let mockPaymentGateway: any;
@@ -110,6 +98,7 @@ describe('OrdersService', () => {
     process.env.MIDTRANS_SERVER_KEY_PRODUCTION = 'prod-server-key';
 
     // Reset crypto mock to default state BEFORE each test
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
     const crypto = require('crypto');
     crypto.timingSafeEqual.mockReturnValue(true);
     crypto.createHash.mockReturnValue({
@@ -127,7 +116,7 @@ describe('OrdersService', () => {
       updateOrder: jest.fn(),
       findOrderById: jest.fn(),
       createAuditLog: jest.fn(),
-      findOrders: jest.fn(),
+      findOrders: jest.fn().mockResolvedValue({ orders: [], total: 0 }),
       aggregateOrders: jest.fn().mockResolvedValue({
         _sum: { cash_amount: null, qris_amount: null, total_amount: null },
         _count: 0,
@@ -164,6 +153,19 @@ describe('OrdersService', () => {
         count: jest.fn().mockResolvedValue(0),
         create: jest.fn().mockResolvedValue(mockOrder),
       },
+      userOutlet: {
+        findUnique: jest.fn().mockResolvedValue({
+          outlet: { id: 'outlet-1', is_active: true },
+        }),
+      },
+      cashRegister: {
+        findMany: jest.fn().mockResolvedValue([]),
+        findFirst: jest.fn().mockResolvedValue(null),
+        findUnique: jest.fn().mockResolvedValue(null),
+      },
+      featureFlag: {
+        findUnique: jest.fn().mockResolvedValue({ value: false }),
+      },
     };
 
     mockMemberService = {
@@ -171,10 +173,13 @@ describe('OrdersService', () => {
     };
 
     mockPaymentGateway = {
-      createQRIS: jest.fn().mockResolvedValue({
+      createQris: jest.fn().mockResolvedValue({
         transaction_id: 'test-txn-id',
-        payment_url: 'https://test.midtrans.com/qris',
+        qr_url: 'https://test.midtrans.com/qris',
+        status: 'success',
       }),
+      verifyWebhookSignature: jest.fn().mockReturnValue(true),
+      isAvailable: jest.fn().mockResolvedValue(true),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -191,10 +196,6 @@ describe('OrdersService', () => {
     }).compile();
 
     service = module.get<OrdersService>(OrdersService);
-
-    // Get reference to the mocked midtransCore
-    const midtransClient = require('midtrans-client');
-    mockMidtransCore = midtransClient.CoreApi.mock.results[0].value;
   });
 
   afterEach(() => {
@@ -331,20 +332,21 @@ describe('OrdersService', () => {
         mockOrderRepository.findProductsWithModifiers.mockResolvedValue([
           { ...mockProduct, base_price: 27000 },
         ]);
+        // Mock updateOrder to return order with qr_string
         mockOrderRepository.updateOrder.mockResolvedValue({
-          ...mockOrder,
-          payment_method: PaymentMethod.qris,
+          ...createdQrisOrder,
           qr_string: 'mock-qr-url',
           midtrans_transaction_id: 'txn-123',
         });
-        mockMidtransCore.charge.mockResolvedValue({
+        mockPaymentGateway.createQris.mockResolvedValue({
           transaction_id: 'txn-123',
-          actions: [{ name: 'generate-qr-code', url: 'mock-qr-url' }],
+          qr_string: 'mock-qr-url',
+          status: 'success',
         });
 
         const result = await service.createOrder(qrisOrder, 'kasir-001');
 
-        expect(mockMidtransCore.charge).toHaveBeenCalled();
+        expect(mockPaymentGateway.createQris).toHaveBeenCalled();
         expect((result as any).qr_string).toBe('mock-qr-url');
       });
 
@@ -430,6 +432,7 @@ describe('OrdersService', () => {
         mockPrismaService.$executeRaw.mockResolvedValue(1);
 
         // Mock $transaction to return order with "Perlu Cek" status
+        // eslint-disable-next-line @typescript-eslint/require-await
         mockPrismaService.$transaction.mockImplementation(async (cb) =>
           cb({
             order: {
@@ -484,6 +487,7 @@ describe('OrdersService', () => {
           items: [],
         };
 
+        // eslint-disable-next-line @typescript-eslint/require-await
         mockPrismaService.$transaction.mockImplementation(async (cb) =>
           cb({
             order: {
@@ -527,6 +531,7 @@ describe('OrdersService', () => {
           id: 'order-created',
           verification_status: 'Valid',
         };
+        // eslint-disable-next-line @typescript-eslint/require-await
         mockPrismaService.$transaction.mockImplementation(async (cb) =>
           cb({
             order: {
@@ -626,7 +631,7 @@ describe('OrdersService', () => {
       mockPrismaService.$executeRaw.mockResolvedValue(1);
       // Mock $queryRaw to return empty (no existing orders)
       mockPrismaService.$queryRaw.mockResolvedValue([]);
-      mockPrismaService.$transaction.mockImplementation(async (cb) => {
+      mockPrismaService.$transaction.mockImplementation((cb) => {
         const mockTx = {
           order: {
             create: jest.fn().mockResolvedValue({
@@ -664,10 +669,12 @@ describe('OrdersService', () => {
         new Error('Database error'),
       );
 
+      /* eslint-disable @typescript-eslint/no-unsafe-argument */
       const results = await service.syncBatchOrders(
         [batchOrders[0]] as any[],
         'kasir-001',
       );
+      /* eslint-enable @typescript-eslint/no-unsafe-argument */
 
       expect(results).toHaveLength(1);
       expect(results[0].status).toBe('error');
@@ -689,10 +696,12 @@ describe('OrdersService', () => {
       ]);
       mockOrderRepository.updateOrder.mockResolvedValue({});
 
+      /* eslint-disable @typescript-eslint/no-unsafe-argument */
       const results = await service.syncBatchOrders(
         [qrisOrder] as any[],
         'kasir-001',
       );
+      /* eslint-enable @typescript-eslint/no-unsafe-argument */
 
       expect(results).toHaveLength(1);
       expect(results[0].status).toBe('success');
@@ -708,7 +717,7 @@ describe('OrdersService', () => {
       mockOrderRepository.findActiveDiscounts.mockResolvedValue([]);
       mockOrderRepository.updateOrder.mockResolvedValue({});
       // Mock transaction to fail on second order
-      mockPrismaService.$transaction.mockImplementation(async (cb) => {
+      mockPrismaService.$transaction.mockImplementation((cb) => {
         const mockTx = {
           order: {
             create: jest
@@ -727,6 +736,7 @@ describe('OrdersService', () => {
     });
 
     it('should handle empty batch', async () => {
+      // eslint-disable-next-line @typescript-eslint/no-unsafe-argument -- Test requires casting to match CreateOrderDto type
       const results = await service.syncBatchOrders([] as any[], 'kasir-001');
 
       expect(results).toHaveLength(0);
@@ -746,15 +756,7 @@ describe('OrdersService', () => {
     };
 
     it('should handle settlement webhook successfully', async () => {
-      mockMidtransCore.transaction.notification.mockResolvedValue({
-        order_id: 'order-001',
-        transaction_status: 'settlement',
-        status_code: '200',
-        gross_amount: '25000',
-        fraud_status: 'accept',
-        transaction_id: 'txn-123',
-        signature_key: MOCK_SIG,
-      });
+      mockPaymentGateway.verifyWebhookSignature.mockReturnValue(true);
       mockOrderRepository.findOrderById.mockResolvedValue({
         ...mockOrder,
         status: OrderStatus.pending_sync,
@@ -786,13 +788,7 @@ describe('OrdersService', () => {
     });
 
     it('should handle expire webhook successfully', async () => {
-      mockMidtransCore.transaction.notification.mockResolvedValue({
-        order_id: 'order-001',
-        transaction_status: 'expire',
-        status_code: '201',
-        gross_amount: '25000',
-        signature_key: MOCK_SIG,
-      });
+      mockPaymentGateway.verifyWebhookSignature.mockReturnValue(true);
       mockOrderRepository.findOrderById.mockResolvedValue({
         ...mockOrder,
         status: OrderStatus.pending_sync,
@@ -822,13 +818,7 @@ describe('OrdersService', () => {
     });
 
     it('should handle cancel webhook successfully', async () => {
-      mockMidtransCore.transaction.notification.mockResolvedValue({
-        order_id: 'order-001',
-        transaction_status: 'cancel',
-        status_code: '202',
-        gross_amount: '25000',
-        signature_key: MOCK_SIG,
-      });
+      mockPaymentGateway.verifyWebhookSignature.mockReturnValue(true);
       mockOrderRepository.findOrderById.mockResolvedValue({
         ...mockOrder,
         status: OrderStatus.pending_sync,
@@ -858,18 +848,8 @@ describe('OrdersService', () => {
     });
 
     it('should ignore webhook with invalid signature', async () => {
-      // Mock timingSafeEqual to return false for invalid signature
-      const crypto = require('crypto');
-      (crypto.timingSafeEqual as jest.Mock).mockReturnValueOnce(false);
-
-      // Mock the notification response
-      mockMidtransCore.transaction.notification.mockResolvedValue({
-        order_id: 'order-001',
-        transaction_status: 'settlement',
-        status_code: '200',
-        gross_amount: '25000',
-        signature_key: MOCK_SIG,
-      });
+      // Mock verifyWebhookSignature to return false for invalid signature
+      mockPaymentGateway.verifyWebhookSignature.mockReturnValue(false);
 
       const result = await service.handleMidtransWebhook(validWebhookPayload);
 
@@ -878,13 +858,7 @@ describe('OrdersService', () => {
     });
 
     it('should handle pending webhook successfully', async () => {
-      mockMidtransCore.transaction.notification.mockResolvedValue({
-        order_id: 'order-001',
-        transaction_status: 'pending',
-        status_code: '201',
-        gross_amount: '25000',
-        signature_key: MOCK_SIG,
-      });
+      mockPaymentGateway.verifyWebhookSignature.mockReturnValue(true);
       mockOrderRepository.findOrderById.mockResolvedValue({
         ...mockOrder,
         status: OrderStatus.pending_sync,
@@ -914,13 +888,7 @@ describe('OrdersService', () => {
     });
 
     it('should handle deny webhook successfully', async () => {
-      mockMidtransCore.transaction.notification.mockResolvedValue({
-        order_id: 'order-001',
-        transaction_status: 'deny',
-        status_code: '202',
-        gross_amount: '25000',
-        signature_key: MOCK_SIG,
-      });
+      mockPaymentGateway.verifyWebhookSignature.mockReturnValue(true);
       mockOrderRepository.findOrderById.mockResolvedValue({
         ...mockOrder,
         status: OrderStatus.pending_sync,
@@ -950,15 +918,7 @@ describe('OrdersService', () => {
     });
 
     it('should ignore webhook with missing signature_key', async () => {
-      // Mock notification returns no signature_key
-      mockMidtransCore.transaction.notification.mockResolvedValue({
-        order_id: 'order-001',
-        transaction_status: 'settlement',
-        status_code: '200',
-        gross_amount: '25000',
-        // No signature_key - this is what the service will use
-      });
-
+      // Service returns early when signature_key is missing, so no need to mock further
       // Pass payload without signature_key (not validWebhookPayload)
       const result = await service.handleMidtransWebhook({
         order_id: 'order-001',
@@ -973,13 +933,7 @@ describe('OrdersService', () => {
     });
 
     it('should throw NotFoundException when order not found', async () => {
-      mockMidtransCore.transaction.notification.mockResolvedValue({
-        order_id: 'non-existent-order',
-        transaction_status: 'settlement',
-        status_code: '200',
-        gross_amount: '25000',
-        signature_key: MOCK_SIG,
-      });
+      mockPaymentGateway.verifyWebhookSignature.mockReturnValue(true);
       mockOrderRepository.findOrderById.mockResolvedValue(null);
 
       // Suppress error logging for this expected error case
@@ -1219,7 +1173,10 @@ describe('OrdersService', () => {
         },
       ];
 
-      mockOrderRepository.findOrders.mockResolvedValue(ordersWithItems);
+      mockOrderRepository.findOrders.mockResolvedValue({
+        orders: ordersWithItems,
+        total: 1,
+      });
 
       const csv = await service.exportOrdersCsv('2024-01-01', '2024-01-31');
 
@@ -1249,7 +1206,10 @@ describe('OrdersService', () => {
         },
       ];
 
-      mockOrderRepository.findOrders.mockResolvedValue(ordersWithNoItems);
+      mockOrderRepository.findOrders.mockResolvedValue({
+        orders: ordersWithNoItems,
+        total: 1,
+      });
 
       const csv = await service.exportOrdersCsv('2024-01-01', '2024-01-31');
 
@@ -1289,11 +1249,20 @@ describe('OrdersService', () => {
 
   describe('getHistory', () => {
     it('should return all orders when no kasirId provided', async () => {
-      mockOrderRepository.findOrders.mockResolvedValue([mockOrder]);
+      mockOrderRepository.findOrders.mockResolvedValue({
+        orders: [mockOrder],
+        total: 1,
+      });
 
       const result = await service.getHistory();
 
-      expect(result).toEqual([mockOrder]);
+      expect(result).toEqual({
+        orders: [mockOrder],
+        total: 1,
+        page: 1,
+        limit: 50,
+        total_pages: 1,
+      });
       expect(mockOrderRepository.findOrders).toHaveBeenCalledWith(
         {},
         { created_at: 'desc' },
@@ -1307,7 +1276,10 @@ describe('OrdersService', () => {
       const today = new Date();
       today.setHours(0, 0, 0, 0);
 
-      mockOrderRepository.findOrders.mockResolvedValue([mockOrder]);
+      mockOrderRepository.findOrders.mockResolvedValue({
+        orders: [mockOrder],
+        total: 1,
+      });
 
       await service.getHistory('kasir-001');
 
@@ -1321,7 +1293,10 @@ describe('OrdersService', () => {
     });
 
     it('should respect pagination parameters', async () => {
-      mockOrderRepository.findOrders.mockResolvedValue([mockOrder]);
+      mockOrderRepository.findOrders.mockResolvedValue({
+        orders: [mockOrder],
+        total: 100,
+      });
 
       await service.getHistory(undefined, 2, 50);
 
@@ -1342,9 +1317,14 @@ describe('OrdersService', () => {
         cashier_id: 'kasir-001',
         status: 'open',
       };
-      mockOrderRepository.findCurrentShift.mockResolvedValue(existingShift);
+      // Mock userOutlet.findUnique for outlet validation
+      mockPrismaService.userOutlet.findUnique.mockResolvedValue({
+        outlet: { id: 'outlet-1', is_active: true },
+      });
+      // Mock cashRegister.findFirst for existing shift check
+      mockPrismaService.cashRegister.findFirst.mockResolvedValue(existingShift);
 
-      const result = await service.startShift('kasir-001');
+      const result = await service.startShift('kasir-001', 'outlet-1');
 
       expect(result).toEqual(existingShift);
       expect(mockOrderRepository.createShift).not.toHaveBeenCalled();
@@ -1356,19 +1336,26 @@ describe('OrdersService', () => {
       const newShift = {
         id: 'shift-002',
         cashier_id: 'kasir-001',
+        outlet_id: 'outlet-1',
         status: 'open',
         opening_balance: 500000,
       };
 
-      mockOrderRepository.findCurrentShift.mockResolvedValue(null);
+      // Mock userOutlet.findUnique for outlet validation
+      mockPrismaService.userOutlet.findUnique.mockResolvedValue({
+        outlet: { id: 'outlet-1', is_active: true },
+      });
+      // Mock cashRegister.findFirst to return null (no existing shift)
+      mockPrismaService.cashRegister.findFirst.mockResolvedValue(null);
       mockOrderRepository.getSetting.mockResolvedValue(null);
       mockOrderRepository.createShift.mockResolvedValue(newShift);
 
-      const result = await service.startShift('kasir-001');
+      const result = await service.startShift('kasir-001', 'outlet-1');
 
       expect(result).toEqual(newShift);
       expect(mockOrderRepository.createShift).toHaveBeenCalledWith({
         cashier_id: 'kasir-001',
+        outlet_id: 'outlet-1',
         shift_date: today,
         opening_balance: 500000,
         status: 'open',
@@ -1381,15 +1368,21 @@ describe('OrdersService', () => {
       const newShift = {
         id: 'shift-002',
         cashier_id: 'kasir-001',
+        outlet_id: 'outlet-1',
         status: 'open',
         opening_balance: 1000000,
       };
 
-      mockOrderRepository.findCurrentShift.mockResolvedValue(null);
+      // Mock userOutlet.findUnique for outlet validation
+      mockPrismaService.userOutlet.findUnique.mockResolvedValue({
+        outlet: { id: 'outlet-1', is_active: true },
+      });
+      // Mock cashRegister.findFirst to return null (no existing shift)
+      mockPrismaService.cashRegister.findFirst.mockResolvedValue(null);
       mockOrderRepository.getSetting.mockResolvedValue({ value: '1000000' });
       mockOrderRepository.createShift.mockResolvedValue(newShift);
 
-      const result = await service.startShift('kasir-001');
+      const result = await service.startShift('kasir-001', 'outlet-1');
 
       expect(result.opening_balance).toBe(1000000);
     });

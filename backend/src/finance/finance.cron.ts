@@ -92,6 +92,7 @@ export class FinanceCronService {
 
     for (const shift of shiftsNearClose) {
       const plannedClose = shift.planned_close_at;
+      if (!plannedClose) continue;
       const minutesLeft = Math.round(
         (plannedClose.getTime() - now.getTime()) / 60000,
       );

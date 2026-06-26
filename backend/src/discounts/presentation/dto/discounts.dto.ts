@@ -58,38 +58,38 @@ export class DiscountValueUpdateConstraint implements ValidatorConstraintInterfa
 export class CreateDiscountDto {
   @IsString()
   @MaxLength(100)
-  name: string;
+  name: string = '';
 
   @IsEnum(DiscountType)
-  type: DiscountType;
+  type: DiscountType = 'percentage';
 
   @Type(() => Number)
   @IsNumber()
   @Min(0)
   @Validate(DiscountValueConstraint)
-  value: number;
+  value: number = 0;
 
   @IsEnum(DiscountScope)
-  scope: DiscountScope;
+  scope: DiscountScope = 'global' as DiscountScope;
 
   @IsOptional()
   @IsUUID()
-  target_id?: string;
+  target_id?: string = undefined;
 
   @IsDateString()
-  valid_from: string;
+  valid_from: string = new Date().toISOString();
 
   @IsOptional()
   @IsDateString()
-  valid_until?: string;
+  valid_until?: string = undefined;
 
   @IsArray()
   @IsNumber({}, { each: true })
-  applicable_days: number[];
+  applicable_days: number[] = [];
 
   @IsOptional()
   @IsBoolean()
-  is_active?: boolean;
+  is_active?: boolean = undefined;
 }
 
 export class UpdateDiscountDto {

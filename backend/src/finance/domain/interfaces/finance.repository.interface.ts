@@ -6,8 +6,11 @@ import {
   ProfitShareLog,
   ProfitShareDetail,
   AuditLog,
-  CashRegister,
 } from '@prisma/client';
+import type { CashRegister } from '@prisma/client';
+
+// Re-export CashRegister for use in other modules
+export type { CashRegister };
 
 /**
  * Interface for profit share detail record returned from createManyAndReturn

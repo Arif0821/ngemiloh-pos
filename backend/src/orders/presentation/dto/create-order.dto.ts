@@ -15,16 +15,16 @@ import { PaymentMethod } from '@prisma/client';
 
 export class OrderItemModifierDto {
   @IsUUID()
-  option_id: string;
+  option_id: string = '';
 }
 
 export class OrderItemDto {
   @IsUUID()
-  product_id: string;
+  product_id: string = '';
 
   @IsNumber()
   @Min(1)
-  quantity: number;
+  quantity: number = 1;
 
   @IsOptional()
   @IsString()
@@ -39,11 +39,11 @@ export class OrderItemDto {
 
 export class CreateOrderDto {
   @IsUUID()
-  client_uuid: string;
+  client_uuid: string = '';
 
   // FASE 4: Multi-Outlet - outlet_id is required
   @IsUUID()
-  outlet_id: string;
+  outlet_id: string = '';
 
   @IsOptional()
   @IsUUID()
@@ -54,11 +54,11 @@ export class CreateOrderDto {
   redeem_points?: boolean;
 
   @IsEnum(PaymentMethod)
-  payment_method: PaymentMethod;
+  payment_method: PaymentMethod = 'cash';
 
   @IsNumber()
   @Min(0)
-  client_final_price: number;
+  client_final_price: number = 0;
 
   @IsOptional()
   @IsNumber()
@@ -92,7 +92,7 @@ export class CreateOrderDto {
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => OrderItemDto)
-  items: OrderItemDto[];
+  items: OrderItemDto[] = [];
 }
 
 export class SyncBatchDto {
@@ -101,10 +101,10 @@ export class SyncBatchDto {
   @Max(100, { message: 'Maximum 100 orders per batch' })
   @ValidateNested({ each: true })
   @Type(() => CreateOrderDto)
-  orders: CreateOrderDto[];
+  orders: CreateOrderDto[] = [];
 }
 
 export class StartShiftDto {
   @IsUUID()
-  outlet_id: string;
+  outlet_id: string = '';
 }

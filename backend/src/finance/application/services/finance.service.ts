@@ -8,6 +8,7 @@ import {
 import {
   type IFinanceRepository,
   FINANCE_REPOSITORY,
+  type CashRegister,
 } from '../../domain/interfaces/finance.repository.interface';
 import { EmailService } from '../../../email/email.service';
 import { PrismaService } from '../../../prisma/prisma.service';
@@ -683,7 +684,7 @@ export class FinanceService {
     const maxRetries = 3;
     const retryDelayMs = 100;
 
-    let closeResult = null;
+    let closeResult: CashRegister | undefined = undefined;
     for (let attempt = 0; attempt <= maxRetries; attempt++) {
       const lockAcquired = await this.prisma
         .$executeRaw<number>`SELECT pg_try_advisory_lock(${lockId})`;

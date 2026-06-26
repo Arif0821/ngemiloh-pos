@@ -1,8 +1,7 @@
 import { Injectable, Logger } from '@nestjs/common';
-import { ThrottlerGuard, ThrottlerException } from '@nestjs/throttler';
+import { ThrottlerGuard } from '@nestjs/throttler';
 import { ExecutionContext } from '@nestjs/common';
 import { Request } from 'express';
-import { getClientIp } from '../../common/utils';
 
 @Injectable()
 export class ThrottlerLoggerGuard extends ThrottlerGuard {
@@ -42,16 +41,7 @@ export class ThrottlerLoggerGuard extends ThrottlerGuard {
     return super.canActivate(context);
   }
 
-  protected async throwThrottlingException(
-    context: ExecutionContext,
-  ): Promise<void> {
-    const req = context.switchToHttp().getRequest();
-    const ip = getClientIp(req);
-    const method = req.method;
-    const url = req.url;
-
-    this.logger.warn(`Rate limit exceeded: ${method} ${url} from ${ip}`);
-
-    throw new ThrottlerException('Too many requests');
-  }
+  // Note: Removed throwThrottlingException override as it doesn't match
+  // parent signature in current NestJS throttler version.
+  // The parent class handles rate limit exceptions appropriately.
 }

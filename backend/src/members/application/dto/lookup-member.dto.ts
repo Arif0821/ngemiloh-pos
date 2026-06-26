@@ -20,26 +20,26 @@ export class LookupMemberQueryDto {
 
 export class MemberLookupResponseDto {
   @ApiProperty()
-  id: string;
+  id: string = '';
 
   @ApiProperty({ example: 'MBR-A1B2C3' })
-  member_code: string;
+  member_code: string = '';
 
   @ApiProperty()
-  name: string;
+  name: string = '';
 
   @ApiProperty({ example: 'Silver' })
-  tier: string;
+  tier: string = '';
 
   @ApiProperty({ example: 1250 })
-  loyalty_points: number;
+  loyalty_points: number = 0;
 
   @ApiProperty({ example: 12500, description: 'Poin value in Rupiah' })
-  points_value: number;
+  points_value: number = 0;
 
   @ApiProperty({ example: true })
-  can_earn: boolean;
+  can_earn: boolean = false;
 
   @ApiPropertyOptional()
-  cooldown_until: Date | null;
+  cooldown_until: Date | null = null;
 }

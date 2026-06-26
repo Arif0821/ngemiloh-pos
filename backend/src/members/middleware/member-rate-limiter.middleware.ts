@@ -97,7 +97,7 @@ export class MemberRateLimiterMiddleware implements NestMiddleware {
       if (error instanceof HttpException) {
         throw error;
       }
-      this.logger.error(`Rate limiter Redis error: ${error}`);
+      this.logger.error(`Rate limiter Redis error: ${String(error)}`);
       // Fail open - allow request if Redis is down
       next();
     }

@@ -63,7 +63,9 @@ export class SyncProcessor extends WorkerHost {
         }
       }
     } catch (error) {
-      this.logger.error(`Sync job ${job.id} failed: ${error.message}`);
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(`Sync job ${job.id} failed: ${errorMessage}`);
       throw error;
     }
   }
@@ -108,8 +110,10 @@ export class SyncProcessor extends WorkerHost {
       // If still pending, don't change anything
       return { success: true, orderId };
     } catch (error) {
-      this.logger.error(`Failed to sync order ${orderId}: ${error.message}`);
-      return { success: false, orderId, error: error.message };
+      const errorMessage =
+        error instanceof Error ? error.message : String(error);
+      this.logger.error(`Failed to sync order ${orderId}: ${errorMessage}`);
+      return { success: false, orderId, error: errorMessage };
     }
   }
 

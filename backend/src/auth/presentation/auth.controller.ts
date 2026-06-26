@@ -142,8 +142,8 @@ export class AuthController {
 
     const result = await this.authService.changePin(
       userId,
-      dto.current_pin,
-      dto.new_pin,
+      dto.current_pin ?? '',
+      dto.new_pin ?? '',
       response,
     );
 
@@ -180,6 +180,9 @@ export class AuthController {
   @ApiResponse({ status: 400, description: 'Invalid email' })
   @ApiResponse({ status: 429, description: 'Too many requests' })
   async resendOtp(@Body() dto: ResendOtpDto) {
+    if (!dto.email) {
+      throw new BadRequestException('Email is required');
+    }
     await this.authService.sendOtp(dto.email);
     return { success: true, message: 'Kode OTP baru telah dikirim ke email' };
   }
@@ -197,6 +200,9 @@ export class AuthController {
     @Body() dto: VerifyOtpDto,
     @Res({ passthrough: true }) response: Response,
   ) {
+    if (!dto.email || !dto.otp) {
+      throw new BadRequestException('Email and OTP are required');
+    }
     const result = await this.authService.verifyOtp(
       dto.email,
       dto.otp,
@@ -221,22 +227,27 @@ export class AuthController {
     const tokens = [
       req.cookies?.['access_token'],
       req.cookies?.['admin_token'],
-    ];
+    ].filter((t): t is string => typeof t === 'string');
 
     for (const token of tokens) {
-      if (token) {
-        try {
-          // Decode token to extract JTI and expiry
-          const decoded = this.jwtService.decode(token);
-          if (decoded?.jti) {
-            // Calculate remaining TTL until token expiry
-            const now = Math.floor(Date.now() / 1000);
-            const ttl = decoded.exp ? Math.max(0, decoded.exp - now) : 86400; // Default 24h if no exp
-            await this.redisService.blockJwt(decoded.jti, ttl);
-          }
-        } catch {
-          // Token decode failed - continue with logout anyway
+      try {
+        // Decode token to extract JTI and expiry
+        const decoded = this.jwtService.decode(token);
+        if (
+          decoded &&
+          typeof decoded === 'object' &&
+          typeof decoded.jti === 'string'
+        ) {
+          // Calculate remaining TTL until token expiry
+          const now = Math.floor(Date.now() / 1000);
+          const ttl =
+            typeof decoded.exp === 'number'
+              ? Math.max(0, decoded.exp - now)
+              : 86400; // Default 24h if no exp
+          await this.redisService.blockJwt(String(decoded.jti), ttl);
         }
+      } catch {
+        // Token decode failed - continue with logout anyway
       }
     }
 

@@ -458,10 +458,17 @@ export class OrdersController {
   @ApiResponse({ status: 401, description: 'Unauthorized' })
   sse(@Param('id') id: string, @Req() _req: Request): Observable<SseEvent> {
     // SECURITY: JwtAuthGuard ensures only authenticated users can access SSE
+    interface OrderPayload {
+      orderId: string;
+      status?: string;
+    }
     const orderEvents = fromEvent(this.eventEmitter, 'order.paid').pipe(
-      filter((payload: { orderId: string }) => payload.orderId === id),
-      map((payload: { orderId: string; status: string }) => ({
-        data: payload,
+      filter(
+        (payload): payload is OrderPayload =>
+          (payload as OrderPayload).orderId === id,
+      ),
+      map((payload: OrderPayload) => ({
+        data: payload as unknown as Record<string, unknown>,
       })),
     );
 

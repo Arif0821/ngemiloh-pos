@@ -247,7 +247,7 @@
 					<!-- FIX #4: Badge for pending offline receipts -->
 					{#if pending_receipts_count > 0}
 						<span
-							class="absolute -right-1 -top-1 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white"
+							class="absolute -top-1 -right-1 flex h-5 w-5 items-center justify-center rounded-full bg-orange-500 text-[10px] font-bold text-white"
 						>
 							{pending_receipts_count}
 						</span>

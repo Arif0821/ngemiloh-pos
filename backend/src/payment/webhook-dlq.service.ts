@@ -1,5 +1,6 @@
 import { Injectable, Logger } from '@nestjs/common';
 import { PrismaService } from '../prisma/prisma.service';
+import { Prisma } from '@prisma/client';
 
 /**
  * #20 Webhook Dead Letter Queue Service
@@ -25,7 +26,7 @@ export class WebhookDLQService {
       data: {
         provider: data.provider,
         event_type: data.event_type,
-        payload: data.payload,
+        payload: data.payload as Prisma.InputJsonValue,
         error_message: data.error_message,
         max_attempts: data.max_attempts || 3,
         status: 'pending',

@@ -228,6 +228,8 @@ describe('MidtransGatewayService', () => {
       const serverKey = 'test-sandbox-key';
 
       const stringToHash = orderId + statusCode + grossAmount + serverKey;
+
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const crypto = require('crypto');
       const validSignature = crypto
         .createHash('sha512')
@@ -294,6 +296,7 @@ describe('MidtransGatewayService', () => {
 
       // Create valid signature with correct order_id
       const stringToHash = 'ORDER-123' + statusCode + grossAmount + serverKey;
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const crypto = require('crypto');
       const validSignature = crypto
         .createHash('sha512')
@@ -320,6 +323,7 @@ describe('MidtransGatewayService', () => {
 
       // Create valid signature with amount 50000
       const stringToHash = orderId + statusCode + '50000' + serverKey;
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
       const crypto = require('crypto');
       const validSignature = crypto
         .createHash('sha512')

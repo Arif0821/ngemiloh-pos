@@ -101,11 +101,12 @@ async function bootstrap() {
     profilesSampleRate: 1.0,
   });
 
-  const allowedOrigins = [
+  const frontendUrl = process.env.FRONTEND_URL;
+  const allowedOrigins: (string | RegExp)[] = [
     'http://localhost:5173',
     'http://localhost:4173',
-    process.env.FRONTEND_URL,
-  ].filter(Boolean);
+    frontendUrl,
+  ].filter((origin): origin is string => typeof origin === 'string');
 
   // ========================================
   // SECURITY HEADERS (Helmet)
@@ -287,4 +288,4 @@ async function bootstrap() {
     logger.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   }
 }
-bootstrap();
+void bootstrap();

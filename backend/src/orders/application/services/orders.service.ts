@@ -55,7 +55,12 @@ import { RedisService } from '../../../common/redis/redis.service';
  */
 function escape_csv_field(value: unknown): string {
   if (value === null || value === undefined) return '';
-  const str = String(value);
+  let str: string;
+  if (typeof value === 'object') {
+    str = JSON.stringify(value);
+  } else {
+    str = String(value); // eslint-disable-line @typescript-eslint/no-base-to-string -- Safe: non-object types convert cleanly
+  }
   // SECURITY: Remove control characters and newlines that could inject CSV rows
   // eslint-disable-next-line no-control-regex -- Intentional sanitization of control chars (CSV injection prevention)
   const sanitized = str.replace(/[\r\n\x00-\x1F]/g, '');
@@ -230,7 +235,25 @@ export class OrdersService {
 
     let calculatedSubtotal = 0;
     let totalDiscountAmount = 0;
-    const orderItemsPayload = [];
+    const orderItemsPayload: Array<{
+      product_id: string;
+      product_name_snapshot: string;
+      discount_id: string | null;
+      quantity: number;
+      unit_price: Prisma.Decimal;
+      subtotal: number;
+      notes?: string;
+      discounted_base: number;
+      modifier_total: number;
+      final_price: number;
+      discount_amount: number;
+      modifierSnaps: Array<{
+        option_id: string;
+        group_name_snapshot: string;
+        option_name_snapshot: string;
+        additional_price_at_time: Prisma.Decimal;
+      }>;
+    }> = [];
 
     const activeDiscounts = await this.orderRepository.findActiveDiscounts();
 
