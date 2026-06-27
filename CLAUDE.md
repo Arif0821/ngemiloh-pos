@@ -222,14 +222,14 @@ frontend/src/      # SvelteKit: routes/admin, routes/pos, routes/member
 |----------|----------|-------|
 | PRD Master Index | `PRD v2/PRD_MASTER_INDEX.md` | Titik masuk ke seluruh PRD |
 | PRD Specs | `PRD v2/PRD_SPEC.md` | Feature specs, business rules, ERD |
-| PRD Status | `PRD v2/PRD_STATUS.md` | Issue tracker & progress (19/20 done) |
+| PRD Status | `PRD v2/PRD_STATUS.md` | Issue tracker & progress (20/20 DONE + 3 NEW) |
 | PRD API Contract | `PRD v2/PRD_API_CONTRACT.md` | API endpoints & contracts |
 | PRD Red Team | `PRD v2/PRD_RED_TEAM.md` | Security findings & mitigations |
 | Architecture | `PRD v2/PRD_SPEC.md` | Arsitektur ada di Section 1 PRD Spec |
 | ADRs | `docs/decisions/` | 5 ADRs (NestJS, Prisma, Auth, Offline-first, SvelteKit) |
 | Guides | `docs/guides/` | Runbook, Backup, Payment Testing, dll |
 | API Docs | `docs/api/` | Auth API, Orders API |
-| Audits | `docs/audits/` | 356 security findings (P1-P4) |
+| Audits | `docs/audits/` | Historical audit records (v8.3 = source of truth) |
 | Secrets | `docs/guides/SECRETS_MANAGEMENT.md` | Docker secrets setup |
 | Tech Debt | `docs/guides/Technical_Debt_Register.md` | 4 open items |
 | Memory | `memory/` | Session notes |
@@ -263,5 +263,5 @@ cd frontend && npm run lint && npm run check && npm run test && npm run build
 
 ---
 
-*Last Updated: 2026-06-26*
+*Last Updated: 2026-06-27*
 *Source: PRD v2 (Modular Documentation)*

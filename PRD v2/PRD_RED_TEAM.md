@@ -3,18 +3,18 @@ name: prd-red-team
 description: Red team security findings and recommendations
 metadata:
   type: reference
-  version: 8.1
+  version: 8.3
 ---
 
-# PRD RED TEAM v8.1 - NGEMILOH POS
+# PRD RED TEAM v8.3 - NGEMILOH POS
 **Security Audit Report & Attack Vector Analysis**
 
 | Metadata | Value |
 |----------|-------|
-| Version | 8.1 |
-| Date | 2026-06-25 |
+| Version | 8.3 |
+| Date | 2026-06-27 |
 | Classification | Internal - Confidential |
-| Owner | Tim Security |
+| Owner | Security Team |
 
 ---
 
@@ -39,15 +39,24 @@ This document presents a red team security analysis of the NGEMILOH POS system. 
 
 | Severity | Count | Remediated | Pending |
 |----------|-------|------------|---------|
-| CRITICAL | 5 | 4 | 1 |
+| CRITICAL | 5 | 4 | 1 (Owner) |
 | HIGH | 8 | 8 | 0 |
 | MEDIUM | 5 | 5 | 0 |
 | LOW | 2 | 2 | 0 |
-| **TOTAL** | **20** | **19** | **1** |
+| **TOTAL** | **20** | **19** | **1 (Owner)** |
 
-### 1.4 Overall Assessment
+### 1.4 Deep Audit (2026-06-27)
 
-**GO-LIVE READY (conditional):** 19 of 20 engineer-implemented issues have been remediated. The remaining CRITICAL issue (#8 BOM Cost) requires owner action for manual data entry. All technical security controls are in place.
+**3 NEW issues discovered via multi-agent deep analysis:**
+- N1: Webhook idempotency missing (P1) - In Progress
+- N2: JWT blocklist fail-open (P1) - In Progress
+- N3: Health checks only liveness (P2) - In Progress
+
+See PRD_STATUS.md Section 4.2 for details.
+
+### 1.5 Overall Assessment
+
+**GO-LIVE READY (conditional):** 19 of 20 engineer-implemented issues are remediated. The remaining CRITICAL issue (#8 BOM Cost) requires owner action for manual data entry. All technical security controls are in place.
 
 ---
 

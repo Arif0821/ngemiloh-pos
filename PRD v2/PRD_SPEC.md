@@ -1,9 +1,9 @@
-# PRD SPEC v8.1 - NGEMILOH POS
+# PRD SPEC v8.3 - NGEMILOH POS
 **Product Requirements & Specification Document**
 
 | Metadata | Value |
 |----------|-------|
-| Version | 8.1 |
+| Version | 8.3 |
 | Date | 2026-06-25 |
 | Status | ACTIVE - Development |
 | Owner | Tim Engineering |
@@ -512,10 +512,11 @@ The following features are explicitly NOT in scope for v8.x:
 
 | Version | Date | Changes | Author |
 |---------|------|---------|--------|
+| 8.3 | 2026-06-27 | Version sync with PRD v8.3 | Engineering |
 | 8.1 | 2026-06-25 | Split from monolithic PRD into modular docs | Tim Engineering |
 | 8.0 | 2026-06-19 | Initial comprehensive PRD | Tim Engineering |
 
 ---
 
-*This document is the specification source of truth for NGEMILOH POS v8.1*
+*This document is the specification source of truth for NGEMILOH POS v8.3*
 *For implementation details, see linked documents in Section 10*

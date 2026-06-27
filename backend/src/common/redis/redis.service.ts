@@ -1,4 +1,9 @@
-import { Injectable, OnModuleDestroy, Logger } from '@nestjs/common';
+import {
+  Injectable,
+  OnModuleDestroy,
+  Logger,
+  ServiceUnavailableException,
+} from '@nestjs/common';
 import Redis from 'ioredis';
 import { PrismaService } from '../../prisma/prisma.service';
 
@@ -309,8 +314,11 @@ export class RedisService implements OnModuleDestroy {
       return dbBlocked !== null;
     } catch (err) {
       this.logger.error('Database isJwtBlocked error:', err);
-      // Last resort: assume not blocked (fail-open for availability)
-      return false;
+      // P1 FIX: Fail-closed instead of fail-open
+      // If both Redis AND DB fail, we should NOT accept the token
+      throw new ServiceUnavailableException(
+        'Cannot verify token revocation status. Please try again later.',
+      );
     }
   }
 
@@ -377,11 +385,12 @@ export class RedisService implements OnModuleDestroy {
 
   /**
    * Set an idempotency key in cache.
+   * TTL: 30 days (2592000 seconds) to handle long offline periods
    */
   async setIdempotencyKey(
     key: string,
     orderId: string,
-    ttlSeconds: number = 86400,
+    ttlSeconds: number = 2592000, // 30 days
   ): Promise<void> {
     return this.useFallback(
       async () => {

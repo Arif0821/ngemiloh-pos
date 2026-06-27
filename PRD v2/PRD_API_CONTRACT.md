@@ -1,9 +1,9 @@
-# PRD API CONTRACT v8.1 - NGEMILOH POS
+# PRD API CONTRACT v8.3 - NGEMILOH POS
 **API Specification Document**
 
 | Metadata | Value |
 |----------|-------|
-| Version | 8.1 |
+| Version | 8.3 |
 | Date | 2026-06-25 |
 | Base URL | `/api/v1` |
 | Auth Type | JWT Bearer Token |
@@ -1361,6 +1361,7 @@ Export transactions as CSV.
 
 | Version | Date | Changes |
 |---------|------|---------|
+| 8.3 | 2026-06-27 | Version sync with PRD v8.3 |
 | 8.1 | 2026-06-25 | Split from monolithic PRD |
 | 8.0 | 2026-06-19 | Initial API documentation |
 

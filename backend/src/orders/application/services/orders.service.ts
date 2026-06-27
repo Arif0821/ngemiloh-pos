@@ -116,51 +116,64 @@ export class OrdersService {
 
     const maxRetries = 5;
     const retryDelayMs = 100;
+    let lockAcquired = false;
 
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      // Try to acquire non-blocking advisory lock
-      const lockAcquired = await this.prisma
-        .$executeRaw<number>`SELECT pg_try_advisory_lock(${lockId})`;
+    try {
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        // Try to acquire non-blocking advisory lock
+        const acquired = await this.prisma
+          .$executeRaw<number>`SELECT pg_try_advisory_lock(${lockId})`;
 
-      if (lockAcquired === 1) {
-        // Lock acquired successfully, proceed with order number generation
-        try {
-          const existingCount = await this.prisma.order.count({
-            where: {
-              order_number: {
-                startsWith: `TRX-${dateStr}-${cashierLetter}`,
+        if (acquired === 1) {
+          lockAcquired = true;
+          // Lock acquired successfully, proceed with order number generation
+          try {
+            const existingCount = await this.prisma.order.count({
+              where: {
+                order_number: {
+                  startsWith: `TRX-${dateStr}-${cashierLetter}`,
+                },
               },
-            },
-          });
+            });
 
-          const sequence = String(existingCount + 1).padStart(3, '0');
-          return `TRX-${dateStr}-${cashierLetter}${sequence}`;
-        } finally {
-          // Always release the lock
-          await this.prisma.$executeRaw`SELECT pg_advisory_unlock(${lockId})`;
+            const sequence = String(existingCount + 1).padStart(3, '0');
+            return `TRX-${dateStr}-${cashierLetter}${sequence}`;
+          } finally {
+            // Always release the lock after use
+            await this.prisma.$executeRaw`SELECT pg_advisory_unlock(${lockId})`;
+            lockAcquired = false;
+          }
+        }
+
+        // Lock not acquired, check if this is the last attempt
+        if (attempt < maxRetries) {
+          this.logger.warn(
+            `[generateOrderNumber] Advisory lock busy for ${lockKey}, retrying (${attempt + 1}/${maxRetries})`,
+          );
+          // Wait before retry with jitter to reduce contention
+          const jitter = Math.floor(Math.random() * 50);
+          await new Promise((resolve) =>
+            setTimeout(resolve, retryDelayMs + jitter),
+          );
         }
       }
 
-      // Lock not acquired, check if this is the last attempt
-      if (attempt < maxRetries) {
+      // All retries exhausted
+      this.logger.error(
+        `[generateOrderNumber] Failed to acquire advisory lock for ${lockKey} after ${maxRetries + 1} attempts`,
+      );
+      throw new Error(
+        `Failed to acquire advisory lock for order number generation: ${lockKey}`,
+      );
+    } finally {
+      // SECURITY: Outer finally as safety net - ensure lock is released if acquired
+      if (lockAcquired) {
+        await this.prisma.$executeRaw`SELECT pg_advisory_unlock(${lockId})`;
         this.logger.warn(
-          `[generateOrderNumber] Advisory lock busy for ${lockKey}, retrying (${attempt + 1}/${maxRetries})`,
-        );
-        // Wait before retry with jitter to reduce contention
-        const jitter = Math.floor(Math.random() * 50);
-        await new Promise((resolve) =>
-          setTimeout(resolve, retryDelayMs + jitter),
+          `[generateOrderNumber] Outer finally released lock for ${lockKey}`,
         );
       }
     }
-
-    // All retries exhausted
-    this.logger.error(
-      `[generateOrderNumber] Failed to acquire advisory lock for ${lockKey} after ${maxRetries + 1} attempts`,
-    );
-    throw new Error(
-      `Failed to acquire advisory lock for order number generation: ${lockKey}`,
-    );
   }
 
   /**
@@ -890,6 +903,17 @@ export class OrdersService {
       // Extract order_id and signature from notification
       const orderId = notification.order_id as string;
       const signatureKey = notification.signature_key as string | undefined;
+      const transactionId = notification.transaction_id as string | undefined;
+
+      // P1 FIX: Webhook idempotency - prevent duplicate processing
+      if (transactionId && this.redisService) {
+        const webhookKey = `webhook:midtrans:${transactionId}`;
+        const alreadyProcessed = await this.redisService.get(webhookKey);
+        if (alreadyProcessed) {
+          this.logger.debug(`Duplicate webhook ignored: ${transactionId}`);
+          return { status: 'duplicate', message: 'Already processed' };
+        }
+      }
 
       // SECURITY: Validate signature using payment gateway
       if (!signatureKey) {
@@ -906,7 +930,6 @@ export class OrdersService {
 
       // Extract transaction status from notification
       const transactionStatus = notification.transaction_status as string;
-      const transactionId = notification.transaction_id as string | undefined;
 
       let newStatus: OrderStatus = OrderStatus.pending_sync;
       let paymentStatus: string = 'unpaid';
@@ -980,6 +1003,15 @@ export class OrdersService {
         }
 
         this.eventEmitter.emit('order.paid', { orderId, status: newStatus });
+
+        // P1 FIX: Mark webhook as processed (24h TTL)
+        if (transactionId && this.redisService) {
+          await this.redisService.set(
+            `webhook:midtrans:${transactionId}`,
+            '1',
+            86400,
+          );
+        }
       }
 
       return { status: 'success' };

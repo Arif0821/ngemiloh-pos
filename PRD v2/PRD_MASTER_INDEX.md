@@ -1,10 +1,10 @@
-# PRD MASTER INDEX v8.1 - NGEMILOH POS
+# PRD MASTER INDEX v8.3 - NGEMILOH POS
 **Master Index to Modular PRD Documentation**
 
 | Metadata | Value |
 |----------|-------|
-| Version | 8.1 |
-| Date | 2026-06-25 |
+| Version | 8.3 |
+| Date | 2026-06-27 |
 | Status | ACTIVE |
 | Document Type | Master Index |
 
@@ -127,27 +127,36 @@ PRD v2/
 
 ---
 
-## 📊 Status Summary
+## 📊 Status Summary (v8.3 - 2026-06-27)
 
 ### Implementation Progress
 
 | Metric | Value |
 |--------|-------|
-| Overall Issues | 20 |
-| Implemented | 19 (95%) |
-| In Progress | 0 |
-| Pending | 1 (#8 BOM Cost - Owner) |
+| Overall Issues | 20 PRD + 3 NEW |
+| Implemented | 20 (PRD) + 17 tests |
+| NEW Issues | 3 (In Progress) |
+| Pending | 1 (BOM Cost - Owner) |
 
-### Issues by Severity
+### Issues by Severity (PRD Issues)
 
 | Severity | Total | Done | Pending |
 |----------|-------|------|---------|
-| **CRITICAL** | 5 | 4 | 1 |
+| **CRITICAL** | 5 | 4 | 1 (Owner) |
 | **HIGH** | 8 | 8 | 0 |
 | **MEDIUM** | 5 | 5 | 0 |
 | **LOW** | 2 | 2 | 0 |
+| **NEW (Audit)** | 3 | 0 | 3 |
 
-**For detailed status:** See [PRD_STATUS.md](./PRD_STATUS.md)
+### Test Coverage
+
+| Type | Files | Status |
+|------|-------|--------|
+| Backend | 13 | ✅ All done |
+| Frontend | 4 | ✅ All done |
+| Total | 17 | ✅ 400+ tests |
+
+**For detailed status:** See [PRD_STATUS.md](./PRD_STATUS.md#12-new-issues-found-via-deep-audit-2026-06-27)
 
 ---
 
@@ -207,6 +216,8 @@ PRD v2/
 
 | Version | Date | Author | Changes |
 |---------|------|--------|---------|
+| 8.3 | 2026-06-27 | Engineering | Cleanup: Remove verbose details, add Fitur Baru section |
+| 8.2 | 2026-06-27 | Multi-Agent Audit | Deep audit: 17 test files verified, 3 NEW issues found |
 | 8.1 | 2026-06-25 | Tim Engineering | Split monolithic PRD into modular docs |
 | 8.0 | 2026-06-19 | Tim Engineering | Initial comprehensive PRD |
 
@@ -259,5 +270,5 @@ If you're updating references from old PRD:
 
 ---
 
-*This is the master index for NGEMILOH POS v8.1 modular documentation*
-*Last Updated: 2026-06-26*
+*This is the master index for NGEMILOH POS v8.2 modular documentation*
+*Last Updated: 2026-06-27*
