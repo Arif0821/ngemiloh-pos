@@ -240,6 +240,11 @@ async function bootstrap() {
       res.setHeader('X-Frame-Options', 'DENY');
       res.setHeader('X-XSS-Protection', '1; mode=block');
       res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+      // SECURITY: HSTS header - enforce HTTPS for 1 year, include subdomains
+      res.setHeader(
+        'Strict-Transport-Security',
+        'max-age=31536000; includeSubDomains',
+      );
       res.removeHeader('X-Powered-By');
       next();
     },

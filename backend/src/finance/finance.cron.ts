@@ -151,32 +151,45 @@ export class FinanceCronService {
     const lockId = this.hashStringToBigInt(lockKey);
     const maxRetries = 3;
     const retryDelayMs = 100;
+    let lockAcquired = false;
 
-    for (let attempt = 0; attempt <= maxRetries; attempt++) {
-      const lockAcquired = await this.prisma
-        .$executeRaw<number>`SELECT pg_try_advisory_lock(${lockId})`;
+    try {
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        const acquired = await this.prisma
+          .$executeRaw<number>`SELECT pg_try_advisory_lock(${lockId})`;
 
-      if (lockAcquired === 1) {
-        try {
-          await this.doAutoCloseShift(shift);
-        } finally {
-          await this.prisma.$executeRaw`SELECT pg_advisory_unlock(${lockId})`;
+        if (acquired === 1) {
+          lockAcquired = true;
+          try {
+            await this.doAutoCloseShift(shift);
+          } finally {
+            await this.prisma.$executeRaw`SELECT pg_advisory_unlock(${lockId})`;
+            lockAcquired = false;
+          }
+          return; // Success
         }
-        return; // Success
+
+        // Lock not acquired, retry with backoff
+        if (attempt < maxRetries) {
+          const jitter = Math.floor(Math.random() * 50);
+          await new Promise((resolve) =>
+            setTimeout(resolve, retryDelayMs + jitter),
+          );
+        }
       }
 
-      // Lock not acquired, retry with backoff
-      if (attempt < maxRetries) {
-        const jitter = Math.floor(Math.random() * 50);
-        await new Promise((resolve) =>
-          setTimeout(resolve, retryDelayMs + jitter),
+      this.logger.warn(
+        `Could not acquire lock for auto-close of shift ${shift.id}, will retry next cron run`,
+      );
+    } finally {
+      // SECURITY: Outer finally as safety net - ensure lock is released if acquired
+      if (lockAcquired) {
+        await this.prisma.$executeRaw`SELECT pg_advisory_unlock(${lockId})`;
+        this.logger.warn(
+          `Outer finally released lock for auto-close of shift ${shift.id}`,
         );
       }
     }
-
-    this.logger.warn(
-      `Could not acquire lock for auto-close of shift ${shift.id}, will retry next cron run`,
-    );
   }
 
   private async doAutoCloseShift(shift: {

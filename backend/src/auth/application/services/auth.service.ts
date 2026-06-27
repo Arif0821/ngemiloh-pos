@@ -7,6 +7,7 @@ import {
   Inject,
   BadRequestException,
   NotFoundException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import * as bcrypt from 'bcrypt';
@@ -348,6 +349,7 @@ export class AuthService {
       throw new UnauthorizedException('Admin not found');
 
     // FIX H8: Check for rate limiting on OTP requests
+    // SECURITY: Fail-secure - if Redis is unavailable, DENY the request (prevent brute force)
     const rateLimitKey = `otp:ratelimit:${email.toLowerCase()}`;
     const lastRequest = await this.redisService.get(rateLimitKey);
     if (lastRequest) {
@@ -360,6 +362,14 @@ export class AuthService {
           `Please wait ${remaining} seconds before requesting another OTP.`,
         );
       }
+    } else if (!this.redisService.isAvailable()) {
+      // Redis unavailable - fail-secure by denying the request
+      this.logger.warn(
+        `OTP request denied due to Redis unavailability: ${email}`,
+      );
+      throw new ServiceUnavailableException(
+        'Authentication service temporarily unavailable. Please try again later.',
+      );
     }
 
     // FIX H10: Audit log OTP request (use user ID, not email - PII protection)

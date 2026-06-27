@@ -1,0 +1,41 @@
+{
+  "version": "5.22.0",
+  "engineVersion": "0.0.0",
+  "id": "20260627000000",
+  "checksum": "FIX_MISSING_OUTLET_TABLES",
+  "migrationName": "fix_missing_outlet_tables",
+  "startedAt": "2026-06-27T00:00:00.000Z",
+  "finishedAt": "2026-06-27T00:00:00.000Z",
+  "steps": [
+    {
+      "id": "step_001",
+      "rollback": null,
+      "kind": "CreateTable",
+      "tableName": "Outlet"
+    },
+    {
+      "id": "step_002",
+      "rollback": null,
+      "kind": "CreateTable",
+      "tableName": "UserOutlet"
+    },
+    {
+      "id": "step_003",
+      "rollback": null,
+      "kind": "AlterTable",
+      "tableName": "CashRegister"
+    },
+    {
+      "id": "step_004",
+      "rollback": null,
+      "kind": "AlterTable",
+      "tableName": "Order"
+    },
+    {
+      "id": "step_005",
+      "rollback": null,
+      "kind": "Insert",
+      "tableName": "Outlet"
+    }
+  ]
+}

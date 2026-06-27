@@ -46,8 +46,10 @@
 		"vitest": "^2.1.9"
 	},
 	"dependencies": {
+		"@types/qrcode": "^1.5.6",
 		"browser-image-compression": "^2.0.2",
 		"chart.js": "^4.5.1",
-		"dexie": "^4.4.3"
+		"dexie": "^4.4.3",
+		"qrcode": "^1.5.4"
 	}
 }

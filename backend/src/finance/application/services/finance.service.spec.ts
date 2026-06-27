@@ -29,7 +29,22 @@ const mockEmailService = {
 
 const mockPrismaService = {
   order: {
-    aggregate: jest.fn().mockResolvedValue({ _sum: null, _count: 0 }),
+    aggregate: jest.fn().mockImplementation(
+      (() => {
+        let callCount = 0;
+        return () => {
+          callCount++;
+          // First call: revenue aggregate, Second call: hpp aggregate
+          if (callCount === 1) {
+            return Promise.resolve({
+              _sum: { total_amount: 1500000 },
+              _count: 2,
+            });
+          }
+          return Promise.resolve({ _sum: { cogs_total: 600000 }, _count: 2 });
+        };
+      })(),
+    ),
     findMany: jest.fn().mockResolvedValue([
       {
         id: 'order-1',
@@ -212,7 +227,19 @@ describe('FinanceService', () => {
     });
 
     it('should throw NotFoundException if no orders found', async () => {
-      mockFinanceRepository.findOrders.mockResolvedValue([]);
+      // Mock cashRegister.findMany to return shifts
+      mockPrismaService.cashRegister.findMany.mockResolvedValue([
+        {
+          id: 'shift-1',
+          shift_start: new Date('2026-06-01T08:00:00Z'),
+          actual_close_at: new Date('2026-06-30T20:00:00Z'),
+        },
+      ]);
+      // Mock aggregate to return 0 orders
+      mockPrismaService.order.aggregate.mockResolvedValue({
+        _sum: { total_amount: 0 },
+        _count: 0,
+      });
 
       await expect(service.getProfitShare(6, 2026)).rejects.toThrow(
         NotFoundException,
@@ -220,10 +247,6 @@ describe('FinanceService', () => {
     });
 
     it('should calculate profit share correctly', async () => {
-      const mockOrders = [
-        { id: 'order-1', total_amount: 1000000, cogs_total: 400000 },
-        { id: 'order-2', total_amount: 500000, cogs_total: 200000 },
-      ];
       // Mock cashRegister.findMany for getProfitShare shifts query
       mockPrismaService.cashRegister.findMany.mockResolvedValue([
         {
@@ -232,7 +255,22 @@ describe('FinanceService', () => {
           actual_close_at: new Date('2026-06-30T20:00:00Z'),
         },
       ]);
-      mockFinanceRepository.findOrders.mockResolvedValue(mockOrders);
+      // Mock order aggregate to return revenue and hpp
+      mockPrismaService.order.aggregate.mockImplementation(
+        (() => {
+          let callCount = 0;
+          return () => {
+            callCount++;
+            if (callCount === 1) {
+              return Promise.resolve({
+                _sum: { total_amount: 1500000 },
+                _count: 2,
+              });
+            }
+            return Promise.resolve({ _sum: { cogs_total: 600000 }, _count: 2 });
+          };
+        })(),
+      );
       mockFinanceRepository.findOperationalExpenses.mockResolvedValue([]);
       mockFinanceRepository.findAssets.mockResolvedValue([]);
       mockFinanceRepository.findProfitShareLog.mockResolvedValue(null);
@@ -243,8 +281,9 @@ describe('FinanceService', () => {
       const result = await service.getProfitShare(6, 2026);
 
       expect(result.revenue).toBe(1500000);
-      // netProfit = revenue - totalOpex(0) - totalDepreciation(0) = 1500000
-      expect(result.netProfit).toBe(1500000);
+      expect(result.totalHpp).toBe(600000);
+      // netProfit = revenue - hpp - opex(0) - depreciation(0) = 1500000 - 600000 = 900000
+      expect(result.netProfit).toBe(900000);
     });
 
     it('should return existing log if already calculated', async () => {
@@ -262,6 +301,22 @@ describe('FinanceService', () => {
           actual_close_at: new Date('2026-06-30T20:00:00Z'),
         },
       ]);
+      // Mock order aggregate for revenue/hpp calculation
+      mockPrismaService.order.aggregate.mockImplementation(
+        (() => {
+          let callCount = 0;
+          return () => {
+            callCount++;
+            if (callCount === 1) {
+              return Promise.resolve({
+                _sum: { total_amount: 1500000 },
+                _count: 2,
+              });
+            }
+            return Promise.resolve({ _sum: { cogs_total: 600000 }, _count: 2 });
+          };
+        })(),
+      );
       mockFinanceRepository.findProfitShareLog.mockResolvedValue(existingLog);
 
       const result = await service.getProfitShare(6, 2026);

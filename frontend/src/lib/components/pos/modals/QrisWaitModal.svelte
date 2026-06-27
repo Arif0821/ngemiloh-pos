@@ -1,6 +1,31 @@
 <script lang="ts">
 	import { pos_store } from '$lib/stores/pos.store.svelte';
 	import { pos_service } from '$lib/services/pos.service';
+	import QRCode from 'qrcode';
+	import { onMount } from 'svelte';
+
+	let qr_data_url = $state('');
+
+	async function generate_qr() {
+		const qr_string = pos_store.qris_order_info?.qr_string || '';
+		if (qr_string) {
+			qr_data_url = await QRCode.toDataURL(qr_string, {
+				width: 200,
+				margin: 2,
+				color: {
+					dark: '#000000',
+					light: '#ffffff'
+				}
+			});
+		}
+	}
+
+	// Generate QR when order info changes
+	$effect(() => {
+		if (pos_store.qris_order_info?.qr_string) {
+			generate_qr();
+		}
+	});
 
 	// Focus trap action for modals
 	function focus_trap(node: HTMLElement) {
@@ -73,13 +98,15 @@
 		<!-- QR Code Section -->
 		<div class="bg-surface-50 border-surface-200 border-y px-6 py-4">
 			<div class="border-surface-200 mb-4 inline-block rounded-2xl border bg-white p-4 shadow-sm">
-				<img
-					src="https://api.qrserver.com/v1/create-qr-code/?size=200x200&data={encodeURIComponent(
-						pos_store.qris_order_info?.qr_string || ''
-					)}"
-					alt="QRIS"
-					class="h-48 w-48"
-				/>
+				{#if qr_data_url}
+					<img src={qr_data_url} alt="QRIS" class="h-48 w-48" />
+				{:else}
+					<div
+						class="bg-surface-200 flex h-48 w-48 animate-pulse items-center justify-center rounded-lg"
+					>
+						<span class="text-surface-500 text-sm">Memuat QR...</span>
+					</div>
+				{/if}
 			</div>
 			<p class="text-brand-600 mb-1 text-3xl font-black">
 				{pos_store.format_rp(pos_store.qris_order_info?.final_price || pos_store.cart_total)}

@@ -7,6 +7,8 @@ import {
   WebhookPayload,
 } from './payment-gateway.interface';
 
+const WEBHOOK_TIMESTAMP_TOLERANCE_MS = 5 * 60 * 1000; // 5 minutes
+
 @Injectable()
 export class MidtransGatewayService implements PaymentGateway {
   private readonly logger = new Logger(MidtransGatewayService.name);
@@ -85,6 +87,15 @@ export class MidtransGatewayService implements PaymentGateway {
         return false;
       }
 
+      // SECURITY: Reject webhook if timestamp is too old (> 5 minutes)
+      // This prevents replay attacks where old valid webhooks are replayed
+      if (!this.isWebhookTimestampValid(data)) {
+        this.logger.warn(
+          'Webhook timestamp is too old (>5 minutes), rejecting',
+        );
+        return false;
+      }
+
       const serverKey =
         process.env.MIDTRANS_ENV === 'production'
           ? process.env.MIDTRANS_SERVER_KEY_PRODUCTION
@@ -112,6 +123,53 @@ export class MidtransGatewayService implements PaymentGateway {
     } catch (error) {
       this.logger.error('Error verifying webhook signature:', error);
       return false;
+    }
+  }
+
+  /**
+   * SECURITY: Validate webhook timestamp to prevent replay attacks
+   * Midtrans webhook contains transaction_time field indicating when the transaction was created
+   */
+  private isWebhookTimestampValid(data: WebhookPayload): boolean {
+    // Get transaction time from webhook
+    // Midtrans provides this in various formats, try common fields
+    const transactionTimeStr =
+      ((data as Record<string, unknown>).transaction_time as string) ||
+      ((data as Record<string, unknown>).settlement_time as string) ||
+      ((data as Record<string, unknown>).transaction_time as string);
+
+    if (!transactionTimeStr) {
+      // If no timestamp available, we cannot validate - log warning but allow
+      // This maintains backward compatibility while encouraging clients to include timestamps
+      this.logger.warn(
+        'No transaction_time in webhook, skipping timestamp validation',
+      );
+      return true;
+    }
+
+    try {
+      const transactionTime = new Date(transactionTimeStr).getTime();
+      const now = Date.now();
+      const age = now - transactionTime;
+
+      if (age > WEBHOOK_TIMESTAMP_TOLERANCE_MS) {
+        this.logger.warn(
+          `Webhook too old: ${Math.round(age / 1000)}s > ${WEBHOOK_TIMESTAMP_TOLERANCE_MS / 1000}s tolerance`,
+        );
+        return false;
+      }
+
+      // Also reject if timestamp is in the future (clock skew protection)
+      // Allow 60 seconds of future tolerance for clock differences
+      if (transactionTime > now + 60 * 1000) {
+        this.logger.warn('Webhook timestamp is in the future, rejecting');
+        return false;
+      }
+
+      return true;
+    } catch {
+      this.logger.warn('Failed to parse transaction_time, skipping validation');
+      return true; // Skip validation on parse error to maintain backward compatibility
     }
   }
 

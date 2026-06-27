@@ -84,7 +84,10 @@ start_with_oom_recovery() {
         # Run database migrations (always, including development)
         if [ "${SKIP_MIGRATIONS:-false}" != "true" ]; then
             echo "[INFO] Running database migrations..."
-            npx prisma migrate deploy
+            if ! npx prisma migrate deploy; then
+                echo "[ERROR] Database migration failed!"
+                exit 1
+            fi
             echo "[INFO] Migrations complete"
         fi
 
@@ -167,7 +170,10 @@ else
     # Run database migrations (always, including development)
     if [ "${SKIP_MIGRATIONS:-false}" != "true" ]; then
         echo "[INFO] Running database migrations..."
-        npx prisma migrate deploy
+        if ! npx prisma migrate deploy; then
+            echo "[ERROR] Database migration failed!"
+            exit 1
+        fi
         echo "[INFO] Migrations complete"
     fi
 

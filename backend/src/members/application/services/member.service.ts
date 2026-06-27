@@ -4,6 +4,7 @@ import {
   ConflictException,
   NotFoundException,
   BadRequestException,
+  Logger,
 } from '@nestjs/common';
 import { PrismaService } from '../../../prisma/prisma.service';
 import { RedisService } from '../../../common/redis/redis.service';
@@ -16,6 +17,8 @@ import {
 
 @Injectable()
 export class MemberService {
+  private readonly logger = new Logger(MemberService.name);
+
   constructor(
     @Inject('MEMBER_REPOSITORY')
     private readonly memberRepository: IMemberRepository,
@@ -130,127 +133,182 @@ export class MemberService {
     redeem_requested: boolean;
     cashier_id?: string;
   }) {
-    // Use transaction to prevent race conditions on concurrent point operations
-    return await this.prisma.$transaction(async (tx) => {
-      const member = await tx.member.findUnique({
-        where: { id: data.member_id },
-        include: { tier: true },
-      });
-      if (!member) {
-        throw new NotFoundException('Member tidak ditemukan');
-      }
+    // SECURITY: Use advisory lock per member to prevent race conditions
+    // Two concurrent requests for the same member will be serialized
+    const lockKey = `member:points:${data.member_id}`;
+    const lockId = this.hashStringToBigInt(lockKey);
+    const maxRetries = 5;
+    const retryDelayMs = 50;
 
-      if (!member.is_active) {
-        throw new BadRequestException('Member sudah tidak aktif');
-      }
+    for (let attempt = 0; attempt <= maxRetries; attempt++) {
+      const lockAcquired = await this.prisma
+        .$executeRaw<number>`SELECT pg_try_advisory_lock(${lockId})`;
 
-      let pointsEarned = 0;
-      let pointsRedeemed = 0;
-      let discountAmount = 0;
-      let finalPayment: number | undefined;
-
-      // Check cooldown for earning
-      const cooldownUntil = await this.get_cooldown_until(data.member_id);
-      const canEarn = !cooldownUntil;
-
-      // Handle redemption (if requested)
-      if (data.redeem_requested && member.loyalty_points > 0) {
-        pointsRedeemed = member.loyalty_points;
-        discountAmount =
-          this.loyaltyService.calculate_redeem_value(pointsRedeemed);
-
-        // Create redeem transaction
-        await tx.memberTransaction.create({
-          data: {
-            member_id: data.member_id,
-            order_id: data.order_id,
-            type: 'redeem',
-            points: -pointsRedeemed,
-            balance_after: 0,
-            description: `Redeem ${pointsRedeemed} pts`,
-            cashier_id: data.cashier_id,
-          },
-        });
-
-        // Update balance to 0
-        await tx.member.update({
-          where: { id: data.member_id },
-          data: { loyalty_points: 0 },
-        });
-        finalPayment = Math.max(0, data.transaction_subtotal - discountAmount);
-      }
-
-      // Handle earning (after payment success, not during cooldown)
-      if (canEarn) {
-        pointsEarned = this.loyaltyService.calculate_points_earned(
-          data.transaction_subtotal,
-        );
-
-        if (pointsEarned > 0) {
-          const newBalance =
-            member.loyalty_points - pointsRedeemed + pointsEarned;
-
-          await tx.memberTransaction.create({
-            data: {
-              member_id: data.member_id,
-              order_id: data.order_id,
-              type: 'earn',
-              points: pointsEarned,
-              balance_after: newBalance,
-              description: `Earn ${pointsEarned} pts`,
-              cashier_id: data.cashier_id,
-            },
-          });
-
-          // Set cooldown (Redis, outside transaction - intentional)
-          const cooldownUntilDate = new Date(
-            Date.now() + LOYALTY_COOLDOWN_MINUTES * 60 * 1000,
-          );
-          await this.set_cooldown(data.member_id, cooldownUntilDate);
-
-          // Update balance
-          await tx.member.update({
-            where: { id: data.member_id },
-            data: { loyalty_points: newBalance },
-          });
-
-          // Evaluate tier
-          const tierResult = await this.loyaltyService.evaluate_tier(
-            data.member_id,
-            newBalance,
-          );
-          if (tierResult.changed) {
-            await tx.member.update({
+      if (lockAcquired === 1) {
+        try {
+          // All logic inside lock to prevent race condition
+          const result = await this.prisma.$transaction(async (tx) => {
+            const member = await tx.member.findUnique({
               where: { id: data.member_id },
-              data: { current_tier_id: tierResult.tier_id },
+              include: { tier: true },
             });
-          }
+            if (!member) {
+              throw new NotFoundException('Member tidak ditemukan');
+            }
+
+            if (!member.is_active) {
+              throw new BadRequestException('Member sudah tidak aktif');
+            }
+
+            let pointsEarned = 0;
+            let pointsRedeemed = 0;
+            let discountAmount = 0;
+            let finalPayment: number | undefined;
+
+            // Check cooldown using database (not Redis) to ensure consistency
+            // SECURITY: Cooldown check inside transaction prevents race conditions
+            const recentEarn = await tx.memberTransaction.findFirst({
+              where: {
+                member_id: data.member_id,
+                type: 'earn',
+                created_at: {
+                  gte: new Date(
+                    Date.now() - LOYALTY_COOLDOWN_MINUTES * 60 * 1000,
+                  ),
+                },
+              },
+              orderBy: { created_at: 'desc' },
+            });
+            const cooldownUntil = recentEarn
+              ? new Date(
+                  recentEarn.created_at.getTime() +
+                    LOYALTY_COOLDOWN_MINUTES * 60 * 1000,
+                )
+              : null;
+            const canEarn = !cooldownUntil || cooldownUntil <= new Date();
+
+            // Handle redemption (if requested)
+            if (data.redeem_requested && member.loyalty_points > 0) {
+              pointsRedeemed = member.loyalty_points;
+              discountAmount =
+                this.loyaltyService.calculate_redeem_value(pointsRedeemed);
+
+              // Create redeem transaction
+              await tx.memberTransaction.create({
+                data: {
+                  member_id: data.member_id,
+                  order_id: data.order_id,
+                  type: 'redeem',
+                  points: -pointsRedeemed,
+                  balance_after: 0,
+                  description: `Redeem ${pointsRedeemed} pts`,
+                  cashier_id: data.cashier_id,
+                },
+              });
+
+              // Update balance to 0
+              await tx.member.update({
+                where: { id: data.member_id },
+                data: { loyalty_points: 0 },
+              });
+              finalPayment = Math.max(
+                0,
+                data.transaction_subtotal - discountAmount,
+              );
+            }
+
+            // Handle earning (after payment success, not during cooldown)
+            if (canEarn) {
+              pointsEarned = this.loyaltyService.calculate_points_earned(
+                data.transaction_subtotal,
+              );
+
+              if (pointsEarned > 0) {
+                const newBalance =
+                  member.loyalty_points - pointsRedeemed + pointsEarned;
+
+                await tx.memberTransaction.create({
+                  data: {
+                    member_id: data.member_id,
+                    order_id: data.order_id,
+                    type: 'earn',
+                    points: pointsEarned,
+                    balance_after: newBalance,
+                    description: `Earn ${pointsEarned} pts`,
+                    cashier_id: data.cashier_id,
+                  },
+                });
+
+                // Set cooldown in Redis (after DB commit, still useful for fast lookups)
+                const cooldownUntilDate = new Date(
+                  Date.now() + LOYALTY_COOLDOWN_MINUTES * 60 * 1000,
+                );
+                await this.set_cooldown(data.member_id, cooldownUntilDate);
+
+                // Update balance
+                await tx.member.update({
+                  where: { id: data.member_id },
+                  data: { loyalty_points: newBalance },
+                });
+
+                // Evaluate tier
+                const tierResult = await this.loyaltyService.evaluate_tier(
+                  data.member_id,
+                  newBalance,
+                );
+                if (tierResult.changed) {
+                  await tx.member.update({
+                    where: { id: data.member_id },
+                    data: { current_tier_id: tierResult.tier_id },
+                  });
+                }
+              }
+            }
+
+            // Get updated member
+            const updatedMember = await tx.member.findUnique({
+              where: { id: data.member_id },
+              include: { tier: true },
+            });
+            const tierBenefits = await this.loyaltyService.get_tier_benefits(
+              updatedMember?.current_tier_id || '',
+            );
+
+            return {
+              points_earned: pointsEarned,
+              points_redeemed: pointsRedeemed,
+              discount_amount: discountAmount,
+              final_payment: finalPayment,
+              new_balance: updatedMember?.loyalty_points || 0,
+              cooldown_until: canEarn
+                ? new Date(Date.now() + LOYALTY_COOLDOWN_MINUTES * 60 * 1000)
+                : cooldownUntil,
+              tier: updatedMember?.tier?.name || 'Bronze',
+              tier_changed: false,
+              tier_benefits: tierBenefits,
+            };
+          });
+          return result;
+        } finally {
+          // Always release the lock
+          await this.prisma.$executeRaw`SELECT pg_advisory_unlock(${lockId})`;
         }
       }
 
-      // Get updated member
-      const updatedMember = await tx.member.findUnique({
-        where: { id: data.member_id },
-        include: { tier: true },
-      });
-      const tierBenefits = await this.loyaltyService.get_tier_benefits(
-        updatedMember?.current_tier_id || '',
-      );
+      // Lock not acquired, retry
+      if (attempt < maxRetries) {
+        const jitter = Math.floor(Math.random() * 30);
+        await new Promise((resolve) =>
+          setTimeout(resolve, retryDelayMs + jitter),
+        );
+      }
+    }
 
-      return {
-        points_earned: pointsEarned,
-        points_redeemed: pointsRedeemed,
-        discount_amount: discountAmount,
-        final_payment: finalPayment,
-        new_balance: updatedMember?.loyalty_points || 0,
-        cooldown_until: canEarn
-          ? new Date(Date.now() + LOYALTY_COOLDOWN_MINUTES * 60 * 1000)
-          : cooldownUntil,
-        tier: updatedMember?.tier?.name || 'Bronze',
-        tier_changed: false,
-        tier_benefits: tierBenefits,
-      };
-    });
+    // All retries exhausted
+    this.logger.error(
+      `[process_points] Failed to acquire advisory lock for member ${data.member_id}`,
+    );
+    throw new Error('Gagal memproses points. Silakan coba lagi.');
   }
 
   async revoke_points(orderId: string) {
@@ -396,5 +454,17 @@ export class MemberService {
     if (ttlSeconds > 0) {
       await this.redisService.set(key, until.toISOString(), ttlSeconds);
     }
+  }
+
+  /**
+   * Convert string to bigint for PostgreSQL advisory lock
+   */
+  private hashStringToBigInt(str: string): bigint {
+    let hash = 2166136261n;
+    for (let i = 0; i < str.length; i++) {
+      hash ^= BigInt(str.charCodeAt(i));
+      hash *= 16777619n;
+    }
+    return hash & 0x7fffffffffffffffn;
   }
 }

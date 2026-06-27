@@ -156,11 +156,21 @@
 		if (!pos_store.is_offline) {
 			pos_service.fetch_flags();
 			flag_interval = setInterval(() => pos_service.fetch_flags(), FLAG_REFRESH_INTERVAL_MS);
-			await pos_service.check_shift();
+
+			// Parallelize independent API calls for faster loading
+			const [shiftResult, productsResult, discountsResult, syncResult] = await Promise.all([
+				pos_service.check_shift().catch(() => null),
+				pos_service.fetch_products_from_api().catch(() => null),
+				pos_service.fetch_discounts().catch(() => null),
+				pos_service.sync_pending_orders().catch(() => null)
+			]);
+
+			// Handle shift check failure
+			if (shiftResult === null) {
+				pos_store.is_checking_shift = false;
+			}
+
 			shift_interval = setInterval(() => pos_service.check_shift(), FLAG_REFRESH_INTERVAL_MS);
-			await pos_service.fetch_products_from_api();
-			await pos_service.fetch_discounts();
-			await pos_service.sync_pending_orders();
 		} else {
 			pos_store.is_checking_shift = false;
 		}

@@ -29,6 +29,12 @@ fi
 
 echo "[PROD] Starting Redis with password authentication"
 
+# Ensure /data directory exists and has correct permissions
+# This fixes permission issues on Docker volumes
+mkdir -p /data || true
+chown redis:redis /data 2>/dev/null || true
+chmod 755 /data 2>/dev/null || true
+
 # Start Redis with password and security hardening
 exec redis-server \
     --appendonly yes \

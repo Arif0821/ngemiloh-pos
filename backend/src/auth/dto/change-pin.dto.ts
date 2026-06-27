@@ -13,8 +13,8 @@ export class ChangePinDto {
 
   @IsOptional()
   @IsString()
-  @MinLength(8, { message: 'PIN baru minimal 8 digit' })
-  @MaxLength(8, { message: 'PIN baru maksimal 8 digit' })
+  @MinLength(4, { message: 'PIN baru minimal 4 digit' })
+  @MaxLength(6, { message: 'PIN baru maksimal 6 digit' })
   @Matches(/^\d+$/, { message: 'PIN baru harus berupa angka' })
   new_pin?: string = undefined;
 }

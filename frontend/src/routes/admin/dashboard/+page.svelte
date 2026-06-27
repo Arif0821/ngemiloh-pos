@@ -2,8 +2,10 @@
 	import { api } from '$lib/services/api.client';
 	import { format_rp, DAILY_REVENUE_TARGET, KPI_REFRESH_INTERVAL_MS } from '$lib/utils/format';
 	import { onMount, onDestroy } from 'svelte';
-	import Chart from 'chart.js/auto';
 	import type { Chart as ChartType } from 'chart.js';
+
+	// Module-level variable to hold Chart class (set during onMount)
+	let Chart: typeof ChartType;
 
 	let revenue_canvas: HTMLCanvasElement;
 	let top_products_canvas: HTMLCanvasElement;
@@ -115,7 +117,12 @@
 		}
 	}
 
-	onMount(() => {
+	onMount(async () => {
+		// Dynamic import Chart.js to reduce initial bundle size
+		const { Chart: ChartClass, registerables } = await import('chart.js');
+		ChartClass.register(...registerables);
+		Chart = ChartClass;
+
 		fetch_kpi();
 		fetch_chart_data();
 		refresh_timer = setInterval(() => {

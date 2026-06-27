@@ -102,19 +102,7 @@ export class AuthController {
       response,
     );
 
-    // Skip OTP in development mode for easier testing
-    if (process.env.NODE_ENV === 'development') {
-      const result = await this.authService.login(
-        loginIdentifier,
-        loginSecret,
-        this.getClientIp(req),
-        this.getUserAgent(req),
-        response,
-      );
-      return { success: true, data: result.user };
-    }
-
-    // Generate and send OTP via email
+    // Issue new token with same role
     await this.authService.sendOtp(loginIdentifier);
 
     return {
@@ -327,7 +315,7 @@ export class AuthController {
     });
     set_cookie(response, 'csrf_token', csrfToken, {
       maxAge: maxAgeMs,
-      httpOnly: true,
+      httpOnly: false,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'strict',
       path: '/',
